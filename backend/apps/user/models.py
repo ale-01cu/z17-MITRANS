@@ -74,6 +74,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         'email',
         'first_name',
         'last_name',
+        'password'
     ]
 
     def get_full_name(self):

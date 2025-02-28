@@ -178,7 +178,7 @@ SIMPLE_JWT = {
 
 DJOSER = {
     'LOGIN_FIELD': 'username',
-    'USER_CREATE_PASSWORD_RETYPE': False,
+    'USER_CREATE_PASSWORD_RETYPE': True,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': False,
     'USERNAME_CHANGED_EMAIL_CONFIRMATION': False,
     'SEND_CONFIRMATION_EMAIL': False,
@@ -199,8 +199,9 @@ DJOSER = {
     },
 }
 
+EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
-    "http://127.0.0.1:8000",
+    "http://localhost:5173",
 ]

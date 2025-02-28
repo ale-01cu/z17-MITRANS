@@ -1,6 +1,7 @@
 import logoDark from "./logo-dark.svg";
 import logoLight from "./logo-light.svg";
 import { Button } from "~/components/ui/button";
+import { Link } from "react-router";
 
 export function Welcome() {
   return (
@@ -42,6 +43,7 @@ export function Welcome() {
             </ul>
             <div>
               <Button>Prueba</Button>
+              <Link to="/signin" >Signin</Link>
             </div>
           </nav>
         </div>
