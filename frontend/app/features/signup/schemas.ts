@@ -6,8 +6,17 @@ export const SignupSchema = z
     email: z.string().email({ message: "Correo electrónico inválido" }),
     first_name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres" }),
     last_name: z.string().min(3, { message: "El apellido debe tener al menos 3 caracteres" }),
-    password: z.string().min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
-    re_password: z.string(),
+    password: z
+      .string()
+      .min(8, { message: "La contraseña debe tener al menos 8 caracteres" })
+      .max(128, 'La contraseña no puede tener más de 128 caracteres.')
+      .regex(
+				/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,128}$/,
+				'La contraseña debe contener al menos una letra mayúscula, una letra minúscula, un número y un carácter especial.'
+			),
+    re_password: z
+      .string()
+      .min(8, {  message: "La confirmación de contraseña debe tener al menos 8 caracteres" })
   })
   .refine((data) => data.password === data.re_password, {
     message: "Las contraseñas no coinciden",

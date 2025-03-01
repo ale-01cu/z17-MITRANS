@@ -57,13 +57,19 @@ export default function SignupForm() {
   return (
     <form
       method="post"
-      action="/signup"
+      // action="/signup"
       onSubmit={handleSubmit(myHandleSubmit)}
     >
-      <SignupDialog isOpen={isSuccess} onOpenChange={DialogHandleChange}/>
+      <SignupDialog 
+        isOpen={isSuccess} 
+        onOpenChange={DialogHandleChange}
+      />
       <div className="flex flex-col gap-6 w-96">
         {/* Campo de Nombre de Usuario */}
-        <div>
+        <div className="space-y-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Nombre de usuario
+          </label>
           <Input
             placeholder="Nombre de usuario"
             type="text"
@@ -75,9 +81,12 @@ export default function SignupForm() {
         </div>
 
         {/* Campo de Email */}
-        <div>
+        <div className="space-y-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Correo electrónico
+          </label>
           <Input
-            placeholder="Email"
+            placeholder="Escriba su correo electrónico"
             type="email"
             {...register('email')}
           />
@@ -87,9 +96,12 @@ export default function SignupForm() {
         </div>
 
         {/* Campo de Nombre */}
-        <div>
+        <div className="space-y-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Nombre
+          </label>
           <Input
-            placeholder="Nombre"
+            placeholder="Escriba su nombre"
             type="text"
             {...register('first_name')}
           />
@@ -99,9 +111,12 @@ export default function SignupForm() {
         </div>
 
         {/* Campo de Apellido */}
-        <div>
+        <div className="space-y-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Apellidos
+          </label>
           <Input
-            placeholder="Apellido"
+            placeholder="Escriba sus apellidos"
             type="text"
             {...register('last_name')}
           />
@@ -111,48 +126,58 @@ export default function SignupForm() {
         </div>
 
         {/* Campo de Contraseña */}
-        <div className="relative">
-          <Input
-            placeholder="Contraseña"
-            type={showPassword ? "text" : "password"}
-            {...register('password')}
-          />
-          <Button
-            variant="ghost"
-            className="cursor-pointer absolute right-0 top-1/2 transform -translate-y-1/2"
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? (
-              <EyeIcon className="w-5 h-5" />
-            ) : (
-              <EyeOffIcon className="w-5 h-5" />
-            )}
-          </Button>
+        <div className="space-y-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Contraseña
+          </label>
+          <div className="relative">
+            <Input
+              placeholder="Escriba su contraseña"
+              type={showPassword ? "text" : "password"}
+              {...register('password')}
+            />
+            <Button
+              variant="ghost"
+              className="cursor-pointer absolute right-0 top-1/2 transform -translate-y-1/2"
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeIcon className="w-5 h-5" />
+              ) : (
+                <EyeOffIcon className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
           {errors.password && (
             <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
           )}
         </div>
 
         {/* Campo de Confirmar Contraseña */}
-        <div className="relative">
-          <Input
-            placeholder="Confirmar Contraseña"
-            type={showRePassword ? "text" : "password"}
-            {...register('re_password')}
-          />
-          <Button
-            variant="ghost"
-            className="cursor-pointer absolute right-0 top-1/2 transform -translate-y-1/2"
-            type="button"
-            onClick={() => setShowRePassword(!showRePassword)}
-          >
-            {showRePassword ? (
-              <EyeIcon className="w-5 h-5" />
-            ) : (
-              <EyeOffIcon className="w-5 h-5" />
-            )}
-          </Button>
+        <div className="space-y-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Escriba su contraseña de nuevo
+          </label>
+          <div className="relative">
+            <Input
+              placeholder="Confirmar Contraseña"
+              type={showRePassword ? "text" : "password"}
+              {...register('re_password')}
+            />
+            <Button
+              variant="ghost"
+              className="cursor-pointer absolute right-0 top-1/2 transform -translate-y-1/2"
+              type="button"
+              onClick={() => setShowRePassword(!showRePassword)}
+            >
+              {showRePassword ? (
+                <EyeIcon className="w-5 h-5" />
+              ) : (
+                <EyeOffIcon className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
           {errors.re_password && (
             <p className="text-red-500 text-sm mt-1">{errors.re_password.message}</p>
           )}

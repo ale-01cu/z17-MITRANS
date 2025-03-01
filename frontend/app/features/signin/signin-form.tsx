@@ -1,23 +1,116 @@
-import { Form } from "react-router"
 import { Input } from "~/components/ui/input"
 import { Button } from "~/components/ui/button"
 import { Link } from "react-router"
+import { useForm } from "react-hook-form"
+import { useEffect, useState } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { SigninSchema } from "./schemas"
+import { EyeOffIcon, EyeIcon, Loader2 } from "lucide-react"
+import { useFetcher } from "react-router"
+import { useNavigate } from "react-router"
+import type { SigninFormData } from "~/types/signin"
+
+interface ErrorsResponse {
+  unknown?: string,
+  username?: string,
+  password?: string
+} 
 
 export default function SigninForm() {
+  const [showPassword, setShowPassword] = useState(false)
+  const { register, handleSubmit, formState: { errors } } = useForm({ 
+    resolver: zodResolver(SigninSchema) })
+  const fetcher = useFetcher()
+  const isLoading = fetcher.state == "submitting"
+  const navegate = useNavigate()
+  const [ resErrors, setResErrors ] = useState<ErrorsResponse>({})
+
+  useEffect(() => {
+    if(!fetcher.data) return
+
+    if(fetcher.data?.ok === false) 
+      setResErrors(fetcher.data.error)
+    else navegate("/")
+
+  }, [fetcher.data])
+
+  const onSubmit = (data: SigninFormData) => {
+    fetcher.submit(data, {
+      method: "post",
+      action: "/signin",
+    });
+  };
+
+
   return (
-    <Form
+    <fetcher.Form
       method="post"
-      navigate={false}
+      action="/signin"
+      onSubmit={handleSubmit(onSubmit)} 
     >
-      <div className="flex flex-col gap-6 w-96">
-        <Input name="username" placeholder="Nombre de usuario" type="text" />
-        <Input name="password" placeholder="Contraseña" type="password" />
+      <div className="flex flex-col gap-8 w-96">
+        <div className="space-y-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Nombre de usuario
+          </label>
+          <Input
+            placeholder="Escriba su nombre de usuario"
+            type="text"
+            {...register('username')}
+          />
+          {errors.username && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.username.message}
+            </p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            Contraseña
+          </label>
 
-        <Link to="/signup" className="text-sm text-center">¿No tienes una cuenta?</Link>
+          <div className="relative">
+            <Input
+              placeholder="Escriba su contraseña"
+              type={showPassword ? "text" : "password"}
+              {...register('password')}
+            />
+            <Button
+              variant="ghost"
+              className="cursor-pointer absolute right-0 top-1/2 transform -translate-y-1/2"
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeIcon className="w-5 h-5" />
+              ) : (
+                <EyeOffIcon className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.password.message}
+            </p>
+          )}
+        </div>
 
-        <Button type="submit">Acceder</Button>
+        <Link to="/signup" className="text-sm text-center">
+          ¿No tienes una cuenta?
+        </Link>
+
+        <Button type="submit">
+          {isLoading && <Loader2 className="animate-spin" />}
+          Acceder
+        </Button>
+
+        {resErrors?.unknown && 
+          <p className="text-red-500 text-sm">
+            {fetcher?.data?.error?.unknown}
+          </p>
+        }  
       </div>
 
-    </Form>
+    </fetcher.Form>
   )
 }
