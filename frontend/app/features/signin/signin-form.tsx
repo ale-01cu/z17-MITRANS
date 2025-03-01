@@ -8,6 +8,7 @@ import { SigninSchema } from "./schemas"
 import { EyeOffIcon, EyeIcon, Loader2 } from "lucide-react"
 import { useFetcher } from "react-router"
 import { useNavigate } from "react-router"
+import ErrorMessage from "~/components/error-message"
 import type { SigninFormData } from "~/types/signin"
 
 interface ErrorsResponse {
@@ -58,10 +59,8 @@ export default function SigninForm() {
             type="text"
             {...register('username')}
           />
-          {errors.username && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.username.message}
-            </p>
+          {errors?.username?.message && ( 
+            <ErrorMessage message={errors.username.message} />
           )}
         </div>
         <div className="space-y-2">
@@ -88,10 +87,8 @@ export default function SigninForm() {
               )}
             </Button>
           </div>
-          {errors.password && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.password.message}
-            </p>
+          {errors?.password?.message && (
+            <ErrorMessage message={errors.password.message} />
           )}
         </div>
 
@@ -105,9 +102,7 @@ export default function SigninForm() {
         </Button>
 
         {resErrors?.unknown && 
-          <p className="text-red-500 text-sm">
-            {fetcher?.data?.error?.unknown}
-          </p>
+          <ErrorMessage message={resErrors?.unknown} />
         }  
       </div>
 

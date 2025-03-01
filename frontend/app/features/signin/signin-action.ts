@@ -37,7 +37,7 @@ export default async function clientAction({ request }: Route.ClientActionArgs) 
     if(error.type === "validation") {
       return { ok: false, error: error.errors }
     }
-    return { ok: false, error: { unknown: "Error desconocido." } }
+    return { ok: false, error: { unknown: "No se pudo iniciar sesión." } }
 
   }
 }
