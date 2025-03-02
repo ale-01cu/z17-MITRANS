@@ -7,7 +7,6 @@ export default function Signin() {
         <h1 className="text-4xl font-bold">Acceso</h1>
         <SigninForm />
       </div>
-
     </main>
   )
 }

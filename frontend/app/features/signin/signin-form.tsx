@@ -12,7 +12,7 @@ import ErrorMessage from "~/components/error-message"
 import type { SigninFormData } from "~/types/signin"
 
 interface ErrorsResponse {
-  unknown?: string,
+  request?: string,
   username?: string,
   password?: string
 } 
@@ -101,8 +101,8 @@ export default function SigninForm() {
           Acceder
         </Button>
 
-        {resErrors?.unknown && 
-          <ErrorMessage message={resErrors?.unknown} />
+        {resErrors?.request && 
+          <ErrorMessage message={resErrors?.request} />
         }  
       </div>
 

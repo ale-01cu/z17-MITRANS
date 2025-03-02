@@ -9,6 +9,10 @@ type ValidationError = {
   errors: Record<string, string>; // Un objeto con errores de validación
 };
 
+const responseMap: Record<string, string> = {
+  "No active account found with the given credentials": "No se encontró una cuenta con los datos ingresados.",
+}
+
 export default async function clientAction({ request }: Route.ClientActionArgs) {
   try {
     const formData = await request.formData()
@@ -25,9 +29,6 @@ export default async function clientAction({ request }: Route.ClientActionArgs) 
       } as ValidationError
     }
 
-    console.log("iniciando sesion...")
-    console.log({data})
-  
     const { access, refresh } = await postSigninApi(data)
     setCookie("access", access, 30)
     setCookie("refresh", refresh, 30)
@@ -36,8 +37,16 @@ export default async function clientAction({ request }: Route.ClientActionArgs) 
   } catch (error: any) {
     if(error.type === "validation") {
       return { ok: false, error: error.errors }
+    
+    } else if(error.code === "ERR_NETWORK") {
+      return { ok: false, error: { request: "No se pudo conectar con el servidor." } }
+    
+    } else {
+      const detail = error?.response?.data?.detail
+      if(!detail) return { ok: false, error: { unknown: "No se pudo iniciar sesión." } }
+      return { ok: false, error: { request: responseMap[detail] } }
+
     }
-    return { ok: false, error: { unknown: "No se pudo iniciar sesión." } }
 
   }
 }

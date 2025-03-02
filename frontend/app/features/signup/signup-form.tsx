@@ -12,6 +12,11 @@ import { Loader2, AlertCircleIcon, CheckCircleIcon} from "lucide-react"
 import { toast } from "sonner"
 import SignupDialog from "./signup-dialog"
 
+const responseMap: Record<string, string> = {
+  "Cuenta de Usuario with this Correo already exists.": "El correo ya está registrado.",
+  "Cuenta de Usuario with this Nombre de Usuario already exists.": "El nombre de usuario ya está registrado.",
+}
+
 export default function SignupForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [showRePassword, setShowRePassword] = useState(false)
@@ -37,11 +42,28 @@ export default function SignupForm() {
       setValue('password', '');
       setValue('re_password', '');
 
-    } catch (error) {
-      console.error(error)
+    } catch (error: any) {
+      let description = ""
+      console.log(error);
+      
+
+      if(error.code === "ERR_NETWORK") {
+        description = "No se pudo conectar con el servidor."
+      
+      } else {
+        const detail: Record<string, string> = error?.response?.data
+        if(!detail) description = "No se pudo realizar el registro."
+        else {
+          for (const [_, value] of Object.entries(detail)) {
+            description += `${responseMap[value]}\n`
+          }
+        }
+
+      }
+
       toast("Error al registrar.", {
         icon: <AlertCircleIcon className="w-4 h-4" />,
-        description: "No se ha podido realizar el registro debido a un error.",
+        description,
         style: { backgroundColor: "red" },
         closeButton: true,
         cancelButtonStyle: { background: "white" }

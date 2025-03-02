@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run React Router Dev Server",
+      "type": "shell",
+       "options": {
+        "shell": {
+          "executable": "cmd.exe",
+          "args": ["/K"] // Argumento /K para mantener la sesión de CMD abierta después de ejecutar el comando
+        }
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "command": "npm run dev --host",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+    }
+  ]
+}
