@@ -57,6 +57,7 @@ export default function SigninForm() {
           <Input
             placeholder="Escriba su nombre de usuario"
             type="text"
+            data-testid="username"
             {...register('username')}
           />
           {errors?.username?.message && ( 
@@ -71,6 +72,7 @@ export default function SigninForm() {
           <div className="relative">
             <Input
               placeholder="Escriba su contraseña"
+              data-testid="pass"
               type={showPassword ? "text" : "password"}
               {...register('password')}
             />
@@ -96,9 +98,9 @@ export default function SigninForm() {
           ¿No tienes una cuenta?
         </Link>
 
-        <Button type="submit">
+        <Button type="submit" data-testid="signin-btn-submit">
           {isLoading && <Loader2 className="animate-spin" />}
-          Acceder
+          Iniciar Sesión
         </Button>
 
         {resErrors?.request && 
