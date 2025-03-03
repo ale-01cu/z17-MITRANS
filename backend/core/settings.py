@@ -44,6 +44,9 @@ BASE_APPS = [
 
 LOCAL_APPS = [
     'apps.user',
+    'apps.comment',
+    'apps.classification',
+    'apps.post',
 ]
 
 THIRD_APPS = [
@@ -158,6 +161,12 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'MITRANS API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    # 'SCHEMA_PATH_PREFIX_TRIM': True,
+    # 'TAGS': [
+    #     {'name': 'Comments', 'description': 'Endpoints relacionados con comentarios'},
+    #     {'name': 'Classification', 'description': 'Endpoints relacionados con clasificación'},
+    # ],
     # OTHER SETTINGS
 }
 

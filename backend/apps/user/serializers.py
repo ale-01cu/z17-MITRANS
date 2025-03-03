@@ -9,7 +9,7 @@ class UserAddSerializer(UserCreateSerializer):
     class Meta(UserCreateSerializer.Meta):
         model = User
         fields = (
-            'id',
+            'external_id',
             'username',
             'email',
             'first_name',

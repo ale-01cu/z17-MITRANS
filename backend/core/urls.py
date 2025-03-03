@@ -31,4 +31,8 @@ urlpatterns = [
 
     # Documentación con Redoc
     path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    path('api/comment/', include('apps.comment.urls')),
+    path('api/classification/', include('apps.classification.urls')),
+    path('api/post/', include('apps.post.urls')),
 ]

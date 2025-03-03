@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from simple_history.models import HistoricalRecords
-
+import uuid
 
 class UserAccountManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
@@ -29,6 +29,13 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name = 'Cuenta de Usuario'
         verbose_name_plural = 'Cuentas de Usuarios'
+
+    external_id = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False,
+        verbose_name="ID externo"
+    )
 
     email = models.EmailField(
         max_length=255,
@@ -79,6 +86,12 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     def get_full_name(self):
         return self.first_name + ' ' + self.last_name
+
+    def save(self, *args, **kwargs):
+        if not self.external_id:
+            unique_id = uuid.uuid4().hex
+            self.external_id = f"user_{unique_id}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email
