@@ -8,5 +8,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['external_id', 'text', 'clarification', 'user', 'created_at']
+        fields = ['external_id', 'text', 'classification', 'user', 'created_at']
         read_only_fields = ['external_id', 'created_at', "user"]
+
+
+class FileUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()

@@ -31,7 +31,7 @@ class Comment(models.Model):
         default=None,
         null=True
     )
-    clarification = models.ForeignKey(
+    classification = models.ForeignKey(
         'classification.Classification',
         on_delete=models.CASCADE,
         verbose_name="Clasificación",
@@ -46,7 +46,7 @@ class Comment(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return self.text
+        return f"Comment=(text={self.text}, user={self.user}, created_at={self.created_at})"
 
     @property
     def _history_user(self):
