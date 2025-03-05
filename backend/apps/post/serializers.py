@@ -3,6 +3,7 @@ from apps.post.models import Post
 from apps.user.serializers import UserAddSerializer
 from apps.comment.models import Comment
 from apps.comment.serializers import CommentSerializer
+from drf_spectacular.utils import extend_schema_field
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -18,6 +19,7 @@ class PostSerializer(serializers.ModelSerializer):
         fields = ['external_id', 'content', 'created_at', 'user', 'comments']
         read_only_fields = ['external_id', 'created_at']
 
+    @extend_schema_field(CommentSerializer(many=True))
     def get_comments(self, obj):
         """
         Obtiene y serializa los comentarios relacionados al post.

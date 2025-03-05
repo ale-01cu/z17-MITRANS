@@ -12,5 +12,6 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = ['external_id', 'created_at', "user"]
 
 
+
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
