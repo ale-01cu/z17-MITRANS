@@ -46,7 +46,7 @@ class Comment(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return f"Comment=(text={self.text}, user={self.user}, created_at={self.created_at})"
+        return f"Comment(text={self.text}, user={self.user}, created_at={self.created_at})"
 
     @property
     def _history_user(self):
