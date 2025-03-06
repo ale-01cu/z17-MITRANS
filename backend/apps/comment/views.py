@@ -27,6 +27,7 @@ class CommentAPIView(viewsets.ModelViewSet):
 
     filterset_fields = {
         'created_at': ['gte', 'lte', 'exact'],
+        'classification__name': ['exact'],
     }
 
     def perform_create(self, serializer):
@@ -73,7 +74,7 @@ class GetCommentsFromExcelView(GenericAPIView):
             )
 
 
-class CreateCommentsListView(GenericAPIView):
+class CreateCommentsView(GenericAPIView):
     serializer_class = CommentSerializer
     parser_classes = [MultiPartParser]
 
