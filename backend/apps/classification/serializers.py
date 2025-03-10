@@ -14,3 +14,4 @@ class ClassifyCommentByIdSerializer(serializers.Serializer):
         min_length=1,  # Asegura que la lista contenga al menos un ID
         allow_empty=False  # No se permiten listas vacías
     )
+

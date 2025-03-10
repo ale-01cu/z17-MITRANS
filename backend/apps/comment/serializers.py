@@ -15,3 +15,10 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
+
+
+class ClassificationsByCommentsSerializer(serializers.Serializer):
+    data = serializers.DictField(
+        child=serializers.IntegerField(),
+        allow_empty=False
+    )

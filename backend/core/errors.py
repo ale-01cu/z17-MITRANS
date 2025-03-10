@@ -11,3 +11,4 @@ class Errors:
 
     # Comment
     COMMENT_NOT_FOUND = "EC10000"
+    COMMENT_INVALID_DATA = "EC10001"

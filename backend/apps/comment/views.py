@@ -1,4 +1,4 @@
-from apps.comment.serializers import CommentSerializer, FileUploadSerializer
+from apps.comment.serializers import CommentSerializer, FileUploadSerializer, ClassificationsByCommentsSerializer
 from rest_framework import viewsets, filters
 from rest_framework.views import status, Response
 from rest_framework.generics import GenericAPIView
@@ -8,7 +8,8 @@ from .pagination import ResultsSetPagination
 import pandas as pd
 from django_filters.rest_framework import DjangoFilterBackend
 from core.errors import Errors
-
+from django.db.models import Count
+from apps.classification.models import Classification
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
@@ -96,6 +97,36 @@ class CreateCommentsView(GenericAPIView):
                                 )
 
         except Exception as e:
+            return Response(
+                {"detail": Errors.INTERNAL_SERVER_ERROR},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class ClassificationsByCommentsView(GenericAPIView):
+    serializer_class = ClassificationsByCommentsSerializer
+
+    def get(self, request, *args, **kwargs):
+        try:
+            classification_counts = Classification.objects.annotate(
+                comment_count=Count('comment')
+            ).values('name', 'comment_count')
+
+            result = {
+                item['name']: item['comment_count']
+                for item in classification_counts
+            }
+            result = {"data": result}
+
+            response = ClassificationsByCommentsSerializer(data=result)
+            if not response.is_valid():
+                raise Exception(Errors.COMMENT_INVALID_DATA)
+
+            return Response(response.data, status=status.HTTP_200_OK)
+
+
+        except Exception as e:
+            print("ClassificationsByCommentsView Error: " + e.__str__())
             return Response(
                 {"detail": Errors.INTERNAL_SERVER_ERROR},
                 status=status.HTTP_400_BAD_REQUEST,
