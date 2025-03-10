@@ -38,6 +38,11 @@ class Comment(models.Model):
         default=None,
         null=True
     )
+    source = models.ForeignKey(
+        'source.Source',
+        on_delete=models.CASCADE,
+        verbose_name="Fuente",
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Fecha de creación"

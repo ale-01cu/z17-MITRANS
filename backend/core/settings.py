@@ -47,6 +47,7 @@ LOCAL_APPS = [
     'apps.comment',
     'apps.classification',
     'apps.post',
+    'apps.source',
 ]
 
 THIRD_APPS = [
