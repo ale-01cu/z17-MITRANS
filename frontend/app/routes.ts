@@ -6,7 +6,7 @@ export default [
   ]),
   
   layout("./layouts/sidebar-layout.tsx", [
-    index("routes/home.tsx"),
+    index("routes/dashboard.tsx"),
     route("/extract", "routes/extract.tsx"),
 
   ]),

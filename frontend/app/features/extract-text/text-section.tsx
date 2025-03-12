@@ -53,7 +53,7 @@ const TextSection = ({
         <div className="border rounded-md p-4 max-h-[500px] overflow-y-auto">
           {extractedStatements.map((statement, index) => (
             <div key={statement.id} className="flex justify-between">
-              <div key={index} className="flex items-center space-x-3 py-2 border-b last:border-0 cursor-pointer">
+              <div key={index} className="flex w-full items-center space-x-3 py-2 border-b last:border-0 cursor-pointer">
                 <Checkbox
                   id={`statement-${index}`}
                   checked={selectedStatements.map(s => s.text).includes(statement.text)}
