@@ -8,7 +8,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "~/components/ui/sidebar"
-import { Calendar, Home, Inbox, Search, Settings, Pickaxe } from "lucide-react"
+import { Calendar, Home, Search, Settings, Pickaxe, Diamond } from "lucide-react"
+import { useLocation } from "react-router"
 
 const items = [
   {
@@ -39,17 +40,19 @@ const items = [
 ]
  
 export function AppSidebar() {
+  const { pathname } = useLocation()
+
   return (
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel>Menu de navegación</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <a href={item.url} className={`${pathname === item.url ? "border-black border-l" : ""}`}>
                       <item.icon />
                       <span>{item.title}</span>
                     </a>

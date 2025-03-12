@@ -1,15 +1,22 @@
 import UploadFiles from "~/components/upload-files";
 import ExtractLoading from "./extract-loading";
-import { useState } from "react";
+import React, { useState } from "react";
 import { extractTextFromMedia } from "./actions";
 import TextSection from "./text-section";
 import ActionSection from "./actions-section";
 
+interface Statement {
+  id: string,
+  text: string;          // El texto del statement
+  classification: string | null; // La clasificación (inicialmente vacía)
+}
+
 const ExtractText = () => {
   const [isUploading, setIsUploading] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
-  const [extractedStatements, setExtractedStatements] = useState<string[]>([])
-  const [selectedStatements, setSelectedStatements] = useState<string[]>([])
+  const [extractedStatements, setExtractedStatements] = useState<Statement[]>([])
+  const [extractedUsers, setExtractedUsers] = useState<string[]>([])
+  const [selectedStatements, setSelectedStatements] = useState<Statement[]>([])
   const [files, setFiles] = useState<File[]>([])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,6 +44,7 @@ const ExtractText = () => {
       setTimeout(() => {
         setIsExtracting(false)
         setExtractedStatements(result.statements)
+        setExtractedUsers(result.users)
         // Pre-select some statements by default (in a real app, this might come from the server)
         setSelectedStatements(result.preSelectedStatements)
       }, 2000)
@@ -50,10 +58,14 @@ const ExtractText = () => {
     }
   }
 
-  const toggleStatement = (statement: string) => {
-    setSelectedStatements((prev) =>
-      prev.includes(statement) ? prev.filter((s) => s !== statement) : [...prev, statement],
-    )
+  const toggleStatement = (statement: Statement) => {
+    setSelectedStatements((prev) => {
+      const stateFound = prev.find((s) => s.id === statement.id);
+  
+      return stateFound
+        ? prev.filter((s) => s.id !== statement.id) // Elimina el statement si ya existe
+        : [...prev, statement]; // Agrega el statement si no existe
+    });
   }
 
   const selectAll = () => {
@@ -64,8 +76,30 @@ const ExtractText = () => {
     setSelectedStatements([])
   }
 
-  const handleClassify = () => {
-    console.log("Classifying statements:", selectedStatements)
+  const handleClassify = (setIsClassifying: React.Dispatch<React.SetStateAction<boolean>>) => {
+    setIsClassifying(true)
+    setTimeout(() => {
+      const statementsClassificated = extractedStatements.map((item) => {
+        // Buscar el elemento correspondiente en el array pequeño
+        const selectedItem = selectedStatements.find((selected) => selected.id === item.id);
+    
+        // Si el elemento existe en el array pequeño, actualizarlo
+        if (selectedItem) {
+          return {
+            ...item, // Copiar las propiedades originales
+            classification: "Neutral", // Actualizar la propiedad classification
+          };
+        }
+    
+        // Si no existe, devolver el elemento sin cambios
+        return item;
+      });
+  
+      setExtractedStatements(statementsClassificated)
+      setIsClassifying(false)
+      
+    }, 2000)
+
     // Implement classification logic
   }
 
@@ -79,10 +113,9 @@ const ExtractText = () => {
     // Implement processing logic
   }
 
-
   return (
-    <div className="flex justify-between gap-4 w-full px-4">
-      <div className="container mx-auto py-8 px-4">
+    <div className="flex justify-between w-full px-8 gap-8">
+      <div className="container mx-auto py-8">
         <UploadFiles 
           files={files}
           handleFileChange={handleFileChange}
@@ -102,6 +135,7 @@ const ExtractText = () => {
             selectAll={selectAll}
             selectedStatements={selectedStatements}
             toggleStatement={toggleStatement}
+            extractedUsers={extractedUsers}
           />
         }
       </div>
