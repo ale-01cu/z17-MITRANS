@@ -6,40 +6,40 @@ import { Badge } from "~/components/ui/badge";
 const urgentOpinions = [
   {
     id: "urg-1",
-    text: "The website is completely down and customers can't place orders. This is causing significant revenue loss.",
+    text: "El sitio web está completamente caído y los clientes no pueden realizar pedidos. Esto está causando una pérdida significativa de ingresos.",
     user: "Sarah Johnson",
-    date: "2 hours ago",
+    date: "hace 2 horas",
     avatar: "/placeholder.svg?height=40&width=40",
   },
   {
     id: "urg-2",
-    text: "Payment processing is failing for all credit card transactions. Multiple customers have reported this issue.",
+    text: "El procesamiento de pagos está fallando para todas las transacciones con tarjeta de crédito. Varios clientes han reportado este problema.",
     user: "Michael Chen",
-    date: "4 hours ago",
+    date: "hace 4 horas",
     avatar: "/placeholder.svg?height=40&width=40",
   },
   {
     id: "urg-3",
-    text: "Customer data appears to be exposed in the API response. This is a critical security vulnerability.",
+    text: "Los datos de los clientes parecen estar expuestos en la respuesta de la API. Esto es una vulnerabilidad de seguridad crítica.",
     user: "Emma Williams",
-    date: "6 hours ago",
+    date: "hace 6 horas",
     avatar: "/placeholder.svg?height=40&width=40",
   },
   {
     id: "urg-4",
-    text: "The mobile app is crashing on startup for all iOS users after the latest update.",
+    text: "La aplicación móvil se está cerrando al iniciar para todos los usuarios de iOS después de la última actualización.",
     user: "David Rodriguez",
-    date: "12 hours ago",
+    date: "hace 12 horas",
     avatar: "/placeholder.svg?height=40&width=40",
   },
-]
+];
 
 const UrgentComments = () => {
   return ( 
     <Card className="lg:col-span-4">
       <CardHeader>
-        <CardTitle>Urgent Opinions</CardTitle>
-        <CardDescription>Opinions that require immediate attention</CardDescription>
+        <CardTitle>Peticiones Urgentes</CardTitle>
+        <CardDescription>Opcion que requiere atención inmediate</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -50,7 +50,7 @@ const UrgentComments = () => {
                   <p className="text-sm font-medium leading-none">{opinion.user}</p>
                   <Badge variant="outline" className="ml-auto">
                     <AlertCircle className="mr-1 h-3 w-3 text-orange-500" />
-                    Urgent
+                    Urgente
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">{opinion.text}</p>
@@ -62,7 +62,7 @@ const UrgentComments = () => {
             </div>
           ))}
           <Button variant="outline" className="w-full">
-            View All Urgent Opinions
+            Ver mas
           </Button>
         </div>
       </CardContent>

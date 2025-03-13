@@ -7,9 +7,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter
 } from "~/components/ui/sidebar"
-import { Calendar, Home, Search, Settings, Pickaxe, Diamond } from "lucide-react"
-import { useLocation } from "react-router"
+import { Calendar, Home, Search, Settings, Pickaxe } from "lucide-react"
+import { Button } from "./ui/button"
+import { useLocation, useNavigate } from "react-router"
+import { removeCookie } from "~/utils/cookies"
 
 const items = [
   {
@@ -23,24 +26,31 @@ const items = [
     icon: Pickaxe,
   },
   {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
-  },
-  {
-    title: "Search",
+    title: "Buscar",
     url: "#",
     icon: Search,
   },
   {
-    title: "Settings",
+    title: "Configuraciones",
     url: "#",
     icon: Settings,
+  },
+  {
+    title: "Acerca de",
+    url: "#",
+    icon: Calendar,
   },
 ]
  
 export function AppSidebar() {
   const { pathname } = useLocation()
+  const navegate = useNavigate()
+
+  const handleLogout = () => {
+    removeCookie("access")
+    removeCookie("refresh")
+    navegate("/signin")
+  }
 
   return (
     <Sidebar>
@@ -63,6 +73,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <Button variant="outline" onClick={handleLogout}>
+          Cerrar Sesión
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   )
 }

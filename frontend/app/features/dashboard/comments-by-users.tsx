@@ -5,45 +5,88 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  LabelList
 } from "recharts"
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "~/components/ui/chart";
 
-const userOpinionData = [
-  { name: "Sarah Johnson", count: 24 },
-  { name: "Michael Chen", count: 18 },
-  { name: "Emma Williams", count: 15 },
-  { name: "David Rodriguez", count: 12 },
-  { name: "Alex Thompson", count: 9 },
-  { name: "Lisa Garcia", count: 7 },
-]
+
+const chartData = [
+  { name: "Sarah Johnson", count: 186 },
+  { name: "Michael Chen", count: 305 },
+  { name: "Emma Williams", count: 237 },
+  { name: "David Rodriguez", count: 73 },
+  { name: "Alex Thompson", count: 209 },
+  { name: "Lisa Garcia", count: 214 },
+  { name: "James Smith", count: 150 },
+  { name: "Mary Johnson", count: 275 },
+  { name: "John Williams", count: 320 },
+  { name: "Patricia Brown", count: 90 },
+];
+const chartConfig = {
+  count: {
+    label: "Cantidad",
+    color: "#3366FF",
+  },
+  label: {
+    color: "#FFFFFF",
+  },
+} satisfies ChartConfig
 
 const CommentsByUsers = () => {
   return ( 
     <Card className="lg:col-span-3">
       <CardHeader>
-        <CardTitle>Opinions by User</CardTitle>
-        <CardDescription>Number of opinions submitted by each user</CardDescription>
+        <CardTitle>Comentaios por usuarios</CardTitle>
+        <CardDescription>Número de comentarios por cada usuario</CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ChartContainer config={chartConfig}>
           <BarChart
-            data={userOpinionData}
+            accessibilityLayer
+            data={chartData}
             layout="vertical"
             margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
+              right: 16,
             }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="name" type="category" scale="band" width={100} />
-            <Tooltip />
-            <Bar dataKey="count" fill="#3b82f6" />
+            <CartesianGrid horizontal={false} />
+            <YAxis
+              dataKey="name"
+              type="category"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => value.slice(0, 3)}
+              hide
+            />
+            <XAxis dataKey="count" type="number" hide />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <Bar
+              dataKey="count"
+              layout="vertical"
+              fill="var(--color-count)"
+              radius={10}
+            >
+              <LabelList
+                dataKey="name"
+                position="insideLeft"
+                offset={8}
+                className="fill-[#ffffff]"
+                fontSize={12}
+              />
+              <LabelList
+                dataKey="count"
+                position="right"
+                offset={8}
+                className="fill-foreground"
+                fontSize={12}
+              />
+            </Bar>
           </BarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
 

@@ -3,9 +3,9 @@ import { TabsList, TabsTrigger } from "~/components/ui/tabs";
 const DashNav = () => {
   return ( 
     <TabsList>
-      <TabsTrigger value="overview">Overview</TabsTrigger>
-      <TabsTrigger value="urgent">Urgent</TabsTrigger>
-      <TabsTrigger value="unclassified">Unclassified</TabsTrigger>
+      <TabsTrigger value="overview">General</TabsTrigger>
+      <TabsTrigger value="urgent">Atencion urgente</TabsTrigger>
+      <TabsTrigger value="unclassified">Sin clasificar</TabsTrigger>
     </TabsList>
   );
 }

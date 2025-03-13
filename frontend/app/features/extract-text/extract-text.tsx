@@ -115,7 +115,9 @@ const ExtractText = () => {
 
   return (
     <div className="flex justify-between w-full px-8 gap-8">
-      <div className="container mx-auto py-8">
+
+      <div className="container mx-auto">
+        <h1 className="text-lg font-semibold md:text-2xl py-4">Extracción</h1>
         <UploadFiles 
           files={files}
           handleFileChange={handleFileChange}

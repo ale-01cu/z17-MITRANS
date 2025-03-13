@@ -9,19 +9,19 @@ import {
 } from "recharts"
 
 const classificationData = [
-  { name: "Neutral", value: 45, color: "#94a3b8" },
-  { name: "Positive", value: 30, color: "#22c55e" },
-  { name: "Negative", value: 15, color: "#ef4444" },
-  { name: "Questions", value: 8, color: "#3b82f6" },
-  { name: "Urgent", value: 12, color: "#f97316" },
-]
+  { name: "Neutral", value: 45, color: "#3366FF" },
+  { name: "Positivo", value: 30, color: "#4DABFF" },
+  { name: "Negativo", value: 15, color: "#3D85FF" },
+  { name: "Preguntas", value: 8, color: "#ADDDFF" },
+  { name: "Urgente", value: 12, color: "#CFEAFF" },
+];
 
 const CommentClassification = () => {
-  return ( 
+  return (
     <Card className="lg:col-span-3">
       <CardHeader>
-        <CardTitle>Opinion Classification</CardTitle>
-        <CardDescription>Distribution of opinions by classification type</CardDescription>
+        <CardTitle>Clasificación de Comentarios</CardTitle>
+        <CardDescription>Distribución de comentarios por tipo de clasificación</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={300}>
@@ -47,6 +47,6 @@ const CommentClassification = () => {
       </CardContent>
     </Card>
   );
-}
+};
  
 export default CommentClassification;
