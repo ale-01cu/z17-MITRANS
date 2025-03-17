@@ -25,6 +25,12 @@ class UserAccountManager(BaseUserManager):
         return user
 
 
+ROLE_CHOICES = [
+    ('superuser', 'Super Usuario'),
+    ('manager', 'Gestor'),
+    ('consultant', 'Consultor'),
+]
+
 class UserAccount(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name = 'Cuenta de Usuario'
@@ -66,6 +72,13 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     is_staff = models.BooleanField(
         default=False,
+    )
+
+    role = models.CharField(
+        max_length=10,
+        choices=ROLE_CHOICES,
+        default='consultant',
+        verbose_name="Rol"
     )
 
     create_at = models.DateTimeField(

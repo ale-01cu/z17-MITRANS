@@ -14,5 +14,5 @@ django-simple-history==3.8.0
 
 pandas==2.2.3
 openpyxl==3.1.5
-pyspellchecker==0.8.2
+pysplelchecker==0.8.2
 spacy==3.8.4
