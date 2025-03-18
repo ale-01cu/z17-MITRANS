@@ -5,21 +5,32 @@ import os
 import time
 from img_to_text import img_to_text
 
-dirname = os.path.dirname(__file__)
-image_path = os.path.join(dirname, 'Captura de pantalla (19).png')
-image = cv2.imread(image_path)
-if image is None:
-    print("No se pudo cargar la imagen. Verifica la ruta.")
-    exit()
+def mse(img1, img2):
+    # Calcular el error cuadrático medio de las dos imagenes para saber su similitud
+    error = np.sum((img1.astype("float") - img2.astype("float")) ** 2)
+    error /= float(img1.shape[0] * img1.shape[1])
+    return error
+
+# dirname = os.path.dirname(__file__)
+# image_path = os.path.join(dirname, 'Captura de pantalla (19).png')
+# image = cv2.imread(image_path)
+# if image is None:
+#     print("No se pudo cargar la imagen. Verifica la ruta.")
+#     exit()
 
 counter = 1
 
 print("Bot Running...")
 
+previus_screenshot = None
+chats_reference = None
+current_chat_id = None
+
 while True:
-    # screenshot = pyautogui.screenshot()
-    # frame = np.array(screenshot)  # Convertir a un array NumPy
-    # image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    screenshot = pyautogui.screenshot()
+    frame = np.array(screenshot)  # Convertir a un array NumPy
+    image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
 
     # Convertir el color #0064d1 a formato BGR
     blue_bgr = np.uint8([[[209, 100, 0]]])  # Color en formato BGR (OpenCV usa BGR)
@@ -45,6 +56,10 @@ while True:
     # Aplicar un filtro gaussiano para reducir el ruido
     blurred = cv2.GaussianBlur(mask, (9, 9), 2)
 
+    # cv2.imshow('Regiones Extraídas', mask)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
     # Detectar círculos
     circles = cv2.HoughCircles(
         blurred,
@@ -57,19 +72,33 @@ while True:
         maxRadius=7       # Radio máximo del círculo (ajustado para círculos pequeños)
     )
 
+    # if previus_screenshot:
+    #     previus_screenshot = cv2.resize(previus_screenshot, (image.shape[1], image.shape[0]))
+
+    print("Circles: ", circles)
     if circles is not None:
         circles = np.uint16(np.around(circles))
-        for i in circles[0, :]:
+        width = image.shape[1]
+        threshold_x = int(0.25 * width)  # Umbral para el 25% de la imagen desde la izquierda
+
+        # Filtrar círculos que están en la parte izquierda pero no demasiado cerca del borde
+        filtered_circles = [circle for circle in circles[0, :] if threshold_x // 2 < circle[0] < threshold_x]
+
+        print("filtered circles: ", filtered_circles)
+        for i in filtered_circles:
             x = i[0]
             y = i[1]
             center = (i[0], i[1])  # Coordenadas del centro (x, y)
             radius = i[2]          # Radio del círculo
-            
+
+            if chats_reference is None:
+                chats_reference = center
 
             # Dibujar el círculo y su centro en la imagen original        
             cv2.circle(image, center, 50, (0, 0, 255), 2)  # Círculo rojo con grosor de 2 píxeles
             print(f"Posición del círculo: Centro={center}, Radio={radius}")
 
+            break
             pyautogui.click(center[0] - 100, center[1], duration=1)
 
             # Esperar 1 segundo antes de mover el cursor
@@ -82,15 +111,16 @@ while True:
             print(f"Identificador: {identifier}")
             cv2.imwrite(f'text_roi.png', text_roi)
 
-            # Mover el cursor al centro de la pantalla
-            screen_width, screen_height = pyautogui.size()  # Obtener dimensiones de la pantalla
-            pyautogui.moveTo(screen_width // 2, screen_height // 2)  # Mover al centro de la pantalla
+            current_chat_id = identifier
 
-            # Realizar un scroll hacia arriba
-            #   pyautogui.scroll(100)  # Scroll hacia arriba (valor positivo)
+            # Mover el cursor hacia la zona scroleable del chat
+            pyautogui.moveTo(chats_reference[0], chats_reference[1])
+
 
             time.sleep(1)
 
+            # Realizar un scroll hacia arriba
+            pyautogui.scroll(100)  # Scroll hacia arriba (valor positivo)
             #   pyautogui.scroll(-100)  # Scroll hacia arriba (valor positivo)
         
             screenshot = pyautogui.screenshot()
@@ -104,8 +134,31 @@ while True:
             print(f"Texto extraído: {text_extracted}")
 
             time.sleep(5)
+
+            previus_screenshot = image
+
+    elif previus_screenshot and mse(previus_screenshot, image) > 0:
+        # Comrobar si el texto recibido es muy largo
+
+        # Extraer texto y comprobar si el ultimo exto esxtraido de ese identificador esta en esta imagen
+            # Extrar image text
+            # Buscar si alguna sentencia del texto extraido de la imagen esta en el ultimo texto visto del identificador
+            # del chat en el que se encuentra el bot
+
+
+        # Si no lo esta hacer scroll
+            # EL scroll debe ser lo suficiente como para que no repita contenido
+            # Extraer Texto
+            # Volver a comprobar si alguna sentencia del texto extraido de la imagen esta en el ultimo texto visto del identificador
+            # del chat en el que se encuentra el bot
+
+        # Si lo esta extraer texto
+        text_extracted = img_to_text(image=image)
+        print(f"Texto extraído: {text_extracted}")
+
+
     else:
-        # print("No se encontraron círculos.")
+        # print("Watching...")
         pass
 
 

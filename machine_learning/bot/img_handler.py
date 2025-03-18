@@ -14,7 +14,7 @@ import pytesseract
 """
 
 class ImgHandler:
-    def __init__(self, img_path, image):
+    def __init__(self, img_path = None, image = None):
         self.img_path = img_path
         self.img = image if image is not None else cv2.imread(self.img_path)
         self.color_hex = None
@@ -44,6 +44,25 @@ class ImgHandler:
         self.color_rgb = tuple(int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
         self.color_bgr = self.color_rgb[::-1]
         return self.color_rgb
+
+
+    def to_bgr_color(self, color: list):
+        blue_bgr = np.uint8([[color]])  # Color en formato BGR (OpenCV usa BGR)
+        return blue_bgr
+
+    def from_bgr_to_hsv(self, bgr_color):
+        hsv_color = cv2.cvtColor(bgr_color, cv2.COLOR_BGR2HSV)
+        return hsv_color
+
+
+    def to_hsv_image(self):
+        hsv_image = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+        return hsv_image
+
+
+    def to_blurred_image(self, image, ksize: tuple, sigmaX: int):
+        blurred_image = cv2.GaussianBlur(image, ksize, sigmaX)
+        return blurred_image
 
 
     # Establece un rango de tolerancia para capturar variaciones del color
@@ -79,13 +98,29 @@ class ImgHandler:
         return self.lower_bound, self.upper_bound
 
 
-    def create_mask(self):
+    def create_mask(self, image=None, lower_bound=None, upper_bound=None):
         """
         Crea una máscara binaria para el color objetivo.
 
+        :param image:
+        :param lower_bound: Límite inferior del rango de color (opcional).
+        :param upper_bound: Límite superior del rango de color (opcional).
         :return: Máscara binaria (imagen en escala de grises).
         """
-        self.mask = cv2.inRange(self.img, self.lower_bound, self.upper_bound)
+        # Usar los valores de self si no se proporcionan parámetros
+        if image is None:
+            image = self.img
+        if lower_bound is None:
+            lower_bound = self.lower_bound
+        if upper_bound is None:
+            upper_bound = self.upper_bound
+
+        # Verificar que los valores necesarios estén definidos
+        if lower_bound is None or upper_bound is None:
+            raise ValueError("Los límites inferior y superior deben estar definidos.")
+
+        # Crear la máscara
+        self.mask = cv2.inRange(image, lower_bound, upper_bound)
         return self.mask
 
 
@@ -96,23 +131,25 @@ class ImgHandler:
         :param mask: la máscara.
         :return: Imagen con la máscara y las regiones extraídas.
         """
-        self.result = cv2.bitwise_and(self.img, self.img, mask=mask if mask else self.mask)
+        self.result = cv2.bitwise_and(self.img, self.img,
+                                      mask=mask if mask else self.mask
+                                      )
         return self.result
 
 
-    # def is_text_coherent(self, text):
-    #     """
-    #     Comprueba si el texto es coherente.
+    def is_text_coherent(self, text):
+        """
+        Comprueba si el texto es coherente.
 
-    #     :param text: Texto a comprobar.
-    #     :return: True si el texto es coherente, False en caso contrario.
-    #     """
-    #     dictionary = enchant.Dict("es")  # Diccionario en español
-    #     words = text.split()
-    #     if len(words) < 5:
-    #         return False
-    #     valid_words = [word for word in words if dictionary.check(word)]
-    #     return len(valid_words) / len(words) > 0.8  # Umbral de coherencia
+        :param text: Texto a comprobar.
+        :return: True si el texto es coherente, False en caso contrario.
+        """
+        dictionary = enchant.Dict("es")  # Diccionario en español
+        words = text.split()
+        if len(words) < 5:
+            return False
+        valid_words = [word for word in words if dictionary.check(word)]
+        return len(valid_words) / len(words) > 0.8  # Umbral de coherencia
 
 
     def extract_text(self, image = None):
@@ -126,22 +163,22 @@ class ImgHandler:
         return text
         # result = self.reader.readtext(
         #     self.result if not image else image, lang='spa')
-
+        #
         # counter = 1
-
+        #
         # for item in result:
         #     text = item[1]
         #     isCoherent = self.is_text_coherent(text)
-
+        #
         #     if counter < 8 and isCoherent:
         #         self.possible_usernames.append(text)
         #         counter += 1
-
+        #
         #     if isCoherent and len(text) > 20:
         #         self.coherent_messages.append(text)
-
+        #
         #     self.all_messages.append(text)
-
+        #
         # return {
         #     'possible_usernames': self.possible_usernames,
         #     'all_messages': self.all_messages,
@@ -168,3 +205,28 @@ class ImgHandler:
         else:
             return False
 
+
+    # Calcular el error cuadrático medio de las dos imagenes para saber su similitud
+    def similarity_by_mse(self, new_img):
+        new_img = cv2.resize(new_img, (self.img.shape[1], self.img.shape[0]))
+        error = np.sum((new_img.astype("float") - self.img.astype("float")) ** 2)
+        error /= float(new_img.shape[0] * new_img.shape[1])
+        return error
+
+
+
+    def detect_circles(self, image, dp=1, minDist=10, param1=50,
+                       param2=20, minRadius=5, maxRadius=7 ):
+
+        circles = cv2.HoughCircles(
+            image,
+            cv2.HOUGH_GRADIENT,
+            dp=dp,
+            minDist=minDist,  # Distancia mínima entre centros de círculos
+            param1=param1,  # Sensibilidad del detector de bordes
+            param2=param2,  # Umbral para detectar círculos (reduce para círculos pequeños)
+            minRadius=minRadius,  # Radio mínimo del círculo (ajustado para círculos pequeños)
+            maxRadius=maxRadius  # Radio máximo del círculo (ajustado para círculos pequeños)
+        )
+
+        return circles
