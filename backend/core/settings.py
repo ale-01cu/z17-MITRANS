@@ -48,6 +48,7 @@ LOCAL_APPS = [
     'apps.classification',
     'apps.post',
     'apps.source',
+    'apps.img_process'
 ]
 
 THIRD_APPS = [
