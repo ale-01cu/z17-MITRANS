@@ -3,22 +3,23 @@ import numpy as np
 import pyautogui
 import os
 import time
+from img_to_text import img_to_text
 
-# dirname = os.path.dirname(__file__)
-# image_path = os.path.join(dirname, 'Captura de pantalla (19).png')
-# image = cv2.imread(image_path)
-# if image is None:
-#     print("No se pudo cargar la imagen. Verifica la ruta.")
-#     exit()
+dirname = os.path.dirname(__file__)
+image_path = os.path.join(dirname, 'Captura de pantalla (19).png')
+image = cv2.imread(image_path)
+if image is None:
+    print("No se pudo cargar la imagen. Verifica la ruta.")
+    exit()
 
 counter = 1
 
 print("Bot Running...")
 
 while True:
-    screenshot = pyautogui.screenshot()
-    frame = np.array(screenshot)  # Convertir a un array NumPy
-    image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    # screenshot = pyautogui.screenshot()
+    # frame = np.array(screenshot)  # Convertir a un array NumPy
+    # image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
     # Convertir el color #0064d1 a formato BGR
     blue_bgr = np.uint8([[[209, 100, 0]]])  # Color en formato BGR (OpenCV usa BGR)
@@ -77,8 +78,9 @@ while True:
             # Extract Identifier
             circle_x, circle_y = x, y
             text_roi = image[circle_y - 50:circle_y, circle_x - 250:circle_x - 80]
-            # identifier = img_to_text(image=text_roi)
-            # cv2.imwrite(f'text_roi.png', text_roi)
+            identifier = img_to_text(image=text_roi)
+            print(f"Identificador: {identifier}")
+            cv2.imwrite(f'text_roi.png', text_roi)
 
             # Mover el cursor al centro de la pantalla
             screen_width, screen_height = pyautogui.size()  # Obtener dimensiones de la pantalla
@@ -98,11 +100,13 @@ while True:
             screenshot.save(f'screenshot{counter}.png')
             counter += 1
 
-            # img_to_text(image=image)
+            text_extracted = img_to_text(image=image)
+            print(f"Texto extraído: {text_extracted}")
 
             time.sleep(5)
     else:
-        print("No se encontraron círculos.")
+        # print("No se encontraron círculos.")
+        pass
 
 
     time.sleep(1)

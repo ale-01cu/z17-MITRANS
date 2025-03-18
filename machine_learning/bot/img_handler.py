@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
-import enchant
-import easyocr
+# import enchant
+# import easyocr
+import pytesseract
 
 """
 
@@ -15,7 +16,7 @@ import easyocr
 class ImgHandler:
     def __init__(self, img_path, image):
         self.img_path = img_path
-        self.img = image if image else cv2.imread(self.img_path)
+        self.img = image if image is not None else cv2.imread(self.img_path)
         self.color_hex = None
         self.color_rgb = None
         self.color_bgr = None
@@ -26,7 +27,8 @@ class ImgHandler:
         self.possible_usernames = []
         self.all_messages = []
         self.coherent_messages = []
-        self.reader = easyocr.Reader(['es'], gpu=True)
+        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        # self.reader = easyocr.Reader(['es'], gpu=True)
 
         if self.img is None:
             raise Exception("No se pudo cargar la imagen. Verifica la ruta.")
@@ -98,19 +100,19 @@ class ImgHandler:
         return self.result
 
 
-    def is_text_coherent(self, text):
-        """
-        Comprueba si el texto es coherente.
+    # def is_text_coherent(self, text):
+    #     """
+    #     Comprueba si el texto es coherente.
 
-        :param text: Texto a comprobar.
-        :return: True si el texto es coherente, False en caso contrario.
-        """
-        dictionary = enchant.Dict("es")  # Diccionario en español
-        words = text.split()
-        if len(words) < 5:
-            return False
-        valid_words = [word for word in words if dictionary.check(word)]
-        return len(valid_words) / len(words) > 0.8  # Umbral de coherencia
+    #     :param text: Texto a comprobar.
+    #     :return: True si el texto es coherente, False en caso contrario.
+    #     """
+    #     dictionary = enchant.Dict("es")  # Diccionario en español
+    #     words = text.split()
+    #     if len(words) < 5:
+    #         return False
+    #     valid_words = [word for word in words if dictionary.check(word)]
+    #     return len(valid_words) / len(words) > 0.8  # Umbral de coherencia
 
 
     def extract_text(self, image = None):
@@ -119,29 +121,32 @@ class ImgHandler:
 
         :return: Texto extraído de la imagen.
         """
-        result = self.reader.readtext(
-            self.result if not image else image, lang='spa')
+        
+        text = pytesseract.image_to_string(self.result if not image else image)
+        return text
+        # result = self.reader.readtext(
+        #     self.result if not image else image, lang='spa')
 
-        counter = 1
+        # counter = 1
 
-        for item in result:
-            text = item[1]
-            isCoherent = self.is_text_coherent(text)
+        # for item in result:
+        #     text = item[1]
+        #     isCoherent = self.is_text_coherent(text)
 
-            if counter < 8 and isCoherent:
-                self.possible_usernames.append(text)
-                counter += 1
+        #     if counter < 8 and isCoherent:
+        #         self.possible_usernames.append(text)
+        #         counter += 1
 
-            if isCoherent and len(text) > 20:
-                self.coherent_messages.append(text)
+        #     if isCoherent and len(text) > 20:
+        #         self.coherent_messages.append(text)
 
-            self.all_messages.append(text)
+        #     self.all_messages.append(text)
 
-        return {
-            'possible_usernames': self.possible_usernames,
-            'all_messages': self.all_messages,
-            'coherent_messages': self.coherent_messages
-        }
+        # return {
+        #     'possible_usernames': self.possible_usernames,
+        #     'all_messages': self.all_messages,
+        #     'coherent_messages': self.coherent_messages
+        # }
 
 
     def save_results(self, output_path='result.png'):

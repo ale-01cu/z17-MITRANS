@@ -36,7 +36,7 @@ CONFIG = {
 
 
 def img_to_text(image_path=IMG_PATH, image=None):
-    img = ImgHandler(image_path=image_path, image=image)
+    img = ImgHandler(img_path=image_path, image=image)
     is_dark_mode = img.is_dark_mode()
     mode = 'DARK_IMG_TEXT_BG' if is_dark_mode else 'LIGHT_IMG_TEXT_BG'
 
@@ -54,7 +54,7 @@ def img_to_text(image_path=IMG_PATH, image=None):
     img.create_result()
     img.save_results()
     texts = img.extract_text()
-    print(texts)
+    return texts
 
 
 def main():
