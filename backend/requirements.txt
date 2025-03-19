@@ -12,6 +12,9 @@ drf-spectacular==0.28.0
 
 django-simple-history==3.8.0
 
+celery==5.4.0
+redis==5.2.1
+
 pandas==2.2.3
 #openpyxl==3.1.5
 #pyspellchecker==0.8.1
