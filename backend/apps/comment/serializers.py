@@ -13,21 +13,21 @@ class CommentSerializer(serializers.ModelSerializer):
 
     user_owner_id = serializers.CharField(max_length=50, write_only=True, required=False)
     user_owner_name = serializers.CharField(max_length=50, write_only=True, required=False)
-    user_owner_detail = UserOwnerSerializer(read_only=True)
+    user_owner = UserOwnerSerializer(read_only=True)
 
     source_id = serializers.CharField(max_length=50, write_only=True)
-    source_detail = SourceSerializer(read_only=True)
+    source = SourceSerializer(read_only=True)
 
     class Meta:
         model = Comment
         fields = ['id', 'text', 'classification',
                   'user', 'created_at', 'user_owner_id',
-                  'user_owner_name', 'user_owner_detail',
-                  'source_id', 'source_detail'
+                  'user_owner_name', 'user_owner',
+                  'source_id', 'source'
                   ]
 
         read_only_fields = ['id', 'created_at', 'user',
-                            'user_owner_detail', 'source_detail'
+                            'user_owner', 'source'
                             ]
 
 
@@ -72,6 +72,55 @@ class CommentSerializer(serializers.ModelSerializer):
             **validated_data
         )
         return comment
+
+
+    def update(self, instance, validated_data):
+        # Si el campo 'id' está presente en los datos validados, lo interpretamos como external_id
+        if 'user_owner_id' in validated_data:
+            external_id = validated_data.pop('user_owner_id')
+            try:
+                # Buscamos el objeto por external_id y actualizamos la instancia
+                user_owner = UserOwner.objects.get(external_id=external_id)
+                instance.user_owner = user_owner
+            except UserOwner.DoesNotExist:
+                raise serializers.ValidationError({
+                    'id': f'No existe un UserOwner con external_id={external_id}.'
+                })
+
+        elif 'user_owner_name' in validated_data:
+            name = validated_data.pop('user_owner_name')
+            try:
+                # Buscamos el objeto por external_id y actualizamos la instancia
+                user_owner, created = UserOwner.objects.get_or_create(name=name)
+
+                if not created:
+                    instance.user_owner = None
+                    raise serializers.ValidationError({
+                        'id': f'No se pudo crear un nuevo usuario propietario con name={name}.'
+                    })
+
+                instance.user_owner = user_owner
+
+            except UserOwner.DoesNotExist:
+                raise serializers.ValidationError({
+                    'id': f'No existe un UserOwner con name={name}.'
+                })
+
+        else: instance.user_owner = None
+
+        if 'source_id' in validated_data:
+            external_id = validated_data.pop('source_id')
+            try:
+                # Buscamos el objeto por external_id y actualizamos la instancia
+                source = Source.objects.get(external_id=external_id)
+                instance.source = source
+            except Source.DoesNotExist:
+                raise serializers.ValidationError({
+                    'id': f'No existe un source con external_id={external_id}.'
+                })
+
+        # Actualizamos la instancia con los datos validados
+        return super().update(instance, validated_data)
 
 
     def to_representation(self, instance):

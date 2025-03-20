@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,7 @@ interface DeleteConfirmationProps {
   onConfirm: () => void
   title: string
   description: string
+  isLoading: boolean
 }
 
 export default function DeleteConfirmation({
@@ -23,7 +25,9 @@ export default function DeleteConfirmation({
   onConfirm,
   title,
   description,
+  isLoading
 }: DeleteConfirmationProps) {
+
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -32,11 +36,14 @@ export default function DeleteConfirmation({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel className="cursor-pointer">
+            Cancelar
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-white"
+            className="bg-destructive cursor-pointer hover:bg-destructive/90 text-white"
           >
+            {isLoading && <Loader2 />}
             Eliminar
           </AlertDialogAction>
         </AlertDialogFooter>

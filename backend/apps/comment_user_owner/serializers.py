@@ -11,3 +11,4 @@ class UserOwnerSerializer(serializers.ModelSerializer):
 
     def get_id(self, obj):
         return obj.external_id
+

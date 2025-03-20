@@ -1,27 +1,25 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { use, useEffect, useState } from "react";
 import listUserOwnerApi from "~/api/user-owner/list-user-owner-api";
-import type { userOwner } from "~/types/user-owner";
+import type { UserOwner } from "~/types/user-owner";
 
 
 interface UserOwnerSelectorProps {
   value: string
   handleChange: (value: string) => void,
   error?: boolean
+  isFilter?: boolean
 }
 
 
-const UserOwnerSelector = ({ value, handleChange, error }: UserOwnerSelectorProps) => {
-  const [ users, setUsers ] = useState<userOwner[]>([])
+const UserOwnerSelector = ({ value, handleChange, error, isFilter = false }: UserOwnerSelectorProps) => {
+  const [ users, setUsers ] = useState<UserOwner[]>([])
 
   useEffect(() => {
     listUserOwnerApi()
       .then(data => setUsers(data.results))
       .catch(e => console.error(e))
   }, [])
-
-  console.log({users});
-  
 
   return ( 
     <div>
@@ -30,8 +28,9 @@ const UserOwnerSelector = ({ value, handleChange, error }: UserOwnerSelectorProp
           <SelectValue placeholder="Seleccione un usuario" />
         </SelectTrigger>
         <SelectContent>
+          {isFilter && <SelectItem value="all">Todos las usuarios</SelectItem>}
           {users.map((user) => (
-            <SelectItem key={user.id} value={user.name}>
+            <SelectItem key={user.id} value={user.id}>
               {user.name}
             </SelectItem>
           ))}

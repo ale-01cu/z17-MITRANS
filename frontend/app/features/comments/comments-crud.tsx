@@ -1,19 +1,25 @@
 import { useState, useEffect } from "react"
 import { Input } from "~/components/ui/input"
 import { Button } from "~/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table"
-import { Search, Plus, Edit, Trash2 } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 import CommentForm from "./comment-form"
 import DeleteConfirmation from "./delete-confirmation"
-import type { Comment, User, Source } from "~/types/comments"
-import { getComments, getUsers, getSources, createComment, updateComment, deleteComment } from "~/lib/comment-api"
+import type { Comment, User, CommentServerResponse } from "~/types/comments"
+import type { Source } from "~/types/source"
+import { getUsers, getSources } from "~/lib/comment-api"
 import createCommentApi from "~/api/comments/create-comment-api"
+import CommentsListTable from "./comments-list-table"
+import listCommentsApi from "~/api/comments/list-comments-api"
+import deleteCommentApi from "~/api/comments/delete-comment-api"
+import SourceSelector from "~/components/source/sources-selector"
+import UserOwnerSelector from "~/components/user-owner/user-owner-selector"
+import updateCommentApi from "~/api/comments/update-comment-api"
+
 
 export default function CommentsCrud() {
-  const [comments, setComments] = useState<Comment[]>([])
-  const [filteredComments, setFilteredComments] = useState<Comment[]>([])
+  const [comments, setComments] = useState<CommentServerResponse[]>([])
+  const [filteredComments, setFilteredComments] = useState<CommentServerResponse[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [sources, setSources] = useState<Source[]>([])
   const [selectedUser, setSelectedUser] = useState<string>("")
@@ -22,17 +28,23 @@ export default function CommentsCrud() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [currentComment, setCurrentComment] = useState<Comment | null>(null)
+  const [currentComment, setCurrentComment] = useState<CommentServerResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [ deleteIsLoading, setDeleteIsLoading ] = useState<boolean>(false)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [commentsData, usersData, sourcesData] = await Promise.all([
-          getComments(), getUsers(), getSources()
+        const [usersData, sourcesData] = await Promise.all([
+          getUsers(), getSources()
         ])
-        setComments(commentsData)
-        setFilteredComments(commentsData)
+        listCommentsApi()
+          .then(data => {
+            setComments(data.results)
+            setFilteredComments(data.results)
+          })
+          .catch(e => console.error(e))
+
         setUsers(usersData)
         setSources(sourcesData)
 
@@ -49,27 +61,16 @@ export default function CommentsCrud() {
   }, [])
 
   useEffect(() => {
-    let result = [...comments]
+    const term = searchTerm?.toLowerCase() || ""
 
-    if (selectedUser) {
-      result = result.filter((comment) => comment.user_name === selectedUser)
-    }
-
-    if (selectedSource) {
-      result = result.filter((comment) => comment.user_name === selectedSource)
-    }
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      result = result.filter(
-        (comment) =>
-          comment.text.toLowerCase().includes(term) ||
-          comment.user_name.toLowerCase().includes(term) ||
-          comment.source.toLowerCase().includes(term),
-      )
-    }
-``
-    setFilteredComments(result)
+    listCommentsApi({ 
+      query: term, 
+      sourceId: selectedSource === 'all' ? '' : selectedSource, 
+      userOwnerId: selectedUser === 'all' ? '' : selectedUser 
+    })
+      .then(data => setFilteredComments(data.results))
+      .catch(e => console.error(e))
+      
   }, [comments, selectedUser, selectedSource, searchTerm])
 
   const handleCreateComment = async (data: Omit<Comment, "id">) => {
@@ -84,9 +85,17 @@ export default function CommentsCrud() {
 
   const handleUpdateComment = async (data: Comment) => {
     try {
-      const updatedComment = await updateComment(data)
-      setComments((prev) => prev.map((comment) => (comment.id === updatedComment.id ? updatedComment : comment)))
-      setIsEditOpen(false)
+      await updateCommentApi(data)
+        .then(data => {
+          setComments(prev => {
+            return prev.map(comment => 
+                comment.id === data.id ? data : comment
+            );
+          });
+          setIsEditOpen(false)
+        })
+        .catch(e => console.error(e))
+
     } catch (error) {
       console.error("Error updating comment:", error)
     }
@@ -94,20 +103,24 @@ export default function CommentsCrud() {
 
   const handleDeleteComment = async (id: string) => {
     try {
-      await deleteComment(id)
-      setComments((prev) => prev.filter((comment) => comment.id !== id))
+      setDeleteIsLoading(true)
+      await deleteCommentApi(id)
+      setComments((prev) => 
+        prev.filter((comment) => comment.id !== id))
       setIsDeleteOpen(false)
+      
     } catch (error) {
       console.error("Error deleting comment:", error)
-    }
+    
+    } finally { setDeleteIsLoading(false) }
   }
 
-  const openEditDialog = (comment: Comment) => {
+  const openEditDialog = (comment: CommentServerResponse) => {
     setCurrentComment(comment)
     setIsEditOpen(true)
   }
 
-  const openDeleteDialog = (comment: Comment) => {
+  const openDeleteDialog = (comment: CommentServerResponse) => {
     setCurrentComment(comment)
     setIsDeleteOpen(true)
   }
@@ -132,80 +145,28 @@ export default function CommentsCrud() {
             />
           </div>
 
-          <Select value={selectedUser} onValueChange={setSelectedUser}>
-            <SelectTrigger className="w-full md:w-40">
-              <SelectValue placeholder="Usuario" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los usuarios</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.id} value={user.username}>
-                  {user.username}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <UserOwnerSelector
+            value={selectedUser}
+            handleChange={setSelectedUser}
+            isFilter
+          />
 
-          <Select value={selectedSource} onValueChange={setSelectedSource}>
-            <SelectTrigger className="w-full md:w-40">
-              <SelectValue placeholder="Fuente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las fuentes</SelectItem>
-              {sources.map((source) => (
-                <SelectItem key={source.id} value={source.name}>
-                  {source.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SourceSelector
+            value={selectedSource}
+            handleChange={setSelectedSource}
+            isFilter
+          />
+
         </div>
       </div>
 
       <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Texto</TableHead>
-              <TableHead>Usuario</TableHead>
-              <TableHead>Fuente</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-10">
-                  Cargando comentarios...
-                </TableCell>
-              </TableRow>
-            ) : filteredComments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-10">
-                  No se encontraron comentarios
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredComments.map((comment) => (
-                <TableRow key={comment.id}>
-                  <TableCell className="max-w-md truncate">{comment.text}</TableCell>
-                  <TableCell>{comment.user_name}</TableCell>
-                  <TableCell>{comment.source}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="icon" onClick={() => openEditDialog(comment)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={() => openDeleteDialog(comment)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <CommentsListTable
+          filteredComments={filteredComments}
+          isLoading={isLoading}
+          openEditDialog={openEditDialog}
+          openDeleteDialog={openDeleteDialog}
+        />
       </div>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -244,6 +205,7 @@ export default function CommentsCrud() {
       <DeleteConfirmation
         isOpen={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
+        isLoading={deleteIsLoading}
         onConfirm={() => currentComment && handleDeleteComment(currentComment.id)}
         title="Eliminar Comentario"
         description="¿Está seguro que desea eliminar este comentario? Esta acción no se puede deshacer."

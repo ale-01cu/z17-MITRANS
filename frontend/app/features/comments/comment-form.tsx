@@ -4,14 +4,15 @@ import { Button } from "~/components/ui/button"
 import { Textarea } from "~/components/ui/textarea"
 import { Label } from "~/components/ui/label"
 import { DialogFooter } from "~/components/ui/dialog"
-import type { Comment, User, Source } from "~/types/comments"
+import type { Comment, User, CommentServerResponse } from "~/types/comments"
+import type { Source } from "~/types/source"
 import SourceSelector from "~/components/source/sources-selector"
 import { Input } from "~/components/ui/input"
 import { Loader2, Plus, TextSelect } from "lucide-react"
 import UserOwnerSelector from "~/components/user-owner/user-owner-selector"
 
 interface CommentFormProps {
-  comment?: Comment
+  comment?: CommentServerResponse
   users: User[]
   sources: Source[]
   onSubmit: (data: any) => Promise<void>
@@ -24,16 +25,16 @@ export default function CommentForm({ comment, users, onSubmit, onCancel }: Comm
   const [formData, setFormData] = useState({
     id: comment?.id || "",
     text: comment?.text || "",
-    user_id: comment?.user_id || "",
-    user_name: comment?.user_name || "",
-    source: comment?.source || "",
+    user_owner_id: comment?.user_owner.id || "",
+    user_owner_name: comment?.user_owner.name || "",
+    source_id: comment?.source.id || "",
   })
 
   const [errors, setErrors] = useState({
     text: false,
-    user_id: false,
-    user_name: false,
-    source: false,
+    user_owner_id: false,
+    user_owner_name: false,
+    source_id: false,
   })
 
   const handleChange = (field: string, value: string) => {
@@ -54,14 +55,14 @@ export default function CommentForm({ comment, users, onSubmit, onCancel }: Comm
   const validateForm = () => {
     const newErrors = {
       text: !formData.text.trim(),
-      user_id: !formData.user_id,
-      user_name: !formData.user_name,
-      source: !formData.source,
+      user_owner_id: !formData.user_owner_id,
+      user_owner_name: !formData.user_owner_name,
+      source_id: !formData.source_id,
     }
 
-    if (newErrors.user_id || newErrors.user_name) {
-      newErrors.user_id = false
-      newErrors.user_name = false
+    if (newErrors.user_owner_id || newErrors.user_owner_name) {
+      newErrors.user_owner_id = false
+      newErrors.user_owner_name = false
     }
 
     setErrors(newErrors)
@@ -103,21 +104,21 @@ export default function CommentForm({ comment, users, onSubmit, onCancel }: Comm
           </Label>
 
           <div className="flex gap-2">
-            <div className="flex-1">
+            <div className="flex-3">
               {isPlusActive 
                 ? 
                   <Input 
                     placeholder="Introduzca al usuario" 
-                    value={formData.user_name} 
-                    onChange={(v) => handleChange("user", v.target.value)}
+                    value={formData.user_owner_name} 
+                    onChange={(v) => handleChange("user_owner_name", v.target.value)}
                     className=""
                   />
 
                 :
                   <UserOwnerSelector
-                    value={formData.user_id} 
-                    handleChange={(value) => handleChange("user_id", value)} 
-                    error={errors.user_id}
+                    value={formData.user_owner_id} 
+                    handleChange={(value) => handleChange("user_owner_id", value)} 
+                    error={errors.user_owner_id}
                   />
               }
               
@@ -130,7 +131,7 @@ export default function CommentForm({ comment, users, onSubmit, onCancel }: Comm
             >
               {isPlusActive 
                 ? <div className="flex gap-2 items-center"><TextSelect/>Seleccionar Usuario</div>
-                : <div className="flex gap-2 items-center"><Plus/>Agregar usuario</div>
+                : <div className="flex gap-2 items-center"><Plus/>Nuevo</div>
               }
             </Button>
           </div>
@@ -138,9 +139,9 @@ export default function CommentForm({ comment, users, onSubmit, onCancel }: Comm
 
 
         <SourceSelector 
-          value={formData.source} 
-          handleChange={(value) => handleChange("source", value)} 
-          sourceError={errors.source} 
+          value={formData.source_id} 
+          handleChange={(value) => handleChange("source_id", value)} 
+          sourceError={errors.source_id} 
         />
       </div>
 

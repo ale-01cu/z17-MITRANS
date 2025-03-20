@@ -1,9 +1,12 @@
+import { type UserOwner } from "./user-owner"
+import { type Source } from "./source"
+
 export interface Comment {
   id: string
   text: string
-  user_id: string
-  user_name: string
-  source: string
+  user_owner_id: string
+  user_owner_name: string
+  source_id: string
 }
 
 export interface User {
@@ -11,8 +14,13 @@ export interface User {
   username: string
 }
 
-export interface Source {
+export interface CommentServerResponse {
   id: string
-  name: string
-}
+  text: string
+  classification: number
+  user: User
+  user_owner: UserOwner
+  source: Source
+  created_at: string
 
+}

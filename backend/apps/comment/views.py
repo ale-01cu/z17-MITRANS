@@ -13,7 +13,7 @@ from apps.classification.models import Classification
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
-    queryset = CommentSerializer.Meta.model.objects.all()
+    queryset = CommentSerializer.Meta.model.objects.all().order_by('-created_at')
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = ResultsSetPagination
@@ -24,11 +24,15 @@ class CommentAPIView(viewsets.ModelViewSet):
         'text',
         'post__content',
         'classification__name',
+        # 'user_owner_id',
+        # 'source_id',
     ]
 
     filterset_fields = {
         'created_at': ['gte', 'lte', 'exact'],
         'classification__name': ['exact'],
+        'user_owner__external_id': ['exact'],
+        'source__external_id': ['exact'],
     }
 
     def perform_create(self, serializer):
