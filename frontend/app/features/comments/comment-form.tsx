@@ -14,7 +14,6 @@ import ClassificationsSelector from "~/components/classification/classifications
 
 interface CommentFormProps {
   comment?: CommentServerResponse
-  sources: Source[]
   onSubmit: (data: any) => Promise<void>
   onCancel: () => void,
 }

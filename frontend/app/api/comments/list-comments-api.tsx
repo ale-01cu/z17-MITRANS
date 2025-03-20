@@ -5,7 +5,8 @@ import type { CommentServerResponse } from "~/types/comments";
 interface Params {
   query?: string,
   userOwnerId?: string,
-  sourceId?: string
+  sourceId?: string,
+  page?: number
 }
 
 interface Response {
@@ -13,17 +14,30 @@ interface Response {
   next: string
   previous: string,
   results: CommentServerResponse[]
+  pages: number
 }
 
+const PAGE_SIZE = 100
+
 export default async function listCommentsApi(
-  { query, userOwnerId, sourceId }: Params = {}): Promise<Response> 
+  { query, userOwnerId, sourceId, page }: Params = {}): Promise<Response> 
 {
   const response = await Axios.get(API_COMMENTS, { 
     params: { 
       search: query, 
       user_owner__external_id: userOwnerId, 
-      source__external_id: sourceId 
+      source__external_id: sourceId,
+      page_size: PAGE_SIZE,
+      page
     } 
   });
-  return response.data;
+
+  const data = response.data
+
+  const res = {
+    ...data,
+    pages: Math.ceil(data.count / PAGE_SIZE)
+  }
+
+  return res;
 }

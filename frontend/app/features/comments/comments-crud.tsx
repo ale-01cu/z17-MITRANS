@@ -15,13 +15,14 @@ import deleteCommentApi from "~/api/comments/delete-comment-api"
 import SourceSelector from "~/components/source/sources-selector"
 import UserOwnerSelector from "~/components/user-owner/user-owner-selector"
 import updateCommentApi from "~/api/comments/update-comment-api"
+import { Card } from "~/components/ui/card"
+import CommentListPagination from "./comment-list-pagination"
+import { useLocation, useSearchParams } from "react-router"
 
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
   const [filteredComments, setFilteredComments] = useState<CommentServerResponse[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [sources, setSources] = useState<Source[]>([])
   const [selectedUser, setSelectedUser] = useState<string>("")
   const [selectedSource, setSelectedSource] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState<string>("")
@@ -31,22 +32,20 @@ export default function CommentsCrud() {
   const [currentComment, setCurrentComment] = useState<CommentServerResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [ deleteIsLoading, setDeleteIsLoading ] = useState<boolean>(false)
+  const [ pages, setPages ] = useState<number>(0)
+  const [searchParams, _] = useSearchParams();
+  const currentPage = Number(searchParams.get("page") || 1)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersData, sourcesData] = await Promise.all([
-          getUsers(), getSources()
-        ])
-        listCommentsApi()
+        listCommentsApi({ page: currentPage })
           .then(data => {
             setComments(data.results)
             setFilteredComments(data.results)
+            setPages(data.pages)
           })
           .catch(e => console.error(e))
-
-        setUsers(usersData)
-        setSources(sourcesData)
 
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -58,7 +57,7 @@ export default function CommentsCrud() {
     }
 
     fetchData()
-  }, [])
+  }, [currentPage])
 
   useEffect(() => {
     const term = searchTerm?.toLowerCase() || ""
@@ -66,12 +65,16 @@ export default function CommentsCrud() {
     listCommentsApi({ 
       query: term, 
       sourceId: selectedSource === 'all' ? '' : selectedSource, 
-      userOwnerId: selectedUser === 'all' ? '' : selectedUser 
+      userOwnerId: selectedUser === 'all' ? '' : selectedUser,
+      page: currentPage
     })
-      .then(data => setFilteredComments(data.results))
+      .then(data => {
+        setFilteredComments(data.results)
+        setPages(data.pages)
+      })
       .catch(e => console.error(e))
       
-  }, [comments, selectedUser, selectedSource, searchTerm])
+  }, [comments, selectedUser, selectedSource, searchTerm, currentPage])
 
   const handleCreateComment = async (data: Omit<Comment, "id">) => {
     try {
@@ -125,52 +128,57 @@ export default function CommentsCrud() {
     setIsDeleteOpen(true)
   }
 
-  console.log({filteredComments});
-  
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:justify-between md:items-center">
-        <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Nuevo Comentario
-        </Button>
+    <div className="space-y-6 flex gap-6">
 
-        <div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar comentarios..."
-              className="pl-8 w-48"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <UserOwnerSelector
-            value={selectedUser}
-            handleChange={setSelectedUser}
-            className="w-52"
-            isFilter
-          />
-
-          <SourceSelector
-            value={selectedSource}
-            handleChange={setSelectedSource}
-            className="w-52"
-            isFilter
-          />
-
-        </div>
-      </div>
-
-      <div className="border rounded-md">
+      <Card className="rounded-md flex-3">
         <CommentsListTable
           filteredComments={filteredComments}
           isLoading={isLoading}
           openEditDialog={openEditDialog}
           openDeleteDialog={openDeleteDialog}
         />
+        <CommentListPagination
+          nextUrl={`/comment?page=${currentPage+1}`}
+          previousUrl={`/comment?page=${currentPage-1}`}
+          pages={pages}
+          showPages={5}
+          currentPage={currentPage}
+        />
+      </Card>
+
+      <div className="w-[278px]">
+        <Card className="flex-1 flex flex-col p-4 gap-4 fixed top-6 right-6 bottom-6">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar comentarios..."
+              className="pl-8 w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" /> Nuevo Comentario
+          </Button>
+
+          <UserOwnerSelector
+            value={selectedUser}
+            handleChange={setSelectedUser}
+            className="w-full"
+            isFilter
+          />
+
+          <SourceSelector
+            value={selectedSource}
+            handleChange={setSelectedSource}
+            className="w-full"
+            isFilter
+          />
+        </Card>
       </div>
+      
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">
@@ -179,7 +187,6 @@ export default function CommentsCrud() {
             <DialogDescription>Complete el formulario para crear un nuevo comentario.</DialogDescription>
           </DialogHeader>
           <CommentForm
-            sources={sources}
             onSubmit={handleCreateComment}
             onCancel={() => setIsCreateOpen(false)}
           />
@@ -194,7 +201,6 @@ export default function CommentsCrud() {
           </DialogHeader>
           {currentComment && (
             <CommentForm
-              sources={sources}
               comment={currentComment}
               onSubmit={handleUpdateComment}
               onCancel={() => setIsEditOpen(false)}
