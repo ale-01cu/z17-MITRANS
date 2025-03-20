@@ -24,6 +24,15 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         verbose_name="Usuario"
     )
+
+    user_owner = models.ForeignKey(
+        'comment_user_owner.UserOwner',
+        on_delete=models.CASCADE,
+        verbose_name="Usuario Propietario",
+        default=None,
+        null=True
+    )
+
     post = models.ForeignKey(
         'post.Post',
         on_delete=models.CASCADE,

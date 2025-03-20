@@ -55,6 +55,35 @@ while True:
     # Aplicar un filtro gaussiano para reducir el ruido
     blurred = cv2.GaussianBlur(mask, (9, 9), 2)
 
+    # cv2.imshow('Blurred', blurred)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    # Detectar bordes usando Canny
+    edges = cv2.Canny(blurred, threshold1=50, threshold2=150)
+
+    # Encontrar contornos
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        # Aproximar el contorno a una forma cerrada
+        perimeter = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.01 * perimeter, True)
+
+        # Si el contorno tiene suficientes vértices para ser un círculo
+        if len(approx) > 8:  # Un círculo tiene muchos vértices
+            # Obtener el círculo mínimo que encierra el contorno
+            (x, y), radius = cv2.minEnclosingCircle(contour)
+            center = (int(x), int(y))
+            radius = int(radius)
+
+            # Dibujar el círculo en la imagen original
+            if radius > 5 and radius < 20:  # Filtrar por tamaño
+                cv2.circle(image, center, radius, (0, 255, 0), 2)
+                threshold_x = int(0.25 * (radius * 2))  # Umbral para el 25% de la imagen desde la izquierda
+                if threshold_x // 2 < center[0] < threshold_x:
+                    print(f"Círculo encontrado en: x={center[0]}, y={center[1]}")
+
     # Detectar círculos
     circles = cv2.HoughCircles(
         blurred,
@@ -150,7 +179,6 @@ while True:
         # Si lo esta extraer texto
         text_extracted = img_to_text(image=image)
         print(f"Texto extraído: {text_extracted}")
-
 
     else:
         # print("Watching...")

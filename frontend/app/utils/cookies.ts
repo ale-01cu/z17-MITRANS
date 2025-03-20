@@ -5,6 +5,7 @@ export const setCookie = (name: string, value: string, days: number) => {
 };
 
 export const getCookie = (name: string) => {
+  if(typeof window === "undefined") return null
   const nameEQ = `${name}=`;
   const ca = document.cookie.split(";");
   for (let i = 0; i < ca.length; i++) {

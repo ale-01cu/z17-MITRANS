@@ -35,5 +35,7 @@ urlpatterns = [
     path('api/comment/', include('apps.comment.urls')),
     path('api/classification/', include('apps.classification.urls')),
     path('api/post/', include('apps.post.urls')),
+    path('api/source/', include('apps.source.urls')),
     path('api/img-proc/', include('apps.img_process.urls')),
+    path('api/user-owner/', include('apps.comment_user_owner.urls')),
 ]

@@ -1,22 +1,23 @@
 import type { Route } from "./+types/protected-route";
 import { Outlet, redirect } from "react-router";
-import { getCookieFromCookies } from "~/utils/cookies";
+import { getCookieFromCookies, getCookie } from "~/utils/cookies";
 import postVerifyApi from "~/api/auth/post-verify-api";
 
-export const clientLoader = async ({ request }: Route.LoaderArgs) => {
+export const clientLoader = async ({ request }: Route.ClientLoaderArgs) => {
   try {
-    const cookie = request.headers.get("cookie");
-    const token = getCookieFromCookies("access", cookie);
-    await postVerifyApi(token)
+    const token = getCookie("access");
+    await postVerifyApi(token);
+    return true
     
   } catch (error) {
-    console.log({error})
+    console.log(error)
     return redirect("/signin");
     
   }
 }
 
 
-export default function ProtectedRoute({}: Route.ComponentProps) {
+export default function ProtectedRoute({ loaderData }: Route.ComponentProps) { 
+  if(!loaderData) return null
   return <Outlet />;
 }

@@ -48,7 +48,8 @@ LOCAL_APPS = [
     'apps.classification',
     'apps.post',
     'apps.source',
-    'apps.img_process'
+    'apps.img_process',
+    'apps.comment_user_owner',
 ]
 
 THIRD_APPS = [
@@ -150,7 +151,7 @@ REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly'
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

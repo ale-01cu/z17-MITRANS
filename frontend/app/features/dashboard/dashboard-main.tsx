@@ -22,7 +22,7 @@ const DashboardMain = () => {
         <DashNav />
       </div>
 
-      <TabsContent value="overview" className="space-y-4 p-4">
+      <TabsContent value="overview" className="space-y-4">
         <div>
           <ClassesStats/>
         </div>

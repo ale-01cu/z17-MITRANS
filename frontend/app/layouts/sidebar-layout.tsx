@@ -6,8 +6,8 @@ const SidebarLayout = () => {
   return ( 
     <SidebarProvider>
       <AppSidebar />
-      <main className="w-full min-h-screen">
-        <SidebarTrigger />
+      <SidebarTrigger />
+      <main className="w-full min-h-screen pr-6">
         <Outlet/>
       </main>
     </SidebarProvider>
