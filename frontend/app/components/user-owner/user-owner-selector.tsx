@@ -9,10 +9,11 @@ interface UserOwnerSelectorProps {
   handleChange: (value: string) => void,
   error?: boolean
   isFilter?: boolean
+  className?: string
 }
 
 
-const UserOwnerSelector = ({ value, handleChange, error, isFilter = false }: UserOwnerSelectorProps) => {
+const UserOwnerSelector = ({ value, handleChange, error, isFilter = false, className }: UserOwnerSelectorProps) => {
   const [ users, setUsers ] = useState<UserOwner[]>([])
 
   useEffect(() => {
@@ -22,7 +23,7 @@ const UserOwnerSelector = ({ value, handleChange, error, isFilter = false }: Use
   }, [])
 
   return ( 
-    <div>
+    <div className={className}>
       <Select value={value} onValueChange={handleChange}>
         <SelectTrigger id="usuario" className={`w-full ${error ? "border-red-500" : ""}`}>
           <SelectValue placeholder="Seleccione un usuario" />

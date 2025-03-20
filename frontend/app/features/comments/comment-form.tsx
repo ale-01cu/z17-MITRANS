@@ -10,16 +10,16 @@ import SourceSelector from "~/components/source/sources-selector"
 import { Input } from "~/components/ui/input"
 import { Loader2, Plus, TextSelect } from "lucide-react"
 import UserOwnerSelector from "~/components/user-owner/user-owner-selector"
+import ClassificationsSelector from "~/components/classification/classifications-selector"
 
 interface CommentFormProps {
   comment?: CommentServerResponse
-  users: User[]
   sources: Source[]
   onSubmit: (data: any) => Promise<void>
   onCancel: () => void,
 }
 
-export default function CommentForm({ comment, users, onSubmit, onCancel }: CommentFormProps) {
+export default function CommentForm({ comment, onSubmit, onCancel }: CommentFormProps) {
   const [ isPlusActive, setIsPlusActive ] = useState<boolean>(false)
   const [ isLoading, setIsLoading ] = useState<boolean>(false)
   const [formData, setFormData] = useState({
@@ -28,6 +28,8 @@ export default function CommentForm({ comment, users, onSubmit, onCancel }: Comm
     user_owner_id: comment?.user_owner.id || "",
     user_owner_name: comment?.user_owner.name || "",
     source_id: comment?.source.id || "",
+    classification_id: comment?.classification?.id || "",
+    
   })
 
   const [errors, setErrors] = useState({
@@ -142,6 +144,13 @@ export default function CommentForm({ comment, users, onSubmit, onCancel }: Comm
           value={formData.source_id} 
           handleChange={(value) => handleChange("source_id", value)} 
           sourceError={errors.source_id} 
+          className="w-1/2"
+        />
+
+        <ClassificationsSelector
+          value={formData.classification_id}
+          handleChange={(value) => handleChange("classification_id", value)} 
+          className="w-1/2"
         />
       </div>
 

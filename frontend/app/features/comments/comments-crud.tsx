@@ -124,8 +124,9 @@ export default function CommentsCrud() {
     setCurrentComment(comment)
     setIsDeleteOpen(true)
   }
+
+  console.log({filteredComments});
   
-  console.log({filteredComments})
 
   return (
     <div className="space-y-6">
@@ -135,11 +136,11 @@ export default function CommentsCrud() {
         </Button>
 
         <div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
-          <div className="relative w-full md:w-64">
+          <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar comentarios..."
-              className="pl-8"
+              className="pl-8 w-48"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -148,12 +149,14 @@ export default function CommentsCrud() {
           <UserOwnerSelector
             value={selectedUser}
             handleChange={setSelectedUser}
+            className="w-52"
             isFilter
           />
 
           <SourceSelector
             value={selectedSource}
             handleChange={setSelectedSource}
+            className="w-52"
             isFilter
           />
 
@@ -176,7 +179,6 @@ export default function CommentsCrud() {
             <DialogDescription>Complete el formulario para crear un nuevo comentario.</DialogDescription>
           </DialogHeader>
           <CommentForm
-            users={users}
             sources={sources}
             onSubmit={handleCreateComment}
             onCancel={() => setIsCreateOpen(false)}
@@ -192,7 +194,6 @@ export default function CommentsCrud() {
           </DialogHeader>
           {currentComment && (
             <CommentForm
-              users={users}
               sources={sources}
               comment={currentComment}
               onSubmit={handleUpdateComment}

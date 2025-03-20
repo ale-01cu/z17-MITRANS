@@ -5,14 +5,21 @@ from apps.source.models import Source
 from apps.comment_user_owner.models import UserOwner
 from apps.comment_user_owner.serializers import UserOwnerSerializer
 from apps.source.serializers import SourceSerializer
+from apps.classification.serializers import ClassificationSerializer
+from apps.classification.models import Classification
 
 
 class CommentSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     user = UserAddSerializer(read_only=True)
+    classification = ClassificationSerializer(read_only=True)
+    classification_id = serializers.CharField(
+        max_length=50, write_only=True, required=False)
 
-    user_owner_id = serializers.CharField(max_length=50, write_only=True, required=False)
-    user_owner_name = serializers.CharField(max_length=50, write_only=True, required=False)
+    user_owner_id = serializers.CharField(
+        max_length=50, write_only=True, required=False)
+    user_owner_name = serializers.CharField(
+        max_length=50, write_only=True, required=False)
     user_owner = UserOwnerSerializer(read_only=True)
 
     source_id = serializers.CharField(max_length=50, write_only=True)
@@ -23,7 +30,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'classification',
                   'user', 'created_at', 'user_owner_id',
                   'user_owner_name', 'user_owner',
-                  'source_id', 'source'
+                  'source_id', 'source', 'classification_id'
                   ]
 
         read_only_fields = ['id', 'created_at', 'user',
@@ -42,6 +49,8 @@ class CommentSerializer(serializers.ModelSerializer):
         user_owner_name = validated_data.pop('user_owner_name') \
             if 'user_owner_name' in validated_data else None
         source_data = validated_data.pop('source_id')
+        classification_id = validated_data.pop('classification_id') \
+            if 'classification_id' in validated_data else None
 
         if user_owner_id: user_owner_data = user_owner_id
         elif user_owner_name: user_owner_data = user_owner_name
@@ -65,10 +74,18 @@ class CommentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Source no encontrado con el external_id proporcionado.")
 
-        # Crea el objeto Comment con los objetos relacionados
+        if classification_id:
+            try:
+                classification = Classification.objects.get(external_id=classification_id)
+            except classification.DoesNotExist:
+                raise serializers.ValidationError(
+                    "Clasificacón no encontrada con el external_id proporcionado.")
+        else: classification = None
+
         comment = Comment.objects.create(
             user_owner=user_owner,
             source=source,
+            classification=classification,
             **validated_data
         )
         return comment
@@ -119,6 +136,17 @@ class CommentSerializer(serializers.ModelSerializer):
                     'id': f'No existe un source con external_id={external_id}.'
                 })
 
+        if 'classification_id' in validated_data:
+            external_id = validated_data.pop('classification_id')
+            try:
+                # Buscamos el objeto por external_id y actualizamos la instancia
+                classification = Classification.objects.get(external_id=external_id)
+                instance.classification = classification
+            except Classification.DoesNotExist:
+                raise serializers.ValidationError({
+                    'id': f'No existe una clasificación con external_id={external_id}.'
+                })
+
         # Actualizamos la instancia con los datos validados
         return super().update(instance, validated_data)
 
@@ -136,6 +164,13 @@ class CommentSerializer(serializers.ModelSerializer):
                 UserOwner.objects.get(id=instance.user_owner_id)).data
 
         else: representation['user_owner'] = None
+
+        if instance.classification_id:
+            representation['classification'] = ClassificationSerializer(
+                Classification.objects.get(id=instance.classification_id)
+            ).data
+        else: representation['classification'] = None
+
         return representation
 
 

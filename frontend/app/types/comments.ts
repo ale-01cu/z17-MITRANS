@@ -1,5 +1,6 @@
 import { type UserOwner } from "./user-owner"
 import { type Source } from "./source"
+import type { ClassificationServerResponse } from "./classification"
 
 export interface Comment {
   id: string
@@ -17,7 +18,7 @@ export interface User {
 export interface CommentServerResponse {
   id: string
   text: string
-  classification: number
+  classification: ClassificationServerResponse | null
   user: User
   user_owner: UserOwner
   source: Source

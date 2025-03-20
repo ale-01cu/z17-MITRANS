@@ -23,6 +23,7 @@ const CommentsListTable = ({
           <TableHead>Texto</TableHead>
           <TableHead>Usuario</TableHead>
           <TableHead>Fuente</TableHead>
+          <TableHead>Clasificacón</TableHead>
           <TableHead className="text-right">Acciones</TableHead>
         </TableRow>
       </TableHeader>
@@ -45,6 +46,7 @@ const CommentsListTable = ({
               <TableCell className="max-w-md truncate">{comment.text}</TableCell>
               <TableCell>{comment.user_owner?.name}</TableCell>
               <TableCell>{comment.source?.name}</TableCell>
+              <TableCell>{comment.classification ? comment.classification.name : "-"}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(comment)}>

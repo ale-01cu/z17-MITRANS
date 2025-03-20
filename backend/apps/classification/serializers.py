@@ -3,9 +3,16 @@ from apps.classification.models import Classification
 
 
 class ClassificationSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Classification
-        fields = ['external_id', 'name', 'created_at']
+        fields = ['id', 'name', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def get_id(self, obj):
+        return obj.external_id
+
 
 
 class ClassifyCommentByIdSerializer(serializers.Serializer):

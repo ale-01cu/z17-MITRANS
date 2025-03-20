@@ -6,13 +6,15 @@ interface Params {
   text: string
   user_owner_id: string
   user_owner_name: string
+  classification_id?: string
   source_id: string
 }
 
 interface RequestData {
   text: string
-  user_owner_id: string | undefined
-  user_owner_name: string | undefined
+  user_owner_id?: string
+  user_owner_name?: string
+  classification_id?: string
   source_id: string
 }
 
@@ -21,11 +23,13 @@ export default async function createCommentApi(data: Params): Promise<CommentSer
     ...data,
     user_owner_id: undefined,
     user_owner_name: undefined,
-    source_id: data.source_id
+    classification_id: undefined
   }
 
   if (data.user_owner_id) commentRequest.user_owner_id = data.user_owner_id
   else commentRequest.user_owner_name = data.user_owner_name
+
+  if(data.classification_id) commentRequest.classification_id = data.classification_id
 
   const response = await Axios.post(API_COMMENTS, commentRequest);
   return response.data;
