@@ -23,6 +23,15 @@ CONFIG = {
         'tolerance-upper-r': 20,
     },
     # Desktop
+    'DARK_IMG_TEXT_BG': {
+        'hex': '#333333',
+        'tolerance-lower-b': 13,
+        'tolerance-lower-g': 13,
+        'tolerance-lower-r': 13,
+        'tolerance-upper-b': 20,
+        'tolerance-upper-g': 20,
+        'tolerance-upper-r': 20,
+    },
     'LIGHT_IMG_TEXT_BG': {
         'hex': '#f0f0f0',
         'tolerance-lower-b': 20,

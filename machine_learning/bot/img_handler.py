@@ -37,6 +37,8 @@ class ImgHandler:
     def get_img(self):
         return self.img
 
+    def get_shape(self):
+        return self.img.shape
 
     # Convierte de hex a RGB
     def hex_to_rgb_color(self, hex_color):
@@ -49,6 +51,7 @@ class ImgHandler:
     def to_bgr_color(self, color: list):
         blue_bgr = np.uint8([[color]])  # Color en formato BGR (OpenCV usa BGR)
         return blue_bgr
+
 
     def from_bgr_to_hsv(self, bgr_color):
         hsv_color = cv2.cvtColor(bgr_color, cv2.COLOR_BGR2HSV)
@@ -158,8 +161,9 @@ class ImgHandler:
 
         :return: Texto extraído de la imagen.
         """
-        
-        text = pytesseract.image_to_string(self.result if not image else image)
+        print(image)
+        text = pytesseract.image_to_string(
+            self.result if image is None else image, lang='spa')
         return text
         # result = self.reader.readtext(
         #     self.result if not image else image, lang='spa')
@@ -207,10 +211,10 @@ class ImgHandler:
 
 
     # Calcular el error cuadrático medio de las dos imagenes para saber su similitud
-    def similarity_by_mse(self, new_img):
-        new_img = cv2.resize(new_img, (self.img.shape[1], self.img.shape[0]))
-        error = np.sum((new_img.astype("float") - self.img.astype("float")) ** 2)
-        error /= float(new_img.shape[0] * new_img.shape[1])
+    def similarity_by_mse(self, image):
+        image = cv2.resize(image, (self.img.shape[1], self.img.shape[0]))
+        error = np.sum((image.astype("float") - self.img.astype("float")) ** 2)
+        error /= float(image.shape[0] * image.shape[1])
         return error
 
 
@@ -230,3 +234,18 @@ class ImgHandler:
         )
 
         return circles
+
+
+    def find_contours(self, image):
+        contours, _ = cv2.findContours(image,
+                                       cv2.RETR_EXTERNAL,
+                                       cv2.CHAIN_APPROX_SIMPLE
+                                       )
+
+        return contours
+
+
+    def save_image(self):
+        cv2.imwrite("image_test.png", self.img)
+
+

@@ -2,9 +2,8 @@ import numpy as np
 import pyautogui
 import cv2
 from img_handler import ImgHandler
+from img_to_text import img_to_text
 import time
-from main import circles
-
 
 class Bot:
     def __init__(self):
@@ -22,41 +21,63 @@ class Bot:
         return self.current_screenshot
 
 
-    def take_chat_references(self):
+    def find_chat_references(self):
         img_handler = ImgHandler(image=self.current_screenshot)
-        blue_bgr = img_handler.to_bgr_color(color=[209, 100, 0])
-        hsv_color = img_handler.from_bgr_to_hsv(bgr_color=blue_bgr)
-        hue = hsv_color[0][0][0]
-        lower_hue = max(0, hue - 10)  # Asegura que no sea menor que 0
-        upper_hue = min(179, hue + 10)  # Asegura que no sea mayor que 1
-
-        lower_blue = np.array([lower_hue, 100, 100])  # Límite inferior
-        upper_blue = np.array([upper_hue, 255, 255])
 
         hsv_image = img_handler.to_hsv_image()
-        mask = img_handler.create_mask(image=hsv_image,
-                                    lower_bound=lower_blue,
-                                    upper_bound=upper_blue)
-        blurred = img_handler.to_blurred_image(image=mask,
-                                               ksize=(9, 9),
-                                               sigmaX=2)
+        lower_blue = np.array([100, 50, 50])
+        upper_blue = np.array([130, 255, 255])
 
-        circles = img_handler.detect_circles(image=blurred,
-                                             dp=1,
-                                             minDist=10,
-                                             param1=50,
-                                             param2=20,
-                                             minRadius=5,
-                                             maxRadius=7
-                                             )
+        blue_mask = img_handler.create_mask(image=hsv_image,
+                                       lower_bound=lower_blue,
+                                       upper_bound=upper_blue)
 
-        self.last_circles_references_detected = circles
+        # cv2.imshow('blue_mask', blue_mask)
+        # cv2.waitKey(0)
 
-        first_circle = circles[0]
-        center = (first_circle[0], first_circle[1])
+        kernel = np.ones((3, 3), np.uint8)
 
-        if self.chats_reference is None:
-            self.chats_reference = center
+        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel)
+        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
+
+        contours = img_handler.find_contours(image=blue_mask)
+
+        image_width = img_handler.get_shape()[1]
+        image_height = img_handler.get_shape()[0]
+
+        # Definir los límites en el eje x (5% a 25% del ancho)
+        start_x = int(0.05 * image_width)  # 5% del ancho
+        end_x = int(0.25 * image_width)  # 25% del ancho
+        threshold_y = int(0.35 * image_height)
+        contours_found = []
+
+        for contour in contours:
+            # Aproximar el contorno a un polígono
+            approx = cv2.approxPolyDP(contour,
+                0.04 * cv2.arcLength(contour, True), True)
+
+            # if len(approx) >= 8:
+            # Obtener el centro y el radio del círculo
+            (x, y), radius = cv2.minEnclosingCircle(contour)
+            center = (int(x), int(y))
+            radius = int(radius)
+
+            print(center, radius)
+
+            # Verificar si el círculo está dentro del 25% izquierdo de la imagen
+            if start_x <= center[0] <= end_x and center[1] >= threshold_y:
+                contours_found.append(center + (radius,))
+
+        if len(contours_found) > 0:
+            first_circle = contours_found[0]
+            center = (first_circle[0], first_circle[1])
+
+            if self.chats_reference is None:
+                self.chats_reference = center
+
+            self.last_circles_references_detected = contours_found[-1]
+
+        return contours_found
 
 
     def click_chat(self, chat_ref: tuple[int, int], duration: int = 1):
@@ -73,16 +94,29 @@ class Bot:
         image = self.current_screenshot
         text_roi = image[circle_y - 50:circle_y, circle_x - 250:circle_x - 80]
 
-        img_handler = ImgHandler(image=image)
-        chat_id = img_handler.extract_text(image=text_roi)
+        chat_id = img_to_text(image=text_roi)
+        # img_handler = ImgHandler(image=image)
+        # chat_id = img_handler.extract_text(image=text_roi)
         self.current_chat_id = chat_id
         return chat_id
+
+
+    def extract_chat_text(self):
+        text = img_to_text(image=self.current_screenshot)
+        return text
+
+
+    def move_to_chat(self) -> None:
+        pyautogui.moveTo(self.chats_reference[0],
+                         self.chats_reference[1],
+                         duration=0.3
+                         )
 
 
     def scroll_chat_area(self, direction='up', scroll_move=100):
         pyautogui.moveTo(self.chats_reference[0],
                          self.chats_reference[1],
-                         duration=0.3)
+                         duration=1)
 
         if direction == 'up':
             pyautogui.scroll(scroll_move)
@@ -130,3 +164,34 @@ class Bot:
 
     def send_image(self):
         pass
+
+
+    def run(self):
+        print("Running...")
+        while True:
+            self.take_screenshot()
+            chats = self.find_chat_references()
+
+            for chat in chats:
+                x, y = chat[0], chat[1]
+
+                # chat_id = self.extract_chat_id(chat_ref=(x, y))
+
+                self.click_chat(chat_ref=(x, y), duration=1)
+                # self.move_to_chat()
+                # self.scroll_chat_area(direction='up')
+                text = self.extract_chat_text()
+                # print("================= Chat ID ======================== \n \n", chat_id)
+                print("================= Texto Extraido ================= \n \n", text)
+
+                time.sleep(1)
+
+            # if len(chats) == 0 and self.previous_screenshot is not None:
+            #     img_handler = ImgHandler(image=self.current_screenshot)
+            #     error = img_handler.similarity_by_mse(image=self.previous_screenshot)
+            #
+            #     if error > 0:
+            #         text = self.extract_chat_text()
+            #         print("================= Texto Extraido ================= \n \n", text)
+
+            self.previous_screenshot = self.current_screenshot
