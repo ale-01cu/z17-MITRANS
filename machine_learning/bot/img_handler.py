@@ -13,10 +13,55 @@ import pytesseract
 
 """
 
+
+CONFIG = {
+    # Movil
+    'LIGHT_IMG_TEXT_BG_MOVIL': {
+        'hex': '#f1f2f6',
+        'tolerance-lower-b': 20,
+        'tolerance-lower-g': 20,
+        'tolerance-lower-r': 20,
+        'tolerance-upper-b': 13,
+        'tolerance-upper-g': 13,
+        'tolerance-upper-r': 13,
+    },
+    'DARK_IMG_TEXT_BG_MOVIL': {
+        'hex': '#333333',
+        'tolerance-lower-b': 13,
+        'tolerance-lower-g': 13,
+        'tolerance-lower-r': 13,
+        'tolerance-upper-b': 20,
+        'tolerance-upper-g': 20,
+        'tolerance-upper-r': 20,
+    },
+    # Desktop
+    'DARK_IMG_TEXT_BG': {
+        'hex': '#333333',
+        'tolerance-lower-b': 13,
+        'tolerance-lower-g': 13,
+        'tolerance-lower-r': 13,
+        'tolerance-upper-b': 20,
+        'tolerance-upper-g': 20,
+        'tolerance-upper-r': 20,
+    },
+    'LIGHT_IMG_TEXT_BG': {
+        'hex': '#f0f0f0',
+        'tolerance-lower-b': 20,
+        'tolerance-lower-g': 20,
+        'tolerance-lower-r': 20,
+        'tolerance-upper-b': 13,
+        'tolerance-upper-g': 13,
+        'tolerance-upper-r': 13,
+    },
+}
+
+
 class ImgHandler:
-    def __init__(self, img_path = None, image = None):
+    def __init__(self, img_path: str = None, image = None):
         self.img_path = img_path
-        self.img = image if image is not None else cv2.imread(self.img_path)
+        self.img = image \
+            if image is not None \
+            else cv2.imread(self.img_path)
         self.color_hex = None
         self.color_rgb = None
         self.color_bgr = None
@@ -140,19 +185,19 @@ class ImgHandler:
         return self.result
 
 
-    def is_text_coherent(self, text):
-        """
-        Comprueba si el texto es coherente.
-
-        :param text: Texto a comprobar.
-        :return: True si el texto es coherente, False en caso contrario.
-        """
-        dictionary = enchant.Dict("es")  # Diccionario en español
-        words = text.split()
-        if len(words) < 5:
-            return False
-        valid_words = [word for word in words if dictionary.check(word)]
-        return len(valid_words) / len(words) > 0.8  # Umbral de coherencia
+    # def is_text_coherent(self, text):
+    #     """
+    #     Comprueba si el texto es coherente.
+    #
+    #     :param text: Texto a comprobar.
+    #     :return: True si el texto es coherente, False en caso contrario.
+    #     """
+    #     dictionary = enchant.Dict("es")  # Diccionario en español
+    #     words = text.split()
+    #     if len(words) < 5:
+    #         return False
+    #     valid_words = [word for word in words if dictionary.check(word)]
+    #     return len(valid_words) / len(words) > 0.8  # Umbral de coherencia
 
 
     def extract_text(self, image = None):
@@ -161,9 +206,13 @@ class ImgHandler:
 
         :return: Texto extraído de la imagen.
         """
-        print(image)
-        text = pytesseract.image_to_string(
-            self.result if image is None else image, lang='spa')
+        # show image
+        if self.result is not None:
+            image = self.result
+        elif image is None:
+            image = self.img
+
+        text = pytesseract.image_to_string(image, lang='spa')
         return text
         # result = self.reader.readtext(
         #     self.result if not image else image, lang='spa')
@@ -247,5 +296,122 @@ class ImgHandler:
 
     def save_image(self):
         cv2.imwrite("image_test.png", self.img)
+
+
+    def get_edged(self, image):
+        edged = cv2.Canny(image, 100, 200)
+        return edged
+
+
+    def get_contours_by_edges(self, image):
+        edged = self.get_edged(image)
+        contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contours_found = []
+        chats_contour = None
+        margin = 20
+        possible_chat_contours = []
+        chat_contour = None
+        possible_text_contours = []
+
+        # Filter small contours leaving only large contours | Tested
+        for i, contour in enumerate(contours):
+            x, y, w, h = cv2.boundingRect(contour)
+
+            if chats_contour is None:
+                chats_contour = contour
+
+            if chats_contour is not None and cv2.boundingRect(chats_contour)[0] > x:
+                chats_contour = contour
+
+            if x > 50 and h > 20:
+                contours_found.append(contour)
+
+        # Find possible chat contour nearby | Tested
+        for contour in contours_found:
+            x, y, w, h = cv2.boundingRect(contour)
+            x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+
+            if x < 50 or h < 20:
+                continue
+
+            if abs(x - (x_chats + w_chats)) < margin:
+                possible_chat_contours.append(contour)
+
+        # Find chat contour | Tested
+        for contour in possible_chat_contours:
+            x, y, w, h = cv2.boundingRect(contour)
+
+            if chat_contour is None:
+                chat_contour = contour
+
+            if chat_contour is not None:
+                x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
+                if w_chat * h_chat < w * h:
+                    chat_contour = contour
+
+        x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
+
+        for contour in contours_found:
+            x, y, w, h = cv2.boundingRect(contour)
+
+            # Filtro de tamaño (ajusta según necesidad)
+            if (70 < w < 600) and (h < 50):
+                # Verifica si está DENTRO del chat_contour
+                if (x_chat <= x) and (x + w <= x_chat + w_chat) and (y_chat <= y) and (y + h <= y_chat + h_chat):
+                    possible_text_contours.append(contour)
+
+
+        return chats_contour, chat_contour, possible_text_contours
+
+
+
+    def is_top_edge_irregular(contour, threshold=1, edge_margin=5):
+        """
+        Determina si el borde superior de un contorno tiene alguna irregularidad,
+        específicamente si "baja" en algún punto (excepto en los bordes).
+
+        Args:
+            contour (numpy.ndarray): El contorno en formato de un array de puntos.
+            threshold (int): Umbral para considerar una diferencia significativa en 'y'.
+            edge_margin (int): Margen en píxeles para excluir los bordes izquierdo y derecho.
+
+        Returns:
+            bool: True si el borde superior tiene una irregularidad ("baja"), False si está completamente recto.
+        """
+        # Extraer los puntos del contorno
+        points = contour[:, 0]  # Los puntos están almacenados como un array de shape (N, 1, 2)
+
+        # Crear un diccionario para almacenar el valor mínimo de 'y' para cada 'x'
+        top_edge_points = {}
+        for x, y in points:
+            if x not in top_edge_points or y < top_edge_points[x]:
+                top_edge_points[x] = y
+
+        # Convertir el diccionario en una lista ordenada por 'x'
+        sorted_top_edge = sorted(top_edge_points.items(), key=lambda item: item[0])
+
+        # Extraer las coordenadas x e y del borde superior
+        x_coords = [x for x, y in sorted_top_edge]
+        y_coords = [y for x, y in sorted_top_edge]
+
+        # Excluir los bordes laterales según el margen especificado
+        if len(x_coords) <= 2 * edge_margin:
+            return False  # No hay suficientes puntos para analizar después de excluir los bordes
+
+        start_index = edge_margin
+        end_index = len(x_coords) - edge_margin
+
+        # Filtrar las coordenadas dentro del rango central
+        central_x_coords = x_coords[start_index:end_index]
+        central_y_coords = y_coords[start_index:end_index]
+
+        # Calcular las diferencias consecutivas en 'y' para detectar irregularidades
+        y_diffs = np.diff(central_y_coords)
+
+        # Detectar si alguna diferencia es positiva (indica que el borde "baja")
+        is_incomplete = any(diff > threshold for diff in y_diffs)
+
+        return is_incomplete
+
 
 

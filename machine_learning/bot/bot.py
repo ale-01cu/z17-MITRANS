@@ -6,12 +6,40 @@ from img_to_text import img_to_text
 import time
 
 class Bot:
-    def __init__(self):
+    def __init__(self, name: str, target_name: str, target_templates_paths: list[str]) -> None:
+        self.name = name
+        self.target_name = target_name
         self.previous_screenshot = None
         self.chats_reference = None
         self.current_chat_id = None
         self.current_screenshot = None
         self.last_circles_references_detected = None
+        self.target_templates_paths = target_templates_paths
+        # self.target_template = cv2.imread(self.target_template_path)
+
+
+    def is_watching_target(self, threshold: float = 0.8) -> bool:
+        if self.current_screenshot is None:
+            return False
+
+        for template_path in self.target_templates_paths:
+            template = cv2.imread(template_path)
+
+            if template is None:
+                continue
+
+            h, w = template.shape[:-1]
+            result = cv2.matchTemplate(self.current_screenshot,
+                                       template,
+                                       cv2.TM_CCOEFF_NORMED
+                                       )
+
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+            if max_val >= threshold:
+                return True
+
+        return False
 
 
     def take_screenshot(self):
@@ -62,8 +90,6 @@ class Bot:
             center = (int(x), int(y))
             radius = int(radius)
 
-            print(center, radius)
-
             # Verificar si el círculo está dentro del 25% izquierdo de la imagen
             if start_x <= center[0] <= end_x and center[1] >= threshold_y:
                 contours_found.append(center + (radius,))
@@ -92,11 +118,11 @@ class Bot:
         y = chat_ref[1]
         circle_x, circle_y = x, y
         image = self.current_screenshot
-        text_roi = image[circle_y - 50:circle_y, circle_x - 250:circle_x - 80]
+        text_roi = image[circle_y - 50:circle_y, circle_x - 270:circle_x]
 
-        chat_id = img_to_text(image=text_roi)
-        # img_handler = ImgHandler(image=image)
-        # chat_id = img_handler.extract_text(image=text_roi)
+        img_hanlder = ImgHandler(image=text_roi)
+        chat_id = img_hanlder.extract_text()
+
         self.current_chat_id = chat_id
         return chat_id
 
@@ -162,21 +188,72 @@ class Bot:
         return index
 
 
+
+    # def extract_chat_texts(self):
+    #     """
+    #
+    #     This function extract the texts into chat contour as little contours
+    #     each text is returned as a contour.
+    #
+    #     :return: List of text contours
+    #     """
+    #     img_handler = ImgHandler(image=self.current_screenshot)
+    #
+    #     color_hex = '#f0f0f0'
+    #     color_rgb = tuple(int(color_hex[i:i + 2], 16) for i in (1, 3, 5))  # Convierte de hex a RGB
+    #     color_bgr = color_rgb[::-1]  # Convierte de RGB a BGR
+    #
+    #     # Establece un rango de tolerancia para capturar variaciones del color
+    #     lower_bound = np.array([max(0, color_bgr[0] - 20), max(0, color_bgr[1] - 20), max(0, color_bgr[2] - 20)])
+    #     upper_bound = np.array([min(255, color_bgr[0] + 13), min(255, color_bgr[1] + 13), min(255, color_bgr[2] + 13)])
+    #
+    #     # Paso 3: Crear una máscara para el color objetivo
+    #     mask = cv2.inRange(image, lower_bound, upper_bound)
+    #     result = cv2.bitwise_and(image, image,
+    #                              mask=mask
+    #                              )
+    #
+    #
+    #     pass
+
+
+
+
+
+
+
     def send_image(self):
         pass
 
 
     def run(self):
         print("Running...")
+        last_print = ""
         while True:
             self.take_screenshot()
-            chats = self.find_chat_references()
+            # is_target = self.is_watching_target()
+            #
+            # if not is_target:
+            #     print(f"No Watching target...",
+            #           end="\r" if last_print == "nowatch" else None,
+            #           flush=True
+            #           )
+            #     last_print = "nowatch"
+            #     continue
+            #
+            # print(f"Watching target {self.target_name}...",
+            #       end="\r" if last_print == "watching" else None,
+            #       flush=True
+            #       )
+            # last_print = "watching"
 
+            chats = self.find_chat_references()
             for chat in chats:
                 x, y = chat[0], chat[1]
 
-                # chat_id = self.extract_chat_id(chat_ref=(x, y))
-
+                chat_id = self.extract_chat_id(chat_ref=(x, y))
+                print("Chat id: ", chat_id)
+                continue
                 self.click_chat(chat_ref=(x, y), duration=1)
                 # self.move_to_chat()
                 # self.scroll_chat_area(direction='up')
