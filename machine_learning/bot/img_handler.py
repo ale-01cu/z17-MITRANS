@@ -303,8 +303,8 @@ class ImgHandler:
         return edged
 
 
-    def get_contours_by_edges(self, image):
-        edged = self.get_edged(image)
+    def get_contours_by_edges(self, image = None):
+        edged = self.get_edged(image if image is not None else self.img)
         contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         contours_found = []
         chats_contour = None
@@ -362,6 +362,17 @@ class ImgHandler:
 
 
         return chats_contour, chat_contour, possible_text_contours
+
+
+
+    def contour_to_image(self, contour, image = None):
+        x, y, w, h = cv2.boundingRect(contour)
+        if image is not None:
+            img_roi = image[y:y + h, x:x + w]
+        else:
+            img_roi = self.img[y:y + h, x:x + w]
+
+        return img_roi
 
 
 

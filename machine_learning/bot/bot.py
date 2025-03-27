@@ -4,18 +4,24 @@ import cv2
 from img_handler import ImgHandler
 from img_to_text import img_to_text
 import time
+from db.chat_querys import ChatQuerys
+import pyperclip
 
 class Bot:
     def __init__(self, name: str, target_name: str, target_templates_paths: list[str]) -> None:
         self.name = name
         self.target_name = target_name
+
         self.previous_screenshot = None
         self.chats_reference = None
+        self.chat_area_reference = None
         self.current_chat_id = None
         self.current_screenshot = None
         self.last_circles_references_detected = None
         self.target_templates_paths = target_templates_paths
+        self.scroll_reference = None # Cuanto se ha desplazado el scroll desde el fondo.
         # self.target_template = cv2.imread(self.target_template_path)
+        self.chat_querys = ChatQuerys()
 
 
     def is_watching_target(self, threshold: float = 0.8) -> bool:
@@ -49,6 +55,8 @@ class Bot:
         return self.current_screenshot
 
 
+    # TODO: Agregar que encuentre los puentos dentro del contorno donde van los chats
+    # para achicar el cerco y disminuir el error
     def find_chat_references(self):
         img_handler = ImgHandler(image=self.current_screenshot)
 
@@ -133,8 +141,11 @@ class Bot:
 
 
     def move_to_chat(self) -> None:
-        pyautogui.moveTo(self.chats_reference[0],
-                         self.chats_reference[1],
+        assert self.chat_area_reference is None, \
+            "move_to_chat error: Chat area reference is None."
+
+        pyautogui.moveTo(self.chat_area_reference[0],
+                         self.chat_area_reference[1],
                          duration=0.3
                          )
 
@@ -144,19 +155,24 @@ class Bot:
                          self.chats_reference[1],
                          duration=1)
 
+        self.scroll_reference = scroll_move
+
         if direction == 'up':
             pyautogui.scroll(scroll_move)
         elif direction == 'down':
             pyautogui.scroll(scroll_move)
 
 
-    def get_last_chat_id_text(self) -> str:
+    def get_last_chat_id_image(self) -> ImgHandler:
         """
         Extrae el texto del último chat id detectado.
 
         :return: Texto del último chat id detectado.
         """
-        return ""
+        chat_data = self.chat_querys.get_chat_by_id_scraped(
+            id_scraped=self.current_chat_id)
+        img_handler = ImgHandler(image=chat_data.last_text_url)
+        return img_handler
 
 
     def find_text(self, text: str, text_list_obj: list[str]) -> int | None:
@@ -188,42 +204,255 @@ class Bot:
         return index
 
 
-
-    # def extract_chat_texts(self):
-    #     """
-    #
-    #     This function extract the texts into chat contour as little contours
-    #     each text is returned as a contour.
-    #
-    #     :return: List of text contours
-    #     """
-    #     img_handler = ImgHandler(image=self.current_screenshot)
-    #
-    #     color_hex = '#f0f0f0'
-    #     color_rgb = tuple(int(color_hex[i:i + 2], 16) for i in (1, 3, 5))  # Convierte de hex a RGB
-    #     color_bgr = color_rgb[::-1]  # Convierte de RGB a BGR
-    #
-    #     # Establece un rango de tolerancia para capturar variaciones del color
-    #     lower_bound = np.array([max(0, color_bgr[0] - 20), max(0, color_bgr[1] - 20), max(0, color_bgr[2] - 20)])
-    #     upper_bound = np.array([min(255, color_bgr[0] + 13), min(255, color_bgr[1] + 13), min(255, color_bgr[2] + 13)])
-    #
-    #     # Paso 3: Crear una máscara para el color objetivo
-    #     mask = cv2.inRange(image, lower_bound, upper_bound)
-    #     result = cv2.bitwise_and(image, image,
-    #                              mask=mask
-    #                              )
-    #
-    #
-    #     pass
+    def is_there_text_overflow(self, chat_contour):
+        img_handler = ImgHandler(image=self.current_screenshot)
+        is_overflow = img_handler.is_top_edge_irregular(contour=chat_contour)
+        return is_overflow
 
 
+    def is_contour_already_watched(self, contour) -> bool:
+        img_handler = self.get_last_chat_id_image()
+        contour_image = img_handler.contour_to_image(contour=contour)
+        similarity_error = img_handler.similarity_by_mse(image=contour_image)
+
+        if similarity_error < 0.1:
+            return True
+        return False
 
 
+    def get_texts_did_not_watched_list(self, possible_text_contours):
+        texts_did_not_watched = []
+        has_more = False
 
+        for contour in possible_text_contours[::-1]:
+            # Comparar img_roi con la ultima referencia del texto visto por el current chat id
+            is_watched = self.is_contour_already_watched(contour=contour)
+
+            if not is_watched:
+                x, y, w, h = cv2.boundingRect(contour)
+                start_location = (x, y, self.scroll_reference)
+                end_location = (x + w, y + h, self.scroll_reference)
+                texts_did_not_watched.append([start_location, end_location])
+
+            else:
+                has_more = True
+                break
+
+        return has_more, texts_did_not_watched
+
+
+    def repair_irregular_top_edge(self, image, contour, threshold=1, edge_margin=5, line_thickness=2, radius=5, offset1=-10,
+                                  offset2=20):
+        """
+        Repara solo los segmentos irregulares del borde superior de un contorno en la imagen,
+        añadiendo pequeños radios en los extremos de cada reparación. La línea superior se dibuja
+        en color rojo y está ligeramente desplazada hacia la derecha.
+
+        Args:
+            image (numpy.ndarray): La imagen sobre la que se va a dibujar.
+            contour (numpy.ndarray): El contorno con borde superior irregular.
+            threshold (int): Umbral para considerar una diferencia significativa en 'y'.
+            edge_margin (int): Margen en píxeles para excluir los bordes izquierdo y derecho.
+            line_thickness (int): Grosor de la línea de reparación.
+            radius (int): Radio para las esquinas redondeadas.
+            offset (int): Desplazamiento en píxeles hacia la derecha para el inicio de la línea.
+
+        Returns:
+            numpy.ndarray: La imagen con los segmentos irregulares reparados.
+        """
+        # Hacer una copia de la imagen para no modificar la original
+        result_image = image.copy()
+
+        # Extraer los puntos del contorno
+        points = contour[:, 0]  # Los puntos están almacenados como un array de shape (N, 1, 2)
+
+        # Crear un diccionario para almacenar el valor mínimo de 'y' para cada 'x'
+        top_edge_points = {}
+        for x, y in points:
+            if x not in top_edge_points or y < top_edge_points[x]:
+                top_edge_points[x] = y
+
+        # Convertir el diccionario en una lista ordenada por 'x'
+        sorted_top_edge = sorted(top_edge_points.items(), key=lambda item: item[0])
+
+        # Extraer las coordenadas x e y del borde superior
+        x_coords = np.array([x for x, y in sorted_top_edge])
+        y_coords = np.array([y for x, y in sorted_top_edge])
+
+        # Excluir los bordes laterales según el margen especificado
+        if len(x_coords) <= 2 * edge_margin:
+            return result_image  # No hay suficientes puntos para analizar
+
+        # Calcular las diferencias en Y entre puntos consecutivos
+        y_diffs = np.diff(y_coords)
+
+        # Encontrar los índices donde el borde baja significativamente
+        drop_indices = np.where(y_diffs > threshold)[0] + 1  # +1 porque diff reduce el tamaño
+
+        if len(drop_indices) == 0:
+            return result_image  # No hay irregularidades significativas
+
+        # Dividir el borde en segmentos regulares e irregulares
+        segments = []
+        start_idx = edge_margin
+
+        for drop_idx in drop_indices:
+            if drop_idx < edge_margin or drop_idx > len(x_coords) - edge_margin:
+                continue  # Ignorar cambios cerca de los bordes
+
+            # Segmento antes de la caída
+            if start_idx < drop_idx:
+                segments.append(('regular', start_idx, drop_idx))
+
+            # Encontrar dónde termina la caída (vuelve a subir)
+            end_drop_idx = drop_idx
+            while end_drop_idx < len(y_coords) - 1 and y_coords[end_drop_idx + 1] >= y_coords[end_drop_idx]:
+                end_drop_idx += 1
+
+            # Segmento irregular
+            segments.append(('irregular', drop_idx, end_drop_idx))
+            start_idx = end_drop_idx
+
+        # Añadir el último segmento si queda
+        if start_idx < len(x_coords) - edge_margin:
+            segments.append(('regular', start_idx, len(x_coords) - edge_margin))
+
+        # Procesar cada segmento irregular
+        for seg_type, start_idx, end_idx in segments:
+            if seg_type == 'irregular':
+                # Calcular la altura de reparación (mínimo Y en el área circundante)
+                window_start = max(0, start_idx - 3)
+                window_end = min(len(y_coords), end_idx + 3)
+                repair_y = min(y_coords[window_start:window_end]) + 4
+
+                # Coordenadas de los extremos del segmento irregular
+                x1, y1 = x_coords[start_idx], y_coords[start_idx]
+                x2, y2 = x_coords[end_idx], y_coords[end_idx]
+
+                # Ajustar el inicio de la línea hacia la derecha
+                x1_offset = x1 + offset1
+                x2_offset = x2 + offset2
+
+                # Dibujar la línea recta de reparación en color rojo
+                # cv2.line(result_image, (x1_offset, repair_y), (x2_offset, repair_y), (255, 255, 255), line_thickness)
+                cv2.line(result_image, (x1_offset, repair_y - 6), (x2_offset, repair_y - 6), (255, 255, 255),
+                         line_thickness)
+                cv2.line(result_image, (x1_offset, repair_y), (x2_offset, repair_y), (255, 255, 255), line_thickness)
+
+                # Dibujar radios en los extremos
+                # cv2.ellipse(result_image, (x1 + offset1, repair_y + radius), (radius, radius), 0, 180, 270, (0, 0, 255), line_thickness)
+                # cv2.ellipse(result_image, (x2 + offset2, repair_y + radius), (radius, radius), 0, 270, 360, (0, 0, 255), line_thickness)
+                break
+
+        return result_image
+
+
+    def review_chat(self, has_more: bool = True, texts: list = None) -> list[list[tuple[int, int, int]]]:
+        """
+        This function extracts the texts into chat contour as little contours.
+        Each text is returned as a contour.
+
+        :param has_more: Flag to indicate if there are more texts to extract
+        :param texts: Accumulated list of text contours
+        :return: List of text contours
+        """
+        if texts is None:
+            texts = []
+
+        if not has_more:
+            return texts
+
+        img_handler = ImgHandler(image=self.current_screenshot)
+        chats_contour, chat_contour, possible_text_contours = img_handler.get_contours_by_edges()
+        x, y, w, h = cv2.boundingRect(chat_contour)
+        self.chat_area_reference = (x, y, w, h)
+
+        has_more, texts_did_not_watched = self.get_texts_did_not_watched_list(
+            possible_text_contours=possible_text_contours
+        )
+
+        if has_more:
+            # Si no se encuentra el último texto visto
+            is_overflow = self.is_there_text_overflow()
+
+            if is_overflow:
+
+                # Caso cuando hay texto desbordado (tratamiento diferente)
+                result_image = self.repair_irregular_top_edge(
+                    image=self.current_screenshot, contour=chat_contour)
+
+                img_handler = ImgHandler(image=result_image)
+                _, _, conours_found = img_handler.get_contours_by_edges()
+                contour_overflow = conours_found[0]
+                x, y, w, h = cv2.boundingRect(contour_overflow)
+                x_contour_overflow_end = x + w
+                y_contour_overflow_end = y + h
+
+                while True:
+                    self.scroll_chat_area(direction="up", scroll_move=1)
+                    self.take_screenshot()
+                    is_overflow = self.is_there_text_overflow()
+
+                    if not is_overflow:
+                        result_image = self.repair_irregular_top_edge(
+                            image=self.current_screenshot, contour=chat_contour)
+
+                        img_handler = ImgHandler(image=result_image)
+                        _, _, conours_found = img_handler.get_contours_by_edges()
+                        contour_overflow = conours_found[0]
+                        x, y, w, h = cv2.boundingRect(contour_overflow)
+                        x_contour_overflow_start = x
+                        y_contour_overflow_start = y
+
+                        texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
+                                      (x_contour_overflow_end, y_contour_overflow_end, self.scroll_reference)])
+                        break
+
+            else:
+                # Caso normal: hacer scroll y continuar el proceso
+                self.scroll_chat_area(direction="up",
+                                      scroll_move=self.chat_area_reference[-1])
+
+            # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
+            return self.review_chat(
+                has_more=has_more,
+                texts=texts + texts_did_not_watched
+            )
+
+        return texts + texts_did_not_watched
 
 
     def send_image(self):
         pass
+
+
+    def get_text_by_text_location(self, x_start, y_start, x_end,
+                                  y_end, scroll_pos_start, scroll_pos_end) -> None:
+        self.scroll_chat_area(
+            direction="up" if scroll_pos_start > self.scroll_reference else "down",
+            scroll_move=scroll_pos_start)
+        pyautogui.moveTo(x=x_start, y=y_start, duration=0.3)
+
+        pyautogui.mouseDown(button="left")
+        self.scroll_chat_area(
+            direction="down",
+            scroll_move=scroll_pos_end)
+        pyautogui.moveTo(x=x_end, y=y_end, duration=0.3)
+
+        pyautogui.hotkey('ctrl', 'c')
+        pyautogui.mouseUp(button="left")
+        return pyperclip.paste()
+
+        """
+        Alternativa
+        pyautogui.click(x=x_start, y=y_start, duration=0.3)
+        pyautogui.keyDown("shift")
+        pyautogui.click(x=x_end, y=y_end, duration=0.3)
+        pyautogui.keyUp("shift")
+        pyautogui.hotkey('ctrl', 'c')
+        return pyperclip.paste()
+        """
+
 
 
     def run(self):
@@ -255,11 +484,21 @@ class Bot:
                 print("Chat id: ", chat_id)
                 continue
                 self.click_chat(chat_ref=(x, y), duration=1)
-                # self.move_to_chat()
-                # self.scroll_chat_area(direction='up')
-                text = self.extract_chat_text()
-                # print("================= Chat ID ======================== \n \n", chat_id)
-                print("================= Texto Extraido ================= \n \n", text)
+
+                if chat_id:
+                    self.chat_querys.create_chat(id_scraped=chat_id)
+
+                self.move_to_chat()
+                texts_locations = self.review_chat()
+
+                # ===========================================================================================
+                # TODO Camturar textos de chats
+                for text_location in texts_locations:
+                    x_start, y_start, scroll_pos_start = text_location[0]
+                    x_end, y_end, scroll_pos_end = text_location[1]
+                    literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
+                                                   scroll_pos_start, scroll_pos_end)
+                    print("================= Texto Extraido ================= \n \n", literal_text)
 
                 time.sleep(1)
 

@@ -3,3 +3,5 @@ PyAutoGUI==0.9.54
 # pyenchant==3.2.2
 # easyocr==1.7.2
 pytesseract
+SQLAlchemy==2.0.39
+pyperclip==1.9.0

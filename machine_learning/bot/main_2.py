@@ -1,5 +1,9 @@
 from bot import Bot
 import os
+from db.db import engine, Base
+
+# Crear todas las tablas en la base de datos
+Base.metadata.create_all(bind=engine)
 
 dirname = os.path.dirname(__file__)
 
