@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from .db import get_db
 from .models import Chat
-from typing import Optional
+from typing import Optional, List
 
 
 class ChatQuerys:

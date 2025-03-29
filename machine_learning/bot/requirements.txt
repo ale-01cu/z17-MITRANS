@@ -5,3 +5,4 @@ PyAutoGUI==0.9.54
 pytesseract
 SQLAlchemy==2.0.39
 pyperclip==1.9.0
+pytest==8.3.5

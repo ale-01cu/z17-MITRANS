@@ -288,7 +288,7 @@ class ImgHandler:
     def find_contours(self, image):
         contours, _ = cv2.findContours(image,
                                        cv2.RETR_EXTERNAL,
-                                       cv2.CHAIN_APPROX_SIMPLE
+                                       cv2.CHAIN_APPROX_NONE
                                        )
 
         return contours
@@ -298,17 +298,28 @@ class ImgHandler:
         cv2.imwrite("image_test.png", self.img)
 
 
-    def get_edged(self, image):
-        edged = cv2.Canny(image, 100, 200)
+    def get_edged(self, image = None):
+        edged = cv2.Canny(image if image is not None else self.img, 30, 200)
         return edged
 
 
     def get_contours_by_edges(self, image = None):
-        edged = self.get_edged(image if image is not None else self.img)
+        color_hex = '#f0f0f0'
+        color_rgb = tuple(int(color_hex[i:i + 2], 16) for i in (1, 3, 5))  # Convierte de hex a RGB
+        color_bgr = color_rgb[::-1]  # Convierte de RGB a BGR
+
+        # Establece un rango de tolerancia para capturar variaciones del color
+        lower_bound = np.array([max(0, color_bgr[0] - 20), max(0, color_bgr[1] - 20), max(0, color_bgr[2] - 20)])
+        upper_bound = np.array([min(255, color_bgr[0] + 13), min(255, color_bgr[1] + 13), min(255, color_bgr[2] + 13)])
+
+        # Paso 3: Crear una máscara para el color objetivo
+        mask = cv2.inRange(image if image is not None else self.img, lower_bound, upper_bound)
+
+        edged = self.get_edged(mask)
         contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         contours_found = []
         chats_contour = None
-        margin = 20
+        margin = 10
         possible_chat_contours = []
         chat_contour = None
         possible_text_contours = []
@@ -320,7 +331,9 @@ class ImgHandler:
             if chats_contour is None:
                 chats_contour = contour
 
-            if chats_contour is not None and cv2.boundingRect(chats_contour)[0] > x:
+            x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+
+            if chats_contour is not None and x == 0 and y_chats > y and h_chats < h:
                 chats_contour = contour
 
             if x > 50 and h > 20:
@@ -335,6 +348,7 @@ class ImgHandler:
                 continue
 
             if abs(x - (x_chats + w_chats)) < margin:
+                print("pase")
                 possible_chat_contours.append(contour)
 
         # Find chat contour | Tested
@@ -423,6 +437,28 @@ class ImgHandler:
         is_incomplete = any(diff > threshold for diff in y_diffs)
 
         return is_incomplete
+
+
+    def create_mask_to_large_contours(self, image=None):
+        color_hex = '#f0f0f0'
+        color_rgb = tuple(int(color_hex[i:i+2], 16) for i in (1, 3, 5))  # Convierte de hex a RGB
+        color_bgr = color_rgb[::-1]  # Convierte de RGB a BGR
+
+        # Establece un rango de tolerancia para capturar variaciones del color
+        lower_bound = np.array([max(0, color_bgr[0]-20), max(0, color_bgr[1]-20), max(0, color_bgr[2]-20)])
+        upper_bound = np.array([min(255, color_bgr[0]+13), min(255, color_bgr[1]+13), min(255, color_bgr[2]+13)])
+
+        # Paso 3: Crear una máscara para el color objetivo
+        mask = cv2.inRange(image if image is not None else self.img, lower_bound, upper_bound)
+
+        return mask
+
+
+    def find_contours_by_large_contours_mask(self, image=None):
+        mask = self.create_mask_to_large_contours(image=image if image is not None else self.img)
+        edged = self.get_edged(mask)
+        contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        return contours
 
 
 

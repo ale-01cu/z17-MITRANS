@@ -6,6 +6,10 @@ from img_to_text import img_to_text
 import time
 from db.chat_querys import ChatQuerys
 import pyperclip
+from typing import List, Tuple
+
+MAX_ITERATIONS = 100  # Ejemplo de límite
+MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
 
 class Bot:
     def __init__(self, name: str, target_name: str, target_templates_paths: list[str]) -> None:
@@ -55,59 +59,110 @@ class Bot:
         return self.current_screenshot
 
 
+    def take_chats_container_contour(self):
+        img_handler = ImgHandler(image=self.current_screenshot)
+        contours = img_handler.find_contours_by_large_contours_mask()
+
+        chats_contour = None
+
+        for i, contour in enumerate(contours):
+            x, y, w, h = cv2.boundingRect(contour)
+
+            if chats_contour is None:
+                chats_contour = contour
+
+            x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+
+            if chats_contour is not None and x == 0 and y_chats > y and h_chats < h:
+                chats_contour = contour
+
+        self.chats_reference = chats_contour
+        return self.chats_reference
+
+
     # TODO: Agregar que encuentre los puentos dentro del contorno donde van los chats
     # para achicar el cerco y disminuir el error
     def find_chat_references(self):
         img_handler = ImgHandler(image=self.current_screenshot)
+        edged = img_handler.get_edged()
+        contours = img_handler.find_contours(image=edged)
+        chats_contour = self.take_chats_container_contour()
+        x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
 
-        hsv_image = img_handler.to_hsv_image()
-        lower_blue = np.array([100, 50, 50])
-        upper_blue = np.array([130, 255, 255])
 
-        blue_mask = img_handler.create_mask(image=hsv_image,
-                                       lower_bound=lower_blue,
-                                       upper_bound=upper_blue)
-
-        # cv2.imshow('blue_mask', blue_mask)
+        # x_limit = int(x_chats + 0.80 * w_chats)
+        # cv2.line(self.current_screenshot, (x_limit, 0),
+        #          (x_limit, self.current_screenshot.shape[0]),
+        #          (0, 0, 255), 2)  # Línea roja
+        # cv2.imshow('chats contour line', self.current_screenshot)
         # cv2.waitKey(0)
 
-        kernel = np.ones((3, 3), np.uint8)
 
-        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel)
-        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
+        # cv2.drawContours(self.current_screenshot, chats_contour, -1, (0, 255, 0), 3)
+        # cv2.imshow('chats contour', self.current_screenshot)
+        # cv2.waitKey(0)
 
-        contours = img_handler.find_contours(image=blue_mask)
-
-        image_width = img_handler.get_shape()[1]
-        image_height = img_handler.get_shape()[0]
-
-        # Definir los límites en el eje x (5% a 25% del ancho)
-        start_x = int(0.05 * image_width)  # 5% del ancho
-        end_x = int(0.25 * image_width)  # 25% del ancho
-        threshold_y = int(0.35 * image_height)
         contours_found = []
 
-        for contour in contours:
-            # Aproximar el contorno a un polígono
-            approx = cv2.approxPolyDP(contour,
-                0.04 * cv2.arcLength(contour, True), True)
+        for i, contour in enumerate(contours):
+            # Calcular el área y el perímetro del contorno
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+            x, y, w, h = cv2.boundingRect(contour)
 
-            # if len(approx) >= 8:
-            # Obtener el centro y el radio del círculo
-            (x, y), radius = cv2.minEnclosingCircle(contour)
-            center = (int(x), int(y))
-            radius = int(radius)
+            # Evitar división por cero
+            if perimeter == 0:
+                continue
 
-            # Verificar si el círculo está dentro del 25% izquierdo de la imagen
-            if start_x <= center[0] <= end_x and center[1] >= threshold_y:
-                contours_found.append(center + (radius,))
+            # Calcular la circularidad
+            circularity = (4 * np.pi * area) / (perimeter ** 2)
+
+            is_into_chats_contour = (
+                        x > (x_chats + 0.30 * w_chats) and x < (x_chats + w_chats) and
+                        (y > y_chats and y > (y_chats + 0.10 * h_chats))
+            )
+
+
+
+            is_in_size_range = (
+                (12 < w < 20) and (12 < h < 20) and w == h
+            )
+
+            # Filtrar contornos basados en la circularidad (ajusta el umbral según sea necesario)
+            if 0.7 < circularity <= 1.0 and is_into_chats_contour and is_in_size_range:  # Umbral de circularidad
+                contours_found.append(contour)
+
+        # print(len(contours_found))
+        # cv2.drawContours(self.current_screenshot, contours_found, -1, (0, 255, 0), 3)
+        # cv2.imshow('chats mark', self.current_screenshot)
+        # cv2.waitKey(0)
+
+        # for contour in contours:
+        #     # Aproximar el contorno a un polígono
+        #     approx = cv2.approxPolyDP(contour,
+        #         0.04 * cv2.arcLength(contour, True), True)
+        #
+        #     # if len(approx) >= 8:
+        #     # Obtener el centro y el radio del círculo
+        #     (x, y), radius = cv2.minEnclosingCircle(contour)
+        #     center = (int(x), int(y))
+        #     radius = int(radius)
+        #
+        #     # Verificar si el círculo está dentro del 25% izquierdo de la imagen
+        #     # Verificar si el circulo esta dentro del contorno donde estan los chats
+        #     # if start_x <= center[0] <= end_x and center[1] >= threshold_y:
+        #     self.take_chats_container_contour()
+        #     # if x > self.chats_reference[0] and x < self.chats_reference[0] + self.chats_reference[2] \
+        #     #     and y < self.chats_reference[1] and y < self.chats_reference[1] + self.chats_reference[3]:
+        #     print("\n chats references: ", self.chats_reference)
+        #     contours_found.append(center + (radius,))
 
         if len(contours_found) > 0:
             first_circle = contours_found[0]
             center = (first_circle[0], first_circle[1])
 
-            if self.chats_reference is None:
-                self.chats_reference = center
+            # if self.chats_reference is None:
+            #     self.chats_reference = center
 
             self.last_circles_references_detected = contours_found[-1]
 
@@ -126,7 +181,11 @@ class Bot:
         y = chat_ref[1]
         circle_x, circle_y = x, y
         image = self.current_screenshot
-        text_roi = image[circle_y - 50:circle_y, circle_x - 270:circle_x]
+        text_roi = image[circle_y - 50:circle_y + 10, circle_x - 300:circle_x]
+
+        # cv2.imshow('text_roi', text_roi)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
         img_hanlder = ImgHandler(image=text_roi)
         chat_id = img_hanlder.extract_text()
@@ -155,7 +214,12 @@ class Bot:
                          self.chats_reference[1],
                          duration=1)
 
-        self.scroll_reference = scroll_move
+        if self.scroll_reference is None:
+            self.scroll_reference = scroll_move
+        elif direction == 'up' and self.scroll_reference is not None:
+            self.scroll_reference += scroll_move
+        elif direction == 'down' and self.scroll_reference is not None:
+            self.scroll_reference -= scroll_move
 
         if direction == 'up':
             pyautogui.scroll(scroll_move)
@@ -347,7 +411,11 @@ class Bot:
         return result_image
 
 
-    def review_chat(self, has_more: bool = True, texts: list = None) -> list[list[tuple[int, int, int]]]:
+    def review_chat(
+            self, has_more: bool = True,
+            texts: List[List[Tuple[int, int, int]]] = None,
+            iterations: int = 0
+    ) -> List[List[Tuple[int, int, int]]]:
         """
         This function extracts the texts into chat contour as little contours.
         Each text is returned as a contour.
@@ -356,6 +424,9 @@ class Bot:
         :param texts: Accumulated list of text contours
         :return: List of text contours
         """
+        if iterations > MAX_ITERATIONS:
+            raise RecursionError("Se ha excedido el número máximo de iteraciones.")
+
         if texts is None:
             texts = []
 
@@ -364,6 +435,16 @@ class Bot:
 
         img_handler = ImgHandler(image=self.current_screenshot)
         chats_contour, chat_contour, possible_text_contours = img_handler.get_contours_by_edges()
+
+        print("chats_contour: ", len(chats_contour))
+        print("chat_contour: ", len(chat_contour))
+        print("pssible text contour: ", len(possible_text_contours))
+        if chat_contour is None or not isinstance(chat_contour, np.ndarray):
+            raise ValueError("No se pudo obtener el contorno del chat.")
+
+        if not possible_text_contours or not isinstance(possible_text_contours, list):
+            raise ValueError("No se encontraron contornos de texto posibles.")
+
         x, y, w, h = cv2.boundingRect(chat_contour)
         self.chat_area_reference = (x, y, w, h)
 
@@ -373,10 +454,9 @@ class Bot:
 
         if has_more:
             # Si no se encuentra el último texto visto
-            is_overflow = self.is_there_text_overflow()
+            is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
 
             if is_overflow:
-
                 # Caso cuando hay texto desbordado (tratamiento diferente)
                 result_image = self.repair_irregular_top_edge(
                     image=self.current_screenshot, contour=chat_contour)
@@ -388,7 +468,9 @@ class Bot:
                 x_contour_overflow_end = x + w
                 y_contour_overflow_end = y + h
 
-                while True:
+                scroll_attempts = 0
+
+                while scroll_attempts < MAX_SCROLL_ATTEMPTS:
                     self.scroll_chat_area(direction="up", scroll_move=1)
                     self.take_screenshot()
                     is_overflow = self.is_there_text_overflow()
@@ -399,6 +481,11 @@ class Bot:
 
                         img_handler = ImgHandler(image=result_image)
                         _, _, conours_found = img_handler.get_contours_by_edges()
+
+                        if not conours_found: raise ValueError(
+                            "No se encontraron contornos válidos "
+                            "después de reparar el borde superior.")
+
                         contour_overflow = conours_found[0]
                         x, y, w, h = cv2.boundingRect(contour_overflow)
                         x_contour_overflow_start = x
@@ -408,6 +495,9 @@ class Bot:
                                       (x_contour_overflow_end, y_contour_overflow_end, self.scroll_reference)])
                         break
 
+                if scroll_attempts >= MAX_SCROLL_ATTEMPTS:
+                    raise RuntimeError("Se ha excedido el número máximo de intentos de scroll.")
+
             else:
                 # Caso normal: hacer scroll y continuar el proceso
                 self.scroll_chat_area(direction="up",
@@ -416,14 +506,12 @@ class Bot:
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
             return self.review_chat(
                 has_more=has_more,
-                texts=texts + texts_did_not_watched
+                texts=texts + texts_did_not_watched,
+                iterations=iterations+1
             )
 
         return texts + texts_did_not_watched
 
-
-    def send_image(self):
-        pass
 
 
     def get_text_by_text_location(self, x_start, y_start, x_end,
@@ -459,48 +547,55 @@ class Bot:
         print("Running...")
         last_print = ""
         while True:
+            # pyautogui.keyDown('F11')
             self.take_screenshot()
-            # is_target = self.is_watching_target()
-            #
-            # if not is_target:
-            #     print(f"No Watching target...",
-            #           end="\r" if last_print == "nowatch" else None,
-            #           flush=True
-            #           )
-            #     last_print = "nowatch"
-            #     continue
-            #
-            # print(f"Watching target {self.target_name}...",
-            #       end="\r" if last_print == "watching" else None,
-            #       flush=True
-            #       )
-            # last_print = "watching"
+            is_target = self.is_watching_target()
+
+            if not is_target:
+                # # Si no estamos viendo el objetivo, imprimir "No Watching target..."
+                # print("                                                             ",
+                #       end="\r", flush=True)
+                # print("No Watching target...", end="\r", flush=True)
+                # last_print = "nowatch"
+                continue
+            else:
+                # # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
+                # print("                                                             ",
+                #       end="\r", flush=True)
+                # print(f"Watching target {self.target_name}...", end="\r", flush=True)
+                # last_print = "watching"
+                pass
 
             chats = self.find_chat_references()
+            print("chats: ", len(chats))
             for chat in chats:
-                x, y = chat[0], chat[1]
+                x, y, _, _ = cv2.boundingRect(chat)
 
                 chat_id = self.extract_chat_id(chat_ref=(x, y))
                 print("Chat id: ", chat_id)
-                continue
                 self.click_chat(chat_ref=(x, y), duration=1)
 
-                if chat_id:
-                    self.chat_querys.create_chat(id_scraped=chat_id)
-
-                self.move_to_chat()
-                texts_locations = self.review_chat()
-
-                # ===========================================================================================
-                # TODO Camturar textos de chats
-                for text_location in texts_locations:
-                    x_start, y_start, scroll_pos_start = text_location[0]
-                    x_end, y_end, scroll_pos_end = text_location[1]
-                    literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
-                                                   scroll_pos_start, scroll_pos_end)
-                    print("================= Texto Extraido ================= \n \n", literal_text)
-
-                time.sleep(1)
+                # if chat_id:
+                #     chat_id_clean = chat_id.strip()
+                #     chat = self.chat_querys.get_chat_by_id_scraped(
+                #         id_scraped=chat_id_clean)
+                #
+                #     if not chat:
+                #         self.chat_querys.create_chat(id_scraped=chat_id_clean)
+                #
+                # # self.move_to_chat()
+                # texts_locations = self.review_chat()
+                #
+                # # ===========================================================================================
+                # # TODO Camturar textos de chats
+                # for text_location in texts_locations:
+                #     x_start, y_start, scroll_pos_start = text_location[0]
+                #     x_end, y_end, scroll_pos_end = text_location[1]
+                #     literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
+                #                                    scroll_pos_start, scroll_pos_end)
+                #     print("================= Texto Extraido ================= \n \n", literal_text)
+                #
+                # time.sleep(1)
 
             # if len(chats) == 0 and self.previous_screenshot is not None:
             #     img_handler = ImgHandler(image=self.current_screenshot)
