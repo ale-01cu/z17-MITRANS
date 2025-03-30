@@ -390,7 +390,7 @@ class ImgHandler:
 
 
 
-    def is_top_edge_irregular(contour, threshold=1, edge_margin=5):
+    def is_top_edge_irregular(self, contour, threshold=1, edge_margin=5):
         """
         Determina si el borde superior de un contorno tiene alguna irregularidad,
         específicamente si "baja" en algún punto (excepto en los bordes).
@@ -404,6 +404,7 @@ class ImgHandler:
             bool: True si el borde superior tiene una irregularidad ("baja"), False si está completamente recto.
         """
         # Extraer los puntos del contorno
+        print("points: ", contour)
         points = contour[:, 0]  # Los puntos están almacenados como un array de shape (N, 1, 2)
 
         # Crear un diccionario para almacenar el valor mínimo de 'y' para cada 'x'
@@ -459,6 +460,8 @@ class ImgHandler:
         edged = self.get_edged(mask)
         contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         return contours
+
+
 
 
 

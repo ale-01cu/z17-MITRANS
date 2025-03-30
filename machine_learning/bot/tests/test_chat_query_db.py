@@ -45,14 +45,14 @@ def test_get_chat_by_id_scraped():
     querys = ChatQuerys(db=db)
 
     # Crear un chat para buscarlo
-    new_chat = querys.create_chat(id_scraped="unique_id")
+    new_chat = querys.create_chat(id_scraped="Alejandro Figueroa")
 
     # Obtener el chat por su id_scraped
-    retrieved_chat = querys.get_chat_by_id_scraped(id_scraped="unique_id")
+    retrieved_chat = querys.get_chat_by_id_scraped(id_scraped="Alejandro Figueroa")
 
     # Verificar que el chat recuperado es correcto
     assert retrieved_chat is not None
-    assert retrieved_chat.id_scraped == "unique_id"
+    assert retrieved_chat.id_scraped == "Alejandro Figueroa"
     assert retrieved_chat.id == new_chat.id
 
     # Intentar obtener un chat inexistente
@@ -108,6 +108,40 @@ def test_update_chat():
     # Intentar actualizar un chat inexistente
     non_existent_update = querys.update_chat(chat_id=9999, id_scraped="fail")
     assert non_existent_update is None
+
+
+def test_update_chat_by_id_scraped():
+    db = next(get_db())
+    querys = ChatQuerys(db=db)
+
+    # Crear un chat para actualizar
+    # new_chat = querys.create_chat(id_scraped="Alejandro Figueroa",
+    #                               last_text_url="http://old.com")
+
+    # Actualizar el chat
+    updated_chat = querys.update_chat_by_chat_id_scraped(
+        id_scraped="Alejandro Figueroa",
+        # id_scraped="new_id",
+        last_text_url="http://new.com",
+        last_text="texto",
+    )
+
+    # Verificar que el chat se actualizó correctamente
+    assert updated_chat is not None
+    # assert updated_chat.id_scraped == "new_id"
+    assert updated_chat.last_text_url == "http://new.com"
+    assert updated_chat.last_text == "texto"
+
+    # Verificar que los cambios persisten en la base de datos
+    db_chat = querys.get_chat_by_id_scraped(id_scraped="Alejandro Figueroa")
+    # assert db_chat.id_scraped == "new_id"
+    assert db_chat.last_text_url == "http://new.com"
+    assert db_chat.last_text == "texto"
+
+    # Intentar actualizar un chat inexistente
+    non_existent_update = querys.update_chat_by_chat_id_scraped(id_scraped="fail")
+    assert non_existent_update is None
+
 
 
 def test_delete_chat():
