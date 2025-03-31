@@ -1,6 +1,7 @@
 from bot import Bot
 import os
 from db.db import engine, Base
+import asyncio
 
 # Crear todas las tablas en la base de datos
 Base.metadata.create_all(bind=engine)
@@ -18,9 +19,9 @@ def main():
             messenger_template_path,
             messenger_template_2_path
         ],
-        websocket_uri="ws://your-server:port"
+        websocket_uri="ws://localhost:8000/ws/chat/"
     )
-    bot.run()
+    asyncio.run(bot.run())
 
 if __name__ == "__main__":
     main()

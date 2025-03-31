@@ -83,7 +83,7 @@ class Bot:
             print(f"Error handling WebSocket message: {e}")
 
 
-    async def run_async(self):
+    async def establish_connection(self):
         """Asynchronous version of the run method"""
         print("Running async...")
         
@@ -100,8 +100,7 @@ class Bot:
 
         except Exception as e:
             print(f"Error in run_async: {e}")
-        finally:
-            await self.disconnect_websocket()
+
 
     def is_watching_target(self, threshold: float = 0.8) -> bool:
         if self.current_screenshot is None:
@@ -486,7 +485,7 @@ class Bot:
 
 
 
-    def get_texts_did_not_watched_list(self, possible_text_contours):
+    async def get_texts_did_not_watched_list(self, possible_text_contours):
         texts_did_not_watched = []
         has_more = True
         last_text = None
@@ -496,7 +495,8 @@ class Bot:
 
         self.move_to_chat()
 
-        self.show_contours(contours=possible_text_contours, title="posible contornos de texts")
+        # self.show_contours(contours=possible_text_contours, 
+        # title="posible contornos de texts")
 
         for i, contour in enumerate(possible_text_contours):
             # Comparar img_roi con la ultima referencia del texto visto por el current chat id
@@ -513,14 +513,20 @@ class Bot:
                 scroll_pos_end=self.scroll_reference,
                 desactivate_scroll=True
             )
+            
+            # Send the extracted text through WebSocket
+            await self.send_websocket_message("new_text", {
+                "chat_id": self.current_chat_id,
+                "text": text,
+            })
 
-            print("text: ", text)
             is_watched = self.is_text_already_watched(text=text)
 
             if not is_watched:
                 start_location = (x, y, self.scroll_reference)
                 end_location = (x + w, y + h, self.scroll_reference)
                 texts_did_not_watched.append([start_location, end_location])
+
                 if i == 0:
                     last_text = text
             else:
@@ -639,7 +645,7 @@ class Bot:
         return result_image
 
 
-    def review_chat(
+    async def review_chat(
             self, has_more: bool = True,
             texts: List[List[Tuple[int, int, int]]] = None,
             iterations: int = 0
@@ -679,7 +685,7 @@ class Bot:
         x, y, w, h = cv2.boundingRect(chat_contour)
         self.chat_area_reference = (x, y, w, h)
 
-        has_more, texts_did_not_watched = self.get_texts_did_not_watched_list(
+        has_more, texts_did_not_watched = await self.get_texts_did_not_watched_list(
             possible_text_contours=possible_text_contours
         )
 
@@ -840,11 +846,11 @@ class Bot:
 
 
 
-    def run(self):
+    async def run(self):
+        await self.establish_connection() 
+
         print("Running...")
         last_print = ""
-
-        asyncio.run(self.run_async())
 
         while True:
             # pyautogui.keyDown('F11')
@@ -885,7 +891,7 @@ class Bot:
 
                 # self.move_to_chat()
                 self.take_screenshot()
-                texts_locations = self.review_chat()
+                texts_locations = await self.review_chat()
                 print("texts_locations: ", len(texts_locations))
 
                 # ===========================================================================================
