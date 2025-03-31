@@ -1,6 +1,7 @@
 export const SERVER_HOST = 'localhost' 
 export const SERVER_PORT = 8000
 export const SERVER_BASE_URL = `http://${SERVER_HOST}:${SERVER_PORT}`
+export const WS_URL = `ws://${SERVER_HOST}:${SERVER_PORT}/ws/chat/`
 
 
 // APIS

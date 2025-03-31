@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
   SidebarFooter
 } from "~/components/ui/sidebar"
-import { Calendar, Home, Search, Settings, Pickaxe, MessageSquareTextIcon } from "lucide-react"
+import { Calendar, Home, Search, Settings, Pickaxe, MessageSquareTextIcon, Bot } from "lucide-react"
 import { Button } from "./ui/button"
 import { useLocation, useNavigate } from "react-router"
 import { removeCookie } from "~/utils/cookies"
@@ -19,6 +19,11 @@ const items = [
     title: "Inicio",
     url: "/",
     icon: Home,
+  },
+  {
+    title: "Bot",
+    url: "/bot",
+    icon: Bot,
   },
   {
     title: "Extraer",
