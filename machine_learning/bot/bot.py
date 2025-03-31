@@ -711,51 +711,11 @@ class Bot:
             if len(texts) > 0:
                 print("texts: ", texts)
                 print("the las one bro: ", texts[-1])
-                last_height = abs(texts[-1][0][1] - texts[-1][1][1])
-                
-                # Configuración de márgenes para scroll
-                offset_margin = 30  # Margen de offset para posicionar adecuadamente
-                
-                # Calcular distancia desde el último texto visto al nuevo texto no visto
-                if len(texts_did_not_watched) > 0:
-                    # Calcular la distancia entre el último texto visto y el primer texto no visto
-                    distance = abs(texts[-1][0][1] - texts_did_not_watched[-1][0][1])
-                    
-                    # Si la distancia es muy pequeña, usamos un valor mínimo para evitar desplazamientos insuficientes
-                    if distance < 50:
-                        distance = 50
-                        
-                    # Ajustamos el scroll para posicionar justo encima del último texto visto
-                    scroll_amount = int(distance + last_height + offset_margin + amount_scrolled)
-                else:
-                    # Si no hay textos no vistos, usamos solo la altura del último texto más un margen
-                    scroll_amount = int(last_height * 1.5 + offset_margin + amount_scrolled)
-                
-                print("Scrolling up by: ", scroll_amount, "with amount_scrolled:", amount_scrolled)
-                self.scroll_chat_area(direction="up", scroll_move=scroll_amount)
-                time.sleep(0.5)  # Pequeña pausa para permitir que el scroll se complete
+                last_height = texts[-1][0][1] - texts[-1][1][1]
+                self.scroll_chat_area(direction="up",
+                                      scroll_move=int(((texts[-1][0][1] - texts_did_not_watched[-1][1][1]) + last_height * 2) + amount_scrolled))
                 self.take_screenshot()
-                
-                # Verificar si después del scroll se puede ver el chat_contour correctamente
-                chat_contour = self.find_chat_area_contour()
-                if chat_contour is not None:
-                    is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
-                    if is_overflow:
-                        # Si después del scroll aún hay overflow, ajustamos un poco más
-                        print("Ajustando scroll adicional para eliminar overflow")
-                        self.scroll_chat_area(direction="up", scroll_move=20)
-                        time.sleep(0.3)
-                        self.take_screenshot()
-                
-                # Reiniciamos la variable amount_scrolled ya que lo hemos incluido en el cálculo
-                amount_scrolled = 0
-                
-                # Continuamos la recursión para procesar los nuevos textos en la nueva posición
-                return self.review_chat(
-                    has_more=has_more,
-                    texts=texts + texts_did_not_watched,
-                    iterations=iterations+1
-                )
+                return
 
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
             return self.review_chat(
