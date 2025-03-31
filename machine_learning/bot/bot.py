@@ -16,8 +16,12 @@ import os
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
 
+# Add these imports at the top of the file
+import asyncio
+from websocket_client import WebSocketClient
+
 class Bot:
-    def __init__(self, name: str, target_name: str, target_templates_paths: list[str]) -> None:
+    def __init__(self, name: str, target_name: str, target_templates_paths: list[str], websocket_uri: str) -> None:
         self.name = name
         self.target_name = target_name
 
@@ -32,6 +36,72 @@ class Bot:
         # self.target_template = cv2.imread(self.target_template_path)
         self.chat_querys = ChatQuerys()
 
+        # Initialize WebSocket client
+        self.websocket = WebSocketClient(
+            uri=websocket_uri,
+            on_message=self.handle_websocket_message
+        )
+        self.websocket_uri = websocket_uri
+
+
+    async def connect_websocket(self):
+        """Connects to the WebSocket server"""
+        return await self.websocket.connect()
+
+    async def disconnect_websocket(self):
+        """Disconnects from the WebSocket server"""
+        await self.websocket.disconnect()
+
+    async def send_websocket_message(self, message_type: str, data: dict):
+        """Sends a message through the WebSocket connection"""
+        message = {
+            "type": message_type,
+            "data": data,
+            "bot_name": self.name,
+            "timestamp": time.time()
+        }
+        return await self.websocket.send_message(message)
+
+
+    async def handle_websocket_message(self, message: dict):
+        """Handles incoming WebSocket messages"""
+        try:
+            message_type = message.get("type")
+            data = message.get("data")
+
+            if message_type == "command":
+                # Handle different commands
+                if data.get("action") == "stop":
+                    # Handle stop command
+                    pass
+                elif data.get("action") == "start":
+                    # Handle start command
+                    pass
+                # Add more command handlers as needed
+
+        except Exception as e:
+            print(f"Error handling WebSocket message: {e}")
+
+
+    async def run_async(self):
+        """Asynchronous version of the run method"""
+        print("Running async...")
+        
+        # Connect to WebSocket server
+        if not await self.connect_websocket():
+            print("Failed to connect to WebSocket server")
+            return
+
+        try:
+            # Send status update through WebSocket
+            await self.send_websocket_message("status", {
+                "ok": True,
+            })
+
+        except Exception as e:
+            print(f"Error in run_async: {e}")
+        finally:
+            await self.disconnect_websocket()
 
     def is_watching_target(self, threshold: float = 0.8) -> bool:
         if self.current_screenshot is None:
@@ -426,6 +496,8 @@ class Bot:
 
         self.move_to_chat()
 
+        self.show_contours(contours=possible_text_contours, title="posible contornos de texts")
+
         for i, contour in enumerate(possible_text_contours):
             # Comparar img_roi con la ultima referencia del texto visto por el current chat id
             x, y, w, h = cv2.boundingRect(contour)
@@ -593,6 +665,7 @@ class Bot:
         chat_contour = self.find_chat_area_contour()
         possible_text_contours = self.find_text_area_contours()
 
+        self.take_screenshot()
         print("chats_contour: ", len(chats_contour))
         print("chat_contour: ", len(chat_contour))
         print("pssible text contour: ", len(possible_text_contours))
@@ -712,10 +785,11 @@ class Bot:
                 print("texts: ", texts)
                 print("the las one bro: ", texts[-1])
                 last_height = texts[-1][0][1] - texts[-1][1][1]
-                self.scroll_chat_area(direction="up",
-                                      scroll_move=int(((texts[-1][0][1] - texts_did_not_watched[-1][1][1]) + last_height * 2) + amount_scrolled))
-                self.take_screenshot()
-                return
+
+                for i in range(4):
+                    self.scroll_chat_area(direction="up",
+                                        scroll_move=int((self.chat_area_reference[-1] * 0.25)))
+                    time.sleep(1)
 
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
             return self.review_chat(
@@ -769,6 +843,9 @@ class Bot:
     def run(self):
         print("Running...")
         last_print = ""
+
+        asyncio.run(self.run_async())
+
         while True:
             # pyautogui.keyDown('F11')
             self.take_screenshot()

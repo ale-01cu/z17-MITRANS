@@ -17,7 +17,8 @@ def main():
         target_templates_paths=[
             messenger_template_path,
             messenger_template_2_path
-        ]
+        ],
+        websocket_uri="ws://your-server:port"
     )
     bot.run()
 
