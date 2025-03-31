@@ -50,6 +50,7 @@ LOCAL_APPS = [
     'apps.source',
     'apps.img_process',
     'apps.comment_user_owner',
+    'apps.bot',
 ]
 
 THIRD_APPS = [
@@ -57,6 +58,7 @@ THIRD_APPS = [
     'rest_framework',
     'djoser',
     'drf_spectacular',
+    'channels',
 ]
 
 INSTALLED_APPS = BASE_APPS + LOCAL_APPS + THIRD_APPS
@@ -90,8 +92,10 @@ TEMPLATES = [
     },
 ]
 
+ASGI_APPLICATION = 'core.asgi.application'
 WSGI_APPLICATION = 'core.wsgi.application'
 
+# CORS_ALLOWED_ORIGINS = True
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -106,7 +110,12 @@ DATABASES = {
         'DATABASE_PORT': env('DATABASE_PORT'),
     }
 }
-
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
@@ -222,7 +231,20 @@ EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://localhost:5173",
+    "http://localhost:6379",# esto es para redis probando los channels
+    "ws://localhost:8000",#Esto es websocket
 ]
 
-CELERY_BROKER_URL = "redis://localhost:6379/"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/"
+
+# Se configura los canales para usar redis
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("localhost", 6379)],
+#             # "hosts": [("redis", 6379)],  Para usar con docker
+#         },
+#     },
+# }
+# CELERY_BROKER_URL = "redis://localhost:6379/0"
+# CELERY_RESULT_BACKEND = "redis://localhost:6379/"
