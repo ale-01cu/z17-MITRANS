@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-# import enchant
-# import easyocr
 import pytesseract
 
 """
@@ -389,22 +387,27 @@ class ImgHandler:
         return img_roi
 
 
-
-    def is_top_edge_irregular(self, contour, threshold=1, edge_margin=5):
+    def is_top_edge_irregular(self, contour, threshold=1, edge_margin_left=5,
+                              edge_margin_right=5, analyze_percent=100):
         """
-        Determina si el borde superior de un contorno tiene alguna irregularidad,
-        específicamente si "baja" en algún punto (excepto en los bordes).
+        Determina si el borde superior de un contorno tiene alguna irregularidad en un porcentaje específico del mismo.
 
         Args:
             contour (numpy.ndarray): El contorno en formato de un array de puntos.
             threshold (int): Umbral para considerar una diferencia significativa en 'y'.
-            edge_margin (int): Margen en píxeles para excluir los bordes izquierdo y derecho.
+            edge_margin_left (int): Margen en píxeles para excluir el borde izquierdo.
+            edge_margin_right (int): Margen en píxeles para excluir el borde derecho.
+            analyze_percent (int): Porcentaje del borde superior a analizar (0-100).
+                                  Ejemplo: 25 analiza solo el primer 25% del borde.
 
         Returns:
-            bool: True si el borde superior tiene una irregularidad ("baja"), False si está completamente recto.
+            bool: True si el borde superior tiene una irregularidad ("baja") en el área analizada,
+                  False si está completamente recto en esa sección.
         """
+        # Validar el porcentaje de análisis
+        analyze_percent = max(0, min(100, analyze_percent))
+
         # Extraer los puntos del contorno
-        print("points: ", contour)
         points = contour[:, 0]  # Los puntos están almacenados como un array de shape (N, 1, 2)
 
         # Crear un diccionario para almacenar el valor mínimo de 'y' para cada 'x'
@@ -420,16 +423,26 @@ class ImgHandler:
         x_coords = [x for x, y in sorted_top_edge]
         y_coords = [y for x, y in sorted_top_edge]
 
-        # Excluir los bordes laterales según el margen especificado
-        if len(x_coords) <= 2 * edge_margin:
+        # Excluir los bordes laterales según los márgenes especificados
+        if len(x_coords) <= (edge_margin_left + edge_margin_right):
             return False  # No hay suficientes puntos para analizar después de excluir los bordes
 
-        start_index = edge_margin
-        end_index = len(x_coords) - edge_margin
+        start_index = edge_margin_left
+        end_index = len(x_coords) - edge_margin_right
 
-        # Filtrar las coordenadas dentro del rango central
+        # Calcular el punto final basado en el porcentaje a analizar
+        if analyze_percent < 100:
+            total_central_points = end_index - start_index
+            analyze_points = int(total_central_points * analyze_percent / 100)
+            end_index = start_index + analyze_points
+
+        # Filtrar las coordenadas dentro del rango especificado
         central_x_coords = x_coords[start_index:end_index]
         central_y_coords = y_coords[start_index:end_index]
+
+        # Si no hay suficientes puntos después del filtrado
+        if len(central_x_coords) < 2:
+            return False
 
         # Calcular las diferencias consecutivas en 'y' para detectar irregularidades
         y_diffs = np.diff(central_y_coords)
