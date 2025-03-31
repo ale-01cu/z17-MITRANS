@@ -495,8 +495,8 @@ class Bot:
 
         self.move_to_chat()
 
-        # self.show_contours(contours=possible_text_contours, 
-        # title="posible contornos de texts")
+        self.show_contours(contours=possible_text_contours, 
+        title="posible contornos de texts")
 
         for i, contour in enumerate(possible_text_contours):
             # Comparar img_roi con la ultima referencia del texto visto por el current chat id

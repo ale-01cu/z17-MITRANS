@@ -7,9 +7,22 @@ import {
   ScrollRestoration,
 } from "react-router";
 import { Toaster } from "~/components/ui/sonner";
+import { createContext, useContext } from "react";
+import { useWebSocket } from "./hooks/useWebSocket";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+
+// Mantenemos la definición del contexto aquí ya que es global
+export const WebSocketContext = createContext<ReturnType<typeof useWebSocket> | null>(null);
+
+export const useWebSocketContext = () => {
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error('useWebSocketContext debe ser usado dentro de un WebSocketProvider');
+  }
+  return context;
+};
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
