@@ -3,6 +3,7 @@ from simple_history.models import HistoricalRecords
 import uuid
 
 # Create your models here.
+# Asegúrate de que tu modelo Classification tenga estos campos
 class Classification(models.Model):
     class Meta:
         verbose_name = "Clasificación"
@@ -32,3 +33,16 @@ class Classification(models.Model):
             unique_id = uuid.uuid4().hex
             self.external_id = f"clas_{unique_id}"
         super().save(*args, **kwargs)
+
+    comment = models.ForeignKey(
+        'comment.Comment',
+        on_delete=models.CASCADE,
+        related_name='classifications',
+        null=True,
+        blank=True
+    )
+    
+    classification_type = models.CharField(
+        max_length=100,
+        verbose_name="Tipo de clasificación"
+    )
