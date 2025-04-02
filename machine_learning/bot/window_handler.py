@@ -2,9 +2,9 @@ import pygetwindow as gw
 from pygetwindow import Win32Window
 
 class WindowHandler:
-    def __init__(self):
+    def __init__(self, title: str = ''):
         self.window = None
-        self.title = None
+        self.title = title
         self.class_name = None
         self.process_name = None
         self.pid = None

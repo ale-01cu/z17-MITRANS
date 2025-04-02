@@ -475,6 +475,90 @@ class ImgHandler:
         return contours
 
 
+    # Detecta si hay algun borde horizontal con una discontinuidad
+    def has_irregular_horizontal_edge(
+            self,
+            contour,
+            y_threshold=5,
+            x_threshold=5,
+            slope_threshold=2,
+            corner_margin=5
+    ):
+        """
+        Detecta irregularidades en bordes horizontales, excluyendo esquinas redondeadas.
+
+        Args:
+            contour (numpy.ndarray): Contorno en formato de array de puntos.
+            y_threshold (int): Umbral para detectar desviaciones hacia abajo.
+            x_threshold (int): Umbral para detectar discontinuidades.
+            slope_threshold (int): Variación máxima en 'y' entre puntos consecutivos.
+            corner_margin (int): Píxeles a excluir en los extremos de cada borde horizontal.
+
+        Returns:
+            bool: True si hay irregularidades en bordes horizontales.
+        """
+        if len(contour) < 2:
+            return False
+
+        current_edge = []
+        start_y = None
+
+        for point in contour[:, 0]:
+            x, y = point
+
+            if not current_edge:
+                current_edge.append((x, y))
+                start_y = y
+            else:
+                delta_consecutive = abs(y - current_edge[-1][1])
+                delta_cumulative = abs(y - start_y)
+
+                # Continuar el borde si cumple ambas condiciones
+                if delta_consecutive <= slope_threshold and delta_cumulative <= y_threshold * 2:
+                    current_edge.append((x, y))
+                else:
+                    if len(current_edge) >= 2:
+                        if self.check_irregularities(current_edge, y_threshold, x_threshold, corner_margin):
+                            return True
+                    # Reiniciar el borde
+                    current_edge = [(x, y)]
+                    start_y = y
+
+        # Verificar el último borde
+        if len(current_edge) >= 2:
+            if self.check_irregularities(current_edge, y_threshold, x_threshold, corner_margin):
+                return True
+
+        return False
+
+
+    def check_irregularities(self, edge, y_threshold, x_threshold, corner_margin):
+        """Verifica irregularidades excluyendo las esquinas."""
+        if len(edge) <= 2 * corner_margin:
+            return False  # Borde demasiado corto después de excluir esquinas
+
+        # Excluir margen de esquinas
+        trimmed_edge = edge[corner_margin:-corner_margin]
+        if not trimmed_edge:
+            return False
+
+        baseline_y = trimmed_edge[0][1]  # Referencia desde la zona central
+
+        # 1. Detectar desviación hacia abajo (ahora incluye igualdad)
+        for x, y in trimmed_edge:
+            if y - baseline_y >= y_threshold:  # Cambiado de > a >=
+                return True
+
+        # 2. Detectar discontinuidades
+        for i in range(len(trimmed_edge) - 1):
+            x1, y1 = trimmed_edge[i]
+            x2, y2 = trimmed_edge[i + 1]
+            if abs(x2 - x1) > x_threshold:
+                return True
+
+        return False
+
+
 
 
 
