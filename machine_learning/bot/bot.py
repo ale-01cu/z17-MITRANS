@@ -11,6 +11,8 @@ from typing import List, Tuple
 import os
 from window_handler import WindowHandler
 from utils import get_subtraction_steps
+import keyboard
+import asyncio
 
 # pynput otra libreria para manejar el mouse
 # pydirectinput otra libreria para manejar el mouse
@@ -235,9 +237,11 @@ class Bot:
             if (50 < w < w_chat * 0.70) and (h < h_chat - 10):
 
                 print("First contour reference: ", self.first_contour_reference)
-                is_contour_invalid = y + h < self.first_contour_reference[-1] \
+                is_contour_invalid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
                     if self.first_contour_reference is not None \
                     else True
+
+                # is_contour_invalid = True
 
                 # Verifica si está DENTRO del chat_contour
                 if ((x > x_chat) and (x + w < x_chat + w_chat)) and ((y > y_chat) and (y + h < y_chat + h_chat)) and is_contour_invalid:
@@ -247,6 +251,9 @@ class Bot:
         # cv2.imshow('chats contour', self.current_screenshot)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
+        #
+        # self.show_contours(contours=possible_text_contours,
+        #                    title="posible texto contour-find_text_area_contours")
 
         return possible_text_contours
 
@@ -394,7 +401,7 @@ class Bot:
 
         if move_to_chat: 
             self.move_to_chat()
-            pyautogui.leftClick()
+            # pyautogui.leftClick()
 
 
         if self.scroll_reference is None:
@@ -540,7 +547,7 @@ class Bot:
             )
 
             await self.send_websocket_message(message_type="bot_message", message=text)
-            
+
             # if i == 4:
             #     return False
 
@@ -561,6 +568,11 @@ class Bot:
             else:
                 has_more = False
                 break
+
+
+            if keyboard.is_pressed('esc'):
+                print("Detenido por el usuario.")
+                exit()
 
         # self.chat_querys.update_chat_by_chat_id_scraped(
         #     id_scraped=self.current_chat_id, last_text=last_text)
@@ -687,6 +699,8 @@ class Bot:
         :param texts: Accumulated list of text contours
         :return: List of text contours
         """
+
+
         if iterations > MAX_ITERATIONS:
             raise RecursionError("Se ha excedido el número máximo de iteraciones.")
 
@@ -697,9 +711,16 @@ class Bot:
             return texts
 
         self.take_screenshot()
+        chats = self.find_chat_references()
+
+        if len(chats) > 0:
+            return texts
         chats_contour = self.take_chats_container_contour()
         chat_contour = self.find_chat_area_contour()
         possible_text_contours = self.find_text_area_contours()
+
+        # self.show_contours(contours=possible_text_contours,
+        #                    title="Testeando todos los contornos posibles al inicio de la funcion.")
 
         img_Handler = ImgHandler(image=self.current_screenshot)
         contours = img_Handler.find_contours_by_large_contours_mask()
@@ -771,6 +792,9 @@ class Bot:
 
                 # looking for the start of the overflow contour
                 while scroll_attempts < MAX_SCROLL_ATTEMPTS:
+                    if keyboard.is_pressed('esc'):
+                        print("Detenido por el usuario.")
+                        exit()
                     self.scroll_chat_area(direction="up", scroll_move=1)
                     amount_scrolled += 1
                     self.take_screenshot()
@@ -798,7 +822,16 @@ class Bot:
                         #                    title="imagen sin overflow reparada"
                         #                    )
                         self.take_screenshot()
+                        img_handler = ImgHandler(image=self.current_screenshot)
+                        contours = img_handler.find_contours_by_large_contours_mask()
+
+                        # self.show_contours(contours=contours,
+                        #                    title="Probando")
+
                         conours_found = self.find_text_area_contours()
+
+                        # self.show_contours(contours=conours_found,
+                        #                    title="Contornos en el final del texto con overflow")
 
                         # self.show_contours(contours=conours_found,
                         #                    title="Contornos en el final del texto con overflow")
@@ -812,8 +845,6 @@ class Bot:
                         x_contour_overflow_start = x
                         y_contour_overflow_start = y
 
-                        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa ", len(conours_found))
-
                         await self.get_texts_did_not_watched_list(
                             possible_text_contours=[contour_overflow]
                         )
@@ -822,25 +853,27 @@ class Bot:
                                       (x_contour_overflow_end, y_contour_overflow_end, end_scroll_reference)])
 
                         # Fix: Scroll reference mal
-                        text = self.get_text_by_text_location(
-                            x_start=x_contour_overflow_start + 20,
-                            y_start=y_contour_overflow_start + 20,
-                            x_end=x_contour_overflow_end,
-                            y_end=(y_contour_overflow_end) - 20,
-                            scroll_pos_start=self.scroll_reference,
-                            scroll_pos_end=end_scroll_reference,
-                        )
+                        # text = self.get_text_by_text_location(
+                        #     x_start=x_contour_overflow_start + 20,
+                        #     y_start=y_contour_overflow_start + 20,
+                        #     x_end=x_contour_overflow_end,
+                        #     y_end=(y_contour_overflow_end) - 20,
+                        #     scroll_pos_start=self.scroll_reference,
+                        #     # TODO: revisar aqui cual debe de ser la diferencia correcta
+                        #     scroll_pos_end=end_scroll_reference
+                        #         if self.scroll_reference - end_scroll_reference > 100
+                        #         else self.scroll_reference,
+                        # )
     
-                        is_watched = self.is_text_already_watched(text=text)
+                        # is_watched = self.is_text_already_watched(text=text)
+                        #
+                        # if is_watched:
+                        #     return texts + texts_did_not_watched
 
-                        if is_watched:
-                            return texts + texts_did_not_watched
-
-                        else:
-                            self.scroll_chat_area(direction="down", 
-                                scroll_move=end_scroll_reference
-                            )
-
+                        # else:
+                        #     self.scroll_chat_area(direction="down",
+                        #         scroll_move=end_scroll_reference
+                        #     )
                         break
 
                 if scroll_attempts >= MAX_SCROLL_ATTEMPTS:
@@ -853,7 +886,7 @@ class Bot:
                 last_height = texts[-1][0][1] - texts[-1][1][1]
 
                 steps = get_subtraction_steps(
-                    initial_value=texts[-1][0][1], 
+                    initial_value=texts[-1][0][1],
                     target_value=self.first_contour_reference[1]+self.first_contour_reference[-1], 
                     steps=10
                     )
@@ -862,11 +895,15 @@ class Bot:
                 print("target value: ", self.first_contour_reference[1]+self.first_contour_reference[-1])
                 print("Diference ", abs(texts[-1][0][1] - self.first_contour_reference[1]+self.first_contour_reference[-1]))
 
-                for step in steps:
+                for i, step in enumerate(steps):
                     step = math.ceil(abs(step))
+                    if i == len(steps) - 1:
+                        step = math.ceil(step / 2)
+
+                    print("Current step aaaaaaaaaaaaaaaaaaaaaaa: ", step )
                     self.scroll_chat_area(direction='up',
                                           scroll_move=step)
-                    time.sleep(1)
+                    await asyncio.sleep(1)
                 # for i in range(4):
                 #     self.scroll_chat_area(direction="up",
                 #                         scroll_move=int((self.chat_area_reference[-1] * 0.25)))
@@ -931,33 +968,47 @@ class Bot:
         #     self.scroll_chat_area(direction='up', move_to_chat=True, scroll_move=1)
 
         while True:
+            print("Buscando chats...")
+            if keyboard.is_pressed('esc'):
+                print("Detenido por el usuario.")
+                exit()
             # pyautogui.keyDown('F11')
             self.take_screenshot()
             is_target = self.is_watching_target()
 
-            if not is_target:
-                # # Si no estamos viendo el objetivo, imprimir "No Watching target..."
-                # print("                                                             ",
-                #       end="\r", flush=True)
-                # print("No Watching target...", end="\r", flush=True)
-                # last_print = "nowatch"
-                continue
-            else:
-                # # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
-                # print("                                                             ",
-                #       end="\r", flush=True)
-                # print(f"Watching target {self.target_name}...", end="\r", flush=True)
-                # last_print = "watching"
-                pass
+            # if not is_target:
+            #     # # Si no estamos viendo el objetivo, imprimir "No Watching target..."
+            #     # print("                                                             ",
+            #     #       end="\r", flush=True)
+            #     # print("No Watching target...", end="\r", flush=True)
+            #     # last_print = "nowatch"
+            #     continue
+            # else:
+            #     # # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
+            #     # print("                                                             ",
+            #     #       end="\r", flush=True)
+            #     # print(f"Watching target {self.target_name}...", end="\r", flush=True)
+            #     # last_print = "watching"
+            #     pass
 
+            print("test 1")
             chats = self.find_chat_references()
             print("chats: ", len(chats))
+            print("test 2")
             for chat in chats:
                 x, y, _, _ = cv2.boundingRect(chat)
 
                 chat_id = self.extract_chat_id(chat_ref=(x, y))
                 print("Chat id: ", chat_id)
                 self.click_chat(chat_ref=(x, y), duration=1)
+                print("scroll reference: ", self.scroll_reference)
+                # steps = get_subtraction_steps(initial_value=self.scroll_reference if self.scroll_reference else 0,
+                #                               target_value=0,
+                #                               steps=5)
+                #
+                # for step in steps:
+                #     step = math.ceil(abs(step))
+                #     self.scroll_chat_area(direction='down', scroll_move=step)
 
                 if chat_id:
                     chat = self.chat_querys.get_chat_by_id_scraped(
@@ -972,7 +1023,7 @@ class Bot:
                 print("texts_locations: ", len(texts_locations))
 
                 # ===========================================================================================
-                # TODO Camturar textos de chats
+                # TODO Capturar textos de chats
                 # for text_location in texts_locations:
                 #     x_start, y_start, scroll_pos_start = text_location[0]
                 #     x_end, y_end, scroll_pos_end = text_location[1]
@@ -980,7 +1031,9 @@ class Bot:
                 #                                    scroll_pos_start, scroll_pos_end)
                 #     print("================= Texto Extraido ================= \n \n", literal_text)
                 #
-                time.sleep(1)
+                await asyncio.sleep(1)
+
+            print("Sali del bucle de los chats...")
 
             # if len(chats) == 0 and self.previous_screenshot is not None:
             #     img_handler = ImgHandler(image=self.current_screenshot)

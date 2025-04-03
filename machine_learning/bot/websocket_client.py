@@ -87,39 +87,45 @@ class WebSocketClient:
         """
         if not self.is_connected:
             self.logger.warning("Not connected to server. Adding to queue and attempting to reconnect...")
+            print("Not connected to server. Adding to queue and attempting to reconnect...")
             await self._pending_messages.put((message, require_ack, timeout))
             await self.connect()
             return False
-            
+
         message_id = str(uuid.uuid4())
         message_with_id = {**message, 'message_id': message_id, 'timestamp': datetime.now().isoformat()}
-        
+
         try:
             if require_ack:
                 ack_event = asyncio.Event()
                 self._message_callbacks[message_id] = ack_event
-            
+
             await self.connection.send(json.dumps(message_with_id))
             self.logger.debug(f"Sent message (ID: {message_id}): {message}")
-            
+            print(f"Sent message (ID: {message_id}): {message}")
+
             if require_ack:
                 try:
                     await asyncio.wait_for(ack_event.wait(), timeout=timeout)
                     self.logger.debug(f"Message acknowledged (ID: {message_id})")
+                    print(f"Message acknowledged (ID: {message_id})")
                     return True
                 except asyncio.TimeoutError:
                     self.logger.warning(f"Timeout waiting for ACK (ID: {message_id})")
+                    print(f"Timeout waiting for ACK (ID: {message_id})")
                     return False
             return True
-            
+
         except websockets.exceptions.ConnectionClosed:
             self.logger.warning("Connection closed while sending. Adding to queue...")
+            print("Connection closed while sending. Adding to queue...")
             await self._pending_messages.put((message, require_ack, timeout))
             self.is_connected = False
             await self._handle_reconnect()
             return False
         except Exception as e:
             self.logger.error(f"Failed to send message (ID: {message_id}): {e}")
+            print(f"Failed to send message (ID: {message_id}): {e}")
             return False
 
     async def _listen(self):

@@ -24,14 +24,3 @@ def get_subtraction_steps(initial_value, target_value, steps):
     signed_step = -step_amount if difference > 0 else step_amount
 
     return [signed_step] * steps
-
-
-# Ejemplo de uso / Example usage:
-initial_value = 206
-target_value = 958
-steps = 8
-
-subtraction_list = get_subtraction_steps(initial_value, target_value, steps)
-print(f"Subtracting from {initial_value} to {target_value} in {steps} steps:")
-for step, amount in enumerate(subtraction_list):
-    print(f"Step {step}: Subtract {amount}")
