@@ -3,13 +3,15 @@ import { useWebSocketContext } from '~/root';
 
 export default function BotView() {
     const { subscribe, isConnected } = useWebSocketContext();
-    const [serverResponse, setServerResponse] = useState<string[]>([]);
+    const [serverResponse, setServerResponse] = useState<any[]>([]);
 
     useEffect(() => {
         // Suscribirse a los mensajes del servidor
         const unsubscribe = subscribe('message', (data) => {
             console.log('Respuesta del bot recibida:', data);
-            setServerResponse([...serverResponse, data.message]);
+            setServerResponse(prev => {
+              return [...prev, data.content.message]
+            });
         });
 
         // Limpieza al desmontar

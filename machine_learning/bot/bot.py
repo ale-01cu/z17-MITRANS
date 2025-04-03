@@ -60,13 +60,19 @@ class Bot:
         """Disconnects from the WebSocket server"""
         await self.websocket.disconnect()
 
-    async def send_websocket_message(self, message_type: str, data: dict):
+    async def send_websocket_message(self, message_type: str, message: str):
         """Sends a message through the WebSocket connection"""
+
+        print("Mandando mensaje...")
         message = {
             "type": message_type,
-            "data": data,
-            "bot_name": self.name,
-            "timestamp": time.time()
+            "sender": 'bot',
+            "content": {
+                "chat_id": self.current_chat_id,
+                "message": message,
+                "bot_name": self.name,
+                "timestamp": time.time()
+            }
         }
         return await self.websocket.send_message(message)
 
@@ -102,9 +108,7 @@ class Bot:
 
         try:
             # Send status update through WebSocket
-            await self.send_websocket_message("status", {
-                "ok": True,
-            })
+            await self.send_websocket_message("status", True)
 
         except Exception as e:
             print(f"Error in run_async: {e}")
@@ -466,8 +470,8 @@ class Bot:
         has_downward_deviation = img_handler.is_top_edge_irregular(contour=chat_contour,
                                                         analyze_percent=25)
 
-        has_discontinuity = img_handler.has_irregular_horizontal_edge(contour=chat_contour)
-        return has_downward_deviation or has_discontinuity
+        # has_discontinuity = img_handler.has_irregular_horizontal_edge(contour=chat_contour)
+        return has_downward_deviation
 
 
     def is_contour_already_watched(self, contour) -> bool:
@@ -516,8 +520,8 @@ class Bot:
 
         self.move_to_chat()
 
-        self.show_contours(contours=possible_text_contours, 
-        title="posible contornos de texts")
+        # self.show_contours(contours=possible_text_contours, 
+        # title="posible contornos de texts")
 
         for i, contour in enumerate(possible_text_contours):
             # Comparar img_roi con la ultima referencia del texto visto por el current chat id
@@ -535,14 +539,15 @@ class Bot:
                 desactivate_scroll=True
             )
 
+            await self.send_websocket_message(message_type="bot_message", message=text)
+            
+            # if i == 4:
+            #     return False
+
+
             if i == 0 and self.first_contour_reference is None:
                  self.first_contour_reference = (x, y, w, h)
-            
-            # Send the extracted text through WebSocket
-            # await self.send_websocket_message("new_text", {
-            #     "chat_id": self.current_chat_id,
-            #     "text": text,
-            # })
+
 
             is_watched = self.is_text_already_watched(text=text)
 
@@ -699,8 +704,8 @@ class Bot:
         img_Handler = ImgHandler(image=self.current_screenshot)
         contours = img_Handler.find_contours_by_large_contours_mask()
 
-        self.show_contours(contours=contours,
-                           title="Testeando todos los contornos posibles")
+        # self.show_contours(contours=contours,
+                        #    title="Testeando todos los contornos posibles")
 
         print("chats_contour: ", len(chats_contour))
         print("chat_contour: ", len(chat_contour))
@@ -718,6 +723,8 @@ class Bot:
         has_more_text, texts_did_not_watched = await self.get_texts_did_not_watched_list(
             possible_text_contours=possible_text_contours
         )
+        # if not texts_did_not_watched: return
+
         texts += texts_did_not_watched 
 
         print("has_more: ", has_more_text)
