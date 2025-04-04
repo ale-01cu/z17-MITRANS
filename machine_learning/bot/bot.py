@@ -40,7 +40,8 @@ class Bot:
         self.current_screenshot = None
         self.last_circles_references_detected = None
         self.target_templates_paths = target_templates_paths
-        self.scroll_reference = 0 # Cuanto se ha desplazado el scroll desde el fondo.
+        self.scroll_reference = 0 # Cuanto se ha desplazado el scroll en el area del chat desde el fondo hacia arriba.
+        self.chats_area_scroll_reference = 0 # Cuanto se ha desplazado el scroll en el area de chats (de arriba hacia abajo).
         # self.target_template = cv2.imread(self.target_template_path)
         self.chat_querys = ChatQuerys()
 
@@ -236,7 +237,7 @@ class Bot:
         return chat_contour
 
 
-    def find_text_area_contours(self, image = None):
+    def find_text_area_contours(self, image = None, use_first_contour_reference = True):
         img_handler = ImgHandler(image=self.current_screenshot if image is None else image)
         contours = img_handler.find_contours_by_large_contours_mask()
         possible_text_contours = []
@@ -263,7 +264,7 @@ class Bot:
 
                 print("First contour reference: ", self.first_contour_reference)
                 is_contour_invalid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
-                    if self.first_contour_reference is not None \
+                    if self.first_contour_reference is not None and use_first_contour_reference \
                     else True
 
                 # is_contour_invalid = True
@@ -440,6 +441,30 @@ class Bot:
             pyautogui.scroll(scroll_move)
         elif direction == 'down':
             pyautogui.scroll(scroll_move)
+
+
+    def scroll_chats_area(self, direction='up', scroll_move=100, move_to_chats_area=True):
+        chats_contour = self.take_chats_container_contour()
+        x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+
+        if move_to_chats_area:
+            pyautogui.moveTo(x=x_chats + w_chats / 2,
+                             y=y_chats + h_chats / 2,
+                             duration=0.3
+                             )
+
+        if self.chats_area_scroll_reference is None:
+            self.chats_area_scroll_reference = scroll_move
+        elif direction == 'up' and self.scroll_reference is not None:
+            self.chats_area_scroll_reference += scroll_move
+        elif direction == 'down' and self.chats_area_scroll_reference is not None:
+            self.chats_area_scroll_reference -= scroll_move
+
+        if direction == 'up':
+            pyautogui.scroll(scroll_move)
+        elif direction == 'down':
+            pyautogui.scroll(scroll_move)
+
 
 
     def get_last_chat_id_image(self) -> ImgHandler:
@@ -711,6 +736,103 @@ class Bot:
         return result_image
 
 
+    async def handle_overflow_text(self, chat_contour, amount_scrolled, texts):
+        # Caso cuando hay texto desbordado (tratamiento diferente)
+        result_image = self.repair_irregular_top_edge(
+            image=self.current_screenshot, contour=chat_contour)
+
+        img_handler = ImgHandler(image=result_image)
+        conours_found = img_handler.find_contours_by_large_contours_mask()
+
+        x_contour_overflow_end = None
+        y_contour_overflow_end = None
+
+        if conours_found is not None and len(conours_found) > 0:
+            contour_overflow = conours_found[0]
+            # self.show_contours(contours=[contour_overflow], title="contour with overflowwwwwwww")
+            x, y, w, h = cv2.boundingRect(contour_overflow)
+            x_contour_overflow_end = x + w
+            y_contour_overflow_end = y + h
+            end_scroll_reference = self.scroll_reference
+
+        scroll_attempts = 0
+
+        # looking for the start of the overflow contour
+        while scroll_attempts < MAX_SCROLL_ATTEMPTS:
+            if keyboard.is_pressed('esc'):
+                print("Detenido por el usuario.")
+                exit()
+            self.scroll_chat_area(direction="up", scroll_move=3)
+            amount_scrolled += 3
+            self.take_screenshot()
+
+            chat_contour = self.find_chat_area_contour()
+
+
+            if chat_contour is None:
+                continue
+            is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
+
+            if not is_overflow:
+                self.show_contours(contours=[chat_contour],
+                                   title="chat area contour")
+                self.take_screenshot()
+                conours_found = self.find_text_area_contours(
+                    use_first_contour_reference=False)
+
+                self.show_contours(contours=[conours_found],
+                                   title="find_text_area_contours")
+
+                if not conours_found:
+                    break
+
+                contour_overflow = conours_found[-1]
+
+                self.show_contours(contours=[contour_overflow],
+                                   title="contour with overflowwwwwwww")
+
+                x, y, w, h = cv2.boundingRect(contour_overflow)
+                x_contour_overflow_start = x
+                y_contour_overflow_start = y
+
+                await self.get_texts_did_not_watched_list(
+                    possible_text_contours=[contour_overflow]
+                )
+
+                texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
+                              (x_contour_overflow_end, y_contour_overflow_end, end_scroll_reference)])
+
+                steps = get_subtraction_steps(
+                    initial_value=texts[-1][0][1],
+                    target_value=texts[-1][1][1],
+                    steps=3
+                )
+
+                for i, step in enumerate(steps):
+                    step = math.ceil(abs(step))
+                    if i == len(steps) - 1:
+                        step = math.ceil(step - step*0.1)
+
+                    self.scroll_chat_area(direction='up',
+                                          scroll_move=step)
+                    await asyncio.sleep(1)
+
+                # is_watched = self.is_text_already_watched(text=text)
+                #
+                # if is_watched:
+                #     return texts + texts_did_not_watched
+
+                # else:
+                #     self.scroll_chat_area(direction="down",
+                #         scroll_move=end_scroll_reference
+                #     )
+                break
+
+        if scroll_attempts >= MAX_SCROLL_ATTEMPTS:
+            raise RuntimeError("Se ha excedido el número máximo de intentos de scroll.")
+
+
+
     async def review_chat(
                         self, has_more: bool = True,
                         texts: List[List[Tuple[int, int, int]]] = None,
@@ -743,7 +865,21 @@ class Bot:
         #     return texts
         chats_contour = self.take_chats_container_contour()
         chat_contour = self.find_chat_area_contour()
+
+        # Chequear si hay overflow
+        is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
         possible_text_contours = self.find_text_area_contours()
+
+        scrolled = 0
+        if is_overflow and len(possible_text_contours) == 0:
+            await self.handle_overflow_text(chat_contour=chat_contour,
+                                            amount_scrolled=scrolled,
+                                            texts=texts)
+
+            return
+
+
+
 
         # self.show_contours(contours=possible_text_contours,
         #                    title="Testeando todos los contornos posibles al inicio de la funcion.")
@@ -762,7 +898,8 @@ class Bot:
             raise ValueError("No se pudo obtener el contorno del chat.")
 
         if not possible_text_contours or not isinstance(possible_text_contours, list):
-            raise ValueError("No se encontraron contornos de texto posibles.")
+            print("Texto no visible.")
+            return texts
 
         x, y, w, h = cv2.boundingRect(chat_contour)
         self.chat_area_reference = (x, y, w, h)
@@ -787,123 +924,9 @@ class Bot:
             amount_scrolled = 0
 
             if is_overflow:
-                # Caso cuando hay texto desbordado (tratamiento diferente)
-                result_image = self.repair_irregular_top_edge(
-                    image=self.current_screenshot, contour=chat_contour)
-
-                chat_contour = self.find_chat_area_contour(image=result_image)
-
-                contours = self.find_text_area_contours()
-
-                # self.show_contours(image=result_image,
-                #                    contours=contours,
-                #                    title="chat area repaired")
-
-
-                img_handler = ImgHandler(image=result_image)
-                conours_found = img_handler.find_contours_by_large_contours_mask()
-
-                x_contour_overflow_end = None
-                y_contour_overflow_end = None
-
-                if conours_found is not None and len(conours_found) > 0:
-                    contour_overflow = conours_found[0]
-                    # self.show_contours(contours=[contour_overflow], title="contour with overflowwwwwwww")
-                    x, y, w, h = cv2.boundingRect(contour_overflow)
-                    x_contour_overflow_end = x + w
-                    y_contour_overflow_end = y + h
-                    end_scroll_reference = self.scroll_reference
-
-                scroll_attempts = 0
-
-                # looking for the start of the overflow contour
-                while scroll_attempts < MAX_SCROLL_ATTEMPTS:
-                    if keyboard.is_pressed('esc'):
-                        print("Detenido por el usuario.")
-                        exit()
-                    self.scroll_chat_area(direction="up", scroll_move=1)
-                    amount_scrolled += 1
-                    self.take_screenshot()
-
-                    img_handler = ImgHandler(image=self.current_screenshot)
-                    contours = img_handler.find_contours_by_large_contours_mask()
-
-                    # self.show_contours(contours=contours, 
-                    #                    title="todos los contornos a ver que bola"
-                    #                    )
-
-                    chat_contour = self.find_chat_area_contour()
-                    # print("aaaaaaaaaaaaaaaaaaaa que locura es esta aaaa: ", len(chat_contour))
-                    if chat_contour is None: 
-                        continue
-                    is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
-
-                    if not is_overflow:
-                        # self.show_contours(contours=[chat_contour], title="imagen sin overflow")
-                        # result_image = self.repair_irregular_top_edge(
-                        #     image=self.current_screenshot, contour=chat_contour)
-
-                        # self.show_contours(image=result_image, 
-                        #                    contours=[], 
-                        #                    title="imagen sin overflow reparada"
-                        #                    )
-                        self.take_screenshot()
-                        img_handler = ImgHandler(image=self.current_screenshot)
-                        contours = img_handler.find_contours_by_large_contours_mask()
-
-                        # self.show_contours(contours=contours,
-                        #                    title="Probando")
-
-                        conours_found = self.find_text_area_contours()
-
-                        # self.show_contours(contours=conours_found,
-                        #                    title="Contornos en el final del texto con overflow")
-
-                        # self.show_contours(contours=conours_found,
-                        #                    title="Contornos en el final del texto con overflow")
-
-                        if not conours_found: raise ValueError(
-                            "No se encontraron contornos válidos "
-                            "después de reparar el borde superior.")
-
-                        contour_overflow = conours_found[-1]
-                        x, y, w, h = cv2.boundingRect(contour_overflow)
-                        x_contour_overflow_start = x
-                        y_contour_overflow_start = y
-
-                        await self.get_texts_did_not_watched_list(
-                            possible_text_contours=[contour_overflow]
-                        )
-
-                        texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
-                                      (x_contour_overflow_end, y_contour_overflow_end, end_scroll_reference)])
-
-                        # Fix: Scroll reference mal
-                        # text = self.get_text_by_text_location(
-                        #     x_start=x_contour_overflow_start + 20,
-                        #     y_start=y_contour_overflow_start + 20,
-                        #     x_end=x_contour_overflow_end,
-                        #     y_end=(y_contour_overflow_end) - 20,
-                        #     scroll_pos_start=self.scroll_reference,
-                        #     # TODO: revisar aqui cual debe de ser la diferencia correcta
-                        #     scroll_pos_end=end_scroll_reference
-                        #         if self.scroll_reference - end_scroll_reference > 100
-                        #         else self.scroll_reference,
-                        # )
-    
-                        # is_watched = self.is_text_already_watched(text=text)
-                        #
-                        # if is_watched:
-                        #     return texts + texts_did_not_watched
-
-                        # else:
-                        #     self.scroll_chat_area(direction="down",
-                        #         scroll_move=end_scroll_reference
-                        #     )
-                        break
-
-                if scroll_attempts >= MAX_SCROLL_ATTEMPTS:
-                    raise RuntimeError("Se ha excedido el número máximo de intentos de scroll.")
+                await self.handle_overflow_text(chat_contour=chat_contour,
+                                          amount_scrolled=amount_scrolled,
+                                          texts=texts)
 
             # Caso normal: hacer scroll y continuar el proceso
             if len(texts) > 0:
@@ -922,6 +945,7 @@ class Bot:
                                           scroll_move=step)
                     await asyncio.sleep(1)
 
+
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
             return await self.review_chat(
                 has_more=has_more,
@@ -930,7 +954,6 @@ class Bot:
             )
 
         return texts + texts_did_not_watched
-
 
 
     def get_text_by_text_location(self, x_start, y_start, x_end,
@@ -948,10 +971,12 @@ class Bot:
         pyautogui.doubleClick(button="left")
         pyautogui.mouseDown(button="left")
 
-        if not desactivate_scroll: self.scroll_chat_area(
-            direction="down",
-            scroll_move=scroll_pos_end,
-            move_to_chat=False)
+        if not desactivate_scroll:
+            self.scroll_chat_area(
+                direction="down",
+                scroll_move=scroll_pos_end,
+                move_to_chat=False
+            )
         pyautogui.moveTo(x=x_end, y=y_end)
 
         pyperclip.copy(None)
@@ -1003,54 +1028,60 @@ class Bot:
                 last_print = "watching"
                 pass
 
-            chats = self.find_chat_references()
-            print("chats: ", len(chats))
-            for chat in chats:
-                x, y, _, _ = cv2.boundingRect(chat)
+            while True:
+                chats = self.find_chat_references()
 
-                chat_id = self.extract_chat_id(chat_ref=(x, y))
-                print("Chat id: ", chat_id)
-                self.click_chat(chat_ref=(x, y), duration=1)
-                print("scroll reference: ", self.scroll_reference)
-                # steps = get_subtraction_steps(initial_value=self.scroll_reference if self.scroll_reference else 0,
-                #                               target_value=0,
-                #                               steps=5)
-                #
-                # for step in steps:
-                #     step = math.ceil(abs(step))
-                #     self.scroll_chat_area(direction='down', scroll_move=step)
+                print("chats: ", len(chats))
+                for chat in chats:
+                    x, y, _, _ = cv2.boundingRect(chat)
 
-                if chat_id:
-                    chat = self.chat_querys.get_chat_by_id_scraped(
-                        id_scraped=chat_id)
+                    chat_id = self.extract_chat_id(chat_ref=(x, y))
+                    print("Chat id: ", chat_id)
+                    self.click_chat(chat_ref=(x, y), duration=1)
+                    print("scroll reference: ", self.scroll_reference)
+                    # steps = get_subtraction_steps(initial_value=self.scroll_reference if self.scroll_reference else 0,
+                    #                               target_value=0,
+                    #                               steps=5)
+                    #
+                    # for step in steps:
+                    #     step = math.ceil(abs(step))
+                    #     self.scroll_chat_area(direction='down', scroll_move=step)
 
-                    if not chat:
-                        self.chat_querys.create_chat(id_scraped=chat_id)
+                    if chat_id:
+                        chat = self.chat_querys.get_chat_by_id_scraped(
+                            id_scraped=chat_id)
 
-                # self.move_to_chat()
-                self.take_screenshot()
-                texts_locations = await self.review_chat()
-                print("texts_locations: ", len(texts_locations))
+                        if not chat:
+                            self.chat_querys.create_chat(id_scraped=chat_id)
 
-                # ===========================================================================================
-                # TODO Capturar textos de chats
-                # for text_location in texts_locations:
-                #     x_start, y_start, scroll_pos_start = text_location[0]
-                #     x_end, y_end, scroll_pos_end = text_location[1]
-                #     literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
-                #                                    scroll_pos_start, scroll_pos_end)
-                #     print("================= Texto Extraido ================= \n \n", literal_text)
-                #
-                await asyncio.sleep(1)
+                    # self.move_to_chat()
+                    self.take_screenshot()
+                    texts_locations = await self.review_chat()
+                    self.scroll_reference = 0
+                    print("texts_locations: ", len(texts_locations))
 
-            print("Sali del bucle de los chats...")
+                    # ===========================================================================================
+                    # TODO Capturar textos de chats
+                    # for text_location in texts_locations:
+                    #     x_start, y_start, scroll_pos_start = text_location[0]
+                    #     x_end, y_end, scroll_pos_end = text_location[1]
+                    #     literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
+                    #                                    scroll_pos_start, scroll_pos_end)
+                    #     print("================= Texto Extraido ================= \n \n", literal_text)
+                    #
+                    await asyncio.sleep(1)
 
-            # if len(chats) == 0 and self.previous_screenshot is not None:
-            #     img_handler = ImgHandler(image=self.current_screenshot)
-            #     error = img_handler.similarity_by_mse(image=self.previous_screenshot)
-            #
-            #     if error > 0:
-            #         text = self.extract_chat_text()
-            #         print("================= Texto Extraido ================= \n \n", text)
+                if len(chats) == 0:
+                    # self.scroll_chats_area(direction='up', scroll_move=self.chats_area_scroll_reference)
+                    # img_handler = ImgHandler(image=self.current_screenshot)
+                    # self.take_screenshot()
+                    # error = img_handler.similarity_by_mse(image=self.current_screenshot)
+                    #
+                    # if error > 0:
+                    #     texts_locations = await self.review_chat()
+                    #     self.scroll_reference = 0
+                    break
 
-            self.previous_screenshot = self.current_screenshot
+                else:
+                    self.scroll_chats_area(direction='down', scroll_move=50)
+

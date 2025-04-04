@@ -64,7 +64,7 @@ CONFIG = {
 class ImgHandler:
     def __init__(self, img_path: str = None, image = None):
         self.img_path = img_path
-        self.img = image \
+        self.img = image.copy() \
             if image is not None \
             else cv2.imread(self.img_path)
         self.color_hex = None

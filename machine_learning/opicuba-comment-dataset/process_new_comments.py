@@ -35,7 +35,7 @@ def process_post(comments_file, post_text, post_date, output_excel_file, profile
     
     # Read comments from CSV
     try:
-        comments_df = pd.read_csv(comments_file)
+        comments_df = pd.read_csv(comments_file, encoding='latin1')
         if 'comments' not in comments_df.columns:
             raise ValueError("El archivo CSV debe contener una columna llamada 'comments'")
     except Exception as e:
@@ -125,12 +125,11 @@ def process_post(comments_file, post_text, post_date, output_excel_file, profile
 # Example usage
 if __name__ == "__main__":
     # Configuration (modify these values)
-    comments_file = "./input/facebook-cubadebate(viernes, 28 de marzo de 2025 a las 922).csv"  # CSV with 'comments' column
-    post_text = """Autoridades médicas esclarecen caso de niño cubano
-Publicaciones en redes digitales han reflejado el caso de un #NiñoCubano de diez años de edad que fue atendido en diferentes instituciones de salud de la capital, como parte del diagnóstico y tratamiento a las enfermedades que padece. En aras de explicar los procedimientos que se siguen en las instituciones en #Cuba ante casos de tal complejidad médica y, en consonancia con la probada ética y sensibilidad del gremio de la salud cubano, comparecen autoridades del Hospital Pediátrico Juan Manuel Márquez, de los Institutos de Hematología e Inmunología, de Neurología y Neurocirugía, así como del Ministerio de Salud Pública.."""
-    profile = "Cubadebate"               # Nombre del perfil/autor
+    comments_file = "./input/facebook-mitrans(martes, 1 de abril de 2025 a las 1606).csv"  # CSV with 'comments' column
+    post_text = """Presidido por el Primer Ministro, Manuel Marrero Cruz, quedó inaugurada en la mañana de hoy, la III edición de la Feria Internacional de Transporte y Logística, #FITL2025, principal evento comercial para los profesionales del sector del transporte en el país. #TransporteCuba"""
+    profile = "mitrans"               # Nombre del perfil/autor
     fuente = "Facebook"                        # Plataforma de origen
-    post_date = "2025-03-20 9:22:00"  # Format: YYYY-MM-DD HH:MM:SS
+    post_date = "2025-01-04 16:06:00"  # Format: YYYY-MM-DD HH:MM:SS
     dataset_excel = "./output/opicuba-dataset.xlsx"  # Excel that accumulates all data
     
     # Process the post
