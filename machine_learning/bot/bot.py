@@ -142,6 +142,31 @@ class Bot:
         return False
 
 
+    def is_watching_target_v2(self, threshold: float = 0.8):
+        if self.current_screenshot is None:
+            return False
+
+        template = cv2.imread(self.target_templates_paths[0])
+
+        if template is None:
+            return False
+
+        chats_contour = self.take_chats_container_contour()
+        chat_area_contour = self.find_chat_area_contour()
+
+        ignored_contours = [chats_contour, chat_area_contour]
+
+        img_handler = ImgHandler(image=self.current_screenshot)
+        _, _, score = img_handler.compare_messenger_images_with_contours(img_data2=template,
+                                                           ignored_contours=ignored_contours)
+
+        if score > threshold:
+            return True
+
+        return False
+
+
+
     def take_screenshot(self):
         screenshot = pyautogui.screenshot()
         frame = np.array(screenshot)  # Convertir a un array NumPy
@@ -711,10 +736,11 @@ class Bot:
             return texts
 
         self.take_screenshot()
-        chats = self.find_chat_references()
 
-        if len(chats) > 0:
-            return texts
+        # Detecta un nuevo mensaje mientras esta revisando un chat
+        # chats = self.find_chat_references()
+        # if len(chats) > 0:
+        #     return texts
         chats_contour = self.take_chats_container_contour()
         chat_contour = self.find_chat_area_contour()
         possible_text_contours = self.find_text_area_contours()
@@ -881,33 +907,20 @@ class Bot:
 
             # Caso normal: hacer scroll y continuar el proceso
             if len(texts) > 0:
-                print("texts: ", texts)
-                print("the las one bro: ", texts[-1])
-                last_height = texts[-1][0][1] - texts[-1][1][1]
-
                 steps = get_subtraction_steps(
                     initial_value=texts[-1][0][1],
                     target_value=self.first_contour_reference[1]+self.first_contour_reference[-1], 
                     steps=10
                     )
-                print("stepssssss: ", steps)
-                print("initial value: ", texts[-1][0][1])
-                print("target value: ", self.first_contour_reference[1]+self.first_contour_reference[-1])
-                print("Diference ", abs(texts[-1][0][1] - self.first_contour_reference[1]+self.first_contour_reference[-1]))
 
                 for i, step in enumerate(steps):
                     step = math.ceil(abs(step))
                     if i == len(steps) - 1:
-                        step = math.ceil(step / 2)
+                        step = math.ceil(step / 3)
 
-                    print("Current step aaaaaaaaaaaaaaaaaaaaaaa: ", step )
                     self.scroll_chat_area(direction='up',
                                           scroll_move=step)
                     await asyncio.sleep(1)
-                # for i in range(4):
-                #     self.scroll_chat_area(direction="up",
-                #                         scroll_move=int((self.chat_area_reference[-1] * 0.25)))
-                #     time.sleep(1)
 
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
             return await self.review_chat(
@@ -968,33 +981,30 @@ class Bot:
         #     self.scroll_chat_area(direction='up', move_to_chat=True, scroll_move=1)
 
         while True:
-            print("Buscando chats...")
             if keyboard.is_pressed('esc'):
                 print("Detenido por el usuario.")
                 exit()
             # pyautogui.keyDown('F11')
             self.take_screenshot()
-            is_target = self.is_watching_target()
+            is_target = self.is_watching_target_v2()
 
-            # if not is_target:
-            #     # # Si no estamos viendo el objetivo, imprimir "No Watching target..."
-            #     # print("                                                             ",
-            #     #       end="\r", flush=True)
-            #     # print("No Watching target...", end="\r", flush=True)
-            #     # last_print = "nowatch"
-            #     continue
-            # else:
-            #     # # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
-            #     # print("                                                             ",
-            #     #       end="\r", flush=True)
-            #     # print(f"Watching target {self.target_name}...", end="\r", flush=True)
-            #     # last_print = "watching"
-            #     pass
+            if not is_target:
+                # Si no estamos viendo el objetivo, imprimir "No Watching target..."
+                print("                                                             ",
+                      end="\r", flush=True)
+                print("No Watching target...", end="\r", flush=True)
+                last_print = "nowatch"
+                continue
+            else:
+                # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
+                print("                                                             ",
+                      end="\r", flush=True)
+                print(f"Watching target {self.target_name}...", end="\r", flush=True)
+                last_print = "watching"
+                pass
 
-            print("test 1")
             chats = self.find_chat_references()
             print("chats: ", len(chats))
-            print("test 2")
             for chat in chats:
                 x, y, _, _ = cv2.boundingRect(chat)
 
