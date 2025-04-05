@@ -999,6 +999,8 @@ class Bot:
     async def run(self):
         await self.establish_connection()
 
+        chats_scrroll_done = False
+
         print("Running...")
         last_print = ""
 
@@ -1028,60 +1030,71 @@ class Bot:
                 last_print = "watching"
                 pass
 
-            while True:
-                chats = self.find_chat_references()
+            chats = self.find_chat_references()
 
-                print("chats: ", len(chats))
-                for chat in chats:
-                    x, y, _, _ = cv2.boundingRect(chat)
+            print("chats: ", len(chats))
+            for chat in chats:
+                x, y, _, _ = cv2.boundingRect(chat)
 
-                    chat_id = self.extract_chat_id(chat_ref=(x, y))
-                    print("Chat id: ", chat_id)
-                    self.click_chat(chat_ref=(x, y), duration=1)
-                    print("scroll reference: ", self.scroll_reference)
-                    # steps = get_subtraction_steps(initial_value=self.scroll_reference if self.scroll_reference else 0,
-                    #                               target_value=0,
-                    #                               steps=5)
-                    #
-                    # for step in steps:
-                    #     step = math.ceil(abs(step))
-                    #     self.scroll_chat_area(direction='down', scroll_move=step)
+                chat_id = self.extract_chat_id(chat_ref=(x, y))
+                print("Chat id: ", chat_id)
+                self.click_chat(chat_ref=(x, y), duration=1)
+                print("scroll reference: ", self.scroll_reference)
+                # steps = get_subtraction_steps(initial_value=self.scroll_reference if self.scroll_reference else 0,
+                #                               target_value=0,
+                #                               steps=5)
+                #
+                # for step in steps:
+                #     step = math.ceil(abs(step))
+                #     self.scroll_chat_area(direction='down', scroll_move=step)
 
-                    if chat_id:
-                        chat = self.chat_querys.get_chat_by_id_scraped(
-                            id_scraped=chat_id)
+                if chat_id:
+                    chat = self.chat_querys.get_chat_by_id_scraped(
+                        id_scraped=chat_id)
 
-                        if not chat:
-                            self.chat_querys.create_chat(id_scraped=chat_id)
+                    if not chat:
+                        self.chat_querys.create_chat(id_scraped=chat_id)
 
-                    # self.move_to_chat()
-                    self.take_screenshot()
-                    texts_locations = await self.review_chat()
-                    self.scroll_reference = 0
-                    print("texts_locations: ", len(texts_locations))
+                # self.move_to_chat()
+                self.take_screenshot()
+                texts_locations = await self.review_chat()
+                self.scroll_reference = 0
+                print("texts_locations: ", len(texts_locations))
 
-                    # ===========================================================================================
-                    # TODO Capturar textos de chats
-                    # for text_location in texts_locations:
-                    #     x_start, y_start, scroll_pos_start = text_location[0]
-                    #     x_end, y_end, scroll_pos_end = text_location[1]
-                    #     literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
-                    #                                    scroll_pos_start, scroll_pos_end)
-                    #     print("================= Texto Extraido ================= \n \n", literal_text)
-                    #
-                    await asyncio.sleep(1)
+                # ===========================================================================================
+                # TODO Capturar textos de chats
+                # for text_location in texts_locations:
+                #     x_start, y_start, scroll_pos_start = text_location[0]
+                #     x_end, y_end, scroll_pos_end = text_location[1]
+                #     literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
+                #                                    scroll_pos_start, scroll_pos_end)
+                #     print("================= Texto Extraido ================= \n \n", literal_text)
+                #
+                await asyncio.sleep(1)
 
-                if len(chats) == 0:
-                    # self.scroll_chats_area(direction='up', scroll_move=self.chats_area_scroll_reference)
-                    # img_handler = ImgHandler(image=self.current_screenshot)
-                    # self.take_screenshot()
-                    # error = img_handler.similarity_by_mse(image=self.current_screenshot)
-                    #
-                    # if error > 0:
-                    #     texts_locations = await self.review_chat()
-                    #     self.scroll_reference = 0
-                    break
+            if len(chats) == 0:
+                self.scroll_chats_area(direction='down', scroll_move=50)
+                await asyncio.sleep(1)
+                chats_scrroll_done = True
 
-                else:
-                    self.scroll_chats_area(direction='down', scroll_move=50)
+                if chats_scrroll_done:
+                    self.scroll_chats_area(direction='up',
+                                           scroll_move=self.chats_area_scroll_reference)
+
+            else:
+                chats_scrroll_done = False
+
+
+            # Si se hizo scroll y no hay chats
+            if len(chats) == 0 and chats_scrroll_done:
+                self.take_screenshot()
+                x, y, w, h = self.first_contour_reference
+                text = self.get_text_by_text_location(x_start=x, y_start=y, x_end=x+w, y_end=y+h,
+                                               scroll_pos_start=0, scroll_pos_end=0)
+
+                if text != self.get_last_chat_id_text():
+                    await self.review_chat()
+                    # self.scroll_reference = 0
+                break
+
 
