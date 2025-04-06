@@ -53,6 +53,7 @@ class Bot:
         self.websocket_uri = websocket_uri
         self.window_handler = WindowHandler(title=target_name)
         self.first_contour_reference: Tuple[int, int, int, int] | None = None
+        self.is_in_message_requests_view = False
 
     # =================================================== Web Socket connection (Start) =============================================================
     async def connect_websocket(self):
@@ -287,6 +288,7 @@ class Bot:
     # TODO: Agregar que encuentre los puentos dentro del contorno donde van los chats
     # para achicar el cerco y disminuir el error
     def find_chat_references(self):
+        self.take_screenshot()
         img_handler = ImgHandler(image=self.current_screenshot)
         edged = img_handler.get_edged()
         contours = img_handler.find_contours(image=edged)
@@ -995,17 +997,95 @@ class Bot:
         """
 
 
+    def find_option_button_contour(self):
+        chats_contour = self.take_chats_container_contour()
+        img_handler = ImgHandler(image=self.current_screenshot)
+        contours = img_handler.find_contours_by_large_contours_mask()
+        x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+        min_distance = float('inf')  # Inicializar con un valor muy grande
+        closest_contour = None
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            is_inside_chats_area = x_chats + w_chats > x > x_chats and y_chats + h_chats > y > y_chats
+
+            if is_inside_chats_area and 60 > w > 20 and h > 20:
+                distance = abs(x - x_chats)
+
+                # Si este contorno está más cerca que los anteriores, actualizar
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_contour = contour
+
+        return closest_contour
+
+
+    def find_message_requests_cords(self, x_btn, y_btn, h_btn):
+        x_cord = x_btn + 50
+        y_cord = (y_btn+h_btn)*2
+        return (x_cord, y_cord)
+
+
+    def go_to_message_requests_view(self):
+        btn_contour = self.find_option_button_contour()
+        x, y, w, h = cv2.boundingRect(btn_contour)
+        x_cord, y_cord = self.find_message_requests_cords(x, y, h)
+
+        pyautogui.click(x + w/2, y + h/2, duration=1)
+        time.sleep(1)
+
+        pyautogui.click(x_cord, y_cord, duration=1)
+        time.sleep(1)
+
+        self.is_in_message_requests_view = True
+
+
+
+    def go_to_principal_view(self):
+        back_button_contour = self.find_back_arrow_contour()
+        x, y, w, h = cv2.boundingRect(back_button_contour)
+        pyautogui.click(x+20, y, duration=1)
+        time.sleep(1)
+
+        self.is_in_message_requests_view = False
+
+
+    def find_back_arrow_contour(self):
+        chats_contour = self.take_chats_container_contour()
+        x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+        img_handler = ImgHandler(image=self.current_screenshot)
+        contours = img_handler.find_contours_by_large_contours_mask()
+        min_combined_distance = float('inf')
+        closest_contour = None
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+
+            # Verificar si está dentro del área de chats
+            if x_chats + w_chats > x > x_chats and y_chats + h_chats > y > y_chats:
+                # Calcular distancias normalizadas (para evitar sesgo por diferencias de escala)
+                norm_distance_x = abs(x - x_chats) / w_chats  # Distancia X normalizada
+                norm_distance_y = abs(y - y_chats) / h_chats  # Distancia Y normalizada
+
+                # Combinación de distancias (50% peso para cada eje)
+                combined_distance = 0.5 * norm_distance_x + 0.5 * norm_distance_y
+
+                # Mantener el contorno más cercano
+                if combined_distance < min_combined_distance:
+                    min_combined_distance = combined_distance
+                    closest_contour = contour
+
+        return closest_contour
+
 
     async def run(self):
         await self.establish_connection()
+        counter = 1
 
         chats_scrroll_done = False
 
         print("Running...")
         last_print = ""
-
-        # for i in range(100):
-        #     self.scroll_chat_area(direction='up', move_to_chat=True, scroll_move=1)
 
         while True:
             if keyboard.is_pressed('esc'):
@@ -1017,76 +1097,69 @@ class Bot:
 
             if not is_target:
                 # Si no estamos viendo el objetivo, imprimir "No Watching target..."
-                print("                                                             ",
-                      end="\r", flush=True)
-                print("No Watching target...", end="\r", flush=True)
-                last_print = "nowatch"
+                # print("                                                             ",
+                #       end="\r", flush=True)
+                # print("No Watching target...", end="\r", flush=True)
+                # last_print = "nowatch"
                 continue
             else:
                 # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
-                print("                                                             ",
-                      end="\r", flush=True)
-                print(f"Watching target {self.target_name}...", end="\r", flush=True)
-                last_print = "watching"
+                # print("                                                             ",
+                #       end="\r", flush=True)
+                # print(f"Watching target {self.target_name}...", end="\r", flush=True)
+                # last_print = "watching"
                 pass
+
+            if counter % 5 == 0 and not self.is_in_message_requests_view:
+                self.go_to_message_requests_view()
+
+            counter += 1
+
+            while True:
+                chats = self.find_chat_references()
+                print("chats: ", len(chats))
+
+                # self.show_contours(contours=chats,
+                #                    title="chats")
+
+                if chats is not None and len(chats) > 0:
+                    print("entra a iterar los chats...")
+                    for chat in chats:
+                        x, y, _, _ = cv2.boundingRect(chat)
+
+                        chat_id = self.extract_chat_id(chat_ref=(x, y))
+                        print("Chat id: ", chat_id)
+                        self.click_chat(chat_ref=(x, y), duration=1)
+                        print("scroll reference: ", self.scroll_reference)
+
+                        if chat_id:
+                            chat = self.chat_querys.get_chat_by_id_scraped(
+                                id_scraped=chat_id)
+
+                            if not chat:
+                                self.chat_querys.create_chat(id_scraped=chat_id)
+
+                        # self.move_to_chat()
+                        self.take_screenshot()
+                        await self.review_chat()
+                        self.scroll_reference = 0
+
+                        await asyncio.sleep(1)
+
+                        self.scroll_chats_area(direction='down', scroll_move=50)
+                        await asyncio.sleep(1)
+
+                else:
+                    print("adios bucle scroll")
+                    self.scroll_chats_area(direction='up',
+                                           scroll_move=self.chats_area_scroll_reference)
+                    break
+
 
             chats = self.find_chat_references()
 
-            print("chats: ", len(chats))
-            for chat in chats:
-                x, y, _, _ = cv2.boundingRect(chat)
-
-                chat_id = self.extract_chat_id(chat_ref=(x, y))
-                print("Chat id: ", chat_id)
-                self.click_chat(chat_ref=(x, y), duration=1)
-                print("scroll reference: ", self.scroll_reference)
-                # steps = get_subtraction_steps(initial_value=self.scroll_reference if self.scroll_reference else 0,
-                #                               target_value=0,
-                #                               steps=5)
-                #
-                # for step in steps:
-                #     step = math.ceil(abs(step))
-                #     self.scroll_chat_area(direction='down', scroll_move=step)
-
-                if chat_id:
-                    chat = self.chat_querys.get_chat_by_id_scraped(
-                        id_scraped=chat_id)
-
-                    if not chat:
-                        self.chat_querys.create_chat(id_scraped=chat_id)
-
-                # self.move_to_chat()
-                self.take_screenshot()
-                texts_locations = await self.review_chat()
-                self.scroll_reference = 0
-                print("texts_locations: ", len(texts_locations))
-
-                # ===========================================================================================
-                # TODO Capturar textos de chats
-                # for text_location in texts_locations:
-                #     x_start, y_start, scroll_pos_start = text_location[0]
-                #     x_end, y_end, scroll_pos_end = text_location[1]
-                #     literal_text = self.get_text_by_text_location(x_start, y_start, x_end, y_end,
-                #                                    scroll_pos_start, scroll_pos_end)
-                #     print("================= Texto Extraido ================= \n \n", literal_text)
-                #
-                await asyncio.sleep(1)
-
-            if len(chats) == 0:
-                self.scroll_chats_area(direction='down', scroll_move=50)
-                await asyncio.sleep(1)
-                chats_scrroll_done = True
-
-                if chats_scrroll_done:
-                    self.scroll_chats_area(direction='up',
-                                           scroll_move=self.chats_area_scroll_reference)
-
-            else:
-                chats_scrroll_done = False
-
-
             # Si se hizo scroll y no hay chats
-            if len(chats) == 0 and chats_scrroll_done:
+            if chats is not None and len(chats) == 0 and self.first_contour_reference is not None:
                 self.take_screenshot()
                 x, y, w, h = self.first_contour_reference
                 text = self.get_text_by_text_location(x_start=x, y_start=y, x_end=x+w, y_end=y+h,
@@ -1094,7 +1167,11 @@ class Bot:
 
                 if text != self.get_last_chat_id_text():
                     await self.review_chat()
-                    # self.scroll_reference = 0
+                    self.scroll_reference = 0
                 break
+
+            print("llego al final")
+            if self.is_in_message_requests_view:
+                self.go_to_principal_view()
 
 
