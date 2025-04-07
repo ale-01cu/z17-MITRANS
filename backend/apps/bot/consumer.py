@@ -6,90 +6,128 @@ from channels.generic.websocket import WebsocketConsumer
 
 
 import json
-from channels.generic.websocket import WebsocketConsumer
+from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import async_to_sync
 
-class ChatConsumer(WebsocketConsumer):
-    def connect(self):
+class ChatConsumer(AsyncWebsocketConsumer):
+    """
+    Este consumer debe de atender a un bot y devolver lo que envie.
+    El bot encia datos y este consumer debe de devolver esos datos tal cual los envia el bot.
+
+    Entrada: {
+        type: str,
+        data: {
+            chat_id: str,
+            message: str,
+            "bot_name": str,
+            "timestamp": str
+        }
+    }
+
+    Salida: {
+        type: str,
+        data: {
+            chat_id: str,
+            message: str
+        }
+    }
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    async def connect(self):
         print("Conexión WebSocket establecida")
 
         # Añadir la conexión al grupo "chat"
-        self.room_group_name = "chat"
-        async_to_sync(self.channel_layer.group_add)(
+        self.room_group_name = "general_communication"
+        await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
 
         # Aceptar la conexión
-        self.accept()
+        await self.accept()
 
-        # Enviar un mensaje de bienvenida al cliente
-        self.send(text_data=json.dumps({
-            'message': '¡Bienvenido!',
-            'status': 'conectado'
-        }))
-
-        async_to_sync(self.channel_layer.group_send)(
-            self.room_group_name,
-            {
-                "type": "chat_message",
-                "message": "Bienvenido"
-            }
-        )
-
-    def disconnect(self, close_code):
+    async def disconnect(self, close_code):
         print("Conexión WebSocket cerrada")
 
         # Eliminar la conexión del grupo "chat"
-        async_to_sync(self.channel_layer.group_discard)(
+        await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
 
-    def receive(self, text_data):
-        try:
-            data = json.loads(text_data)
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        # message_type = text_data_json.get('type')
+        message_content = text_data_json.get('content')
+        sender = text_data_json.get('sender')  # 'web' o 'bot'
 
-            if 'text' in data:
-                mensaje_recibido = data['data']
+        print("data: ", text_data_json)
 
-                # Preparar respuesta
-                respuesta = {
-                    'message': mensaje_recibido,
-                    'status': 'recibido'
+        # Reenviar el mensaje al grupo correspondiente
+        if sender == 'bot':
+            # Mensaje de bot a web
+            print("manda a la web")
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'send_to_web',
+                    'content': message_content,
+                    'sender': 'bot'
                 }
+            )
+        elif sender == 'web':
+            # Mensaje de web a bot
+            print("manda a; bot")
 
-                # Broadcast: Enviar el mensaje a todos los clientes en el grupo
-                async_to_sync(self.channel_layer.group_send)(
-                    self.room_group_name,
-                    {
-                        "type": "chat_message",
-                        "message": 'Bienvenido'
-                    }
-                )
-
-            else:
-                print(f"Datos recibidos sin formato correcto: {data}")
-                self.send(text_data=json.dumps({
-                    'error': 'Formato incorrecto',
-                    'message': 'Envía un JSON con formato {"text": "tu mensaje"}'
-                }))
-
-        except json.JSONDecodeError:
-            print(f"Error: Mensaje no es JSON válido. Datos recibidos: {text_data}")
-            self.send(text_data=json.dumps({
-                'error': 'Formato inválido',
-                'message': 'Envía un JSON con formato {"text": "tu mensaje"}'
-            }))
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'send_to_bot',
+                    'content': message_content,
+                    'sender': 'web'
+                }
+            )
 
     # Método para manejar mensajes enviados al grupo
-    def chat_message(self, event):
-        message = event["message"]
+    # def bot_message(self, event):
+    #     data = event["data"]
+    #
+    #     print('aaaaaaaaaaaaaaaaaaaaa')
+    #     # Enviar el mensaje a todos los clientes en el grupo
+    #     self.send(text_data=json.dumps({
+    #         'type': 'broadcast',
+    #         'data': data
+    #     }))
 
-        print('aaaaaaaaaaaaaaaaaaaaa')
-        print(message)
-        # Enviar el mensaje a todos los clientes en el grupo
-        self.send(text_data=json.dumps({
-            "message": message,
-            "status": "broadcast"
-        }))
+    async def send_to_web(self, event):
+        print("manda a la web group")
+
+        content = event['content']
+        sender = event['sender']
+
+        # Enviar solo si el cliente es web
+        if sender == 'bot':
+            await self.send(text_data=json.dumps({
+                'type': 'message',
+                'content': content,
+                'sender': 'bot'
+            }))
+
+    # Handler para mensajes destinados al bot
+    async def send_to_bot(self, event):
+        print("manda a la bot")
+
+        content = event['content']
+        sender = event['sender']
+
+        # Enviar solo si el cliente es bot
+        if sender == 'web':
+            await self.send(text_data=json.dumps({
+                'type': 'message',
+                'content': content,
+                'sender': 'web'
+            }))
