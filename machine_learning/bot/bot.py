@@ -264,14 +264,21 @@ class Bot:
             if (50 < w < w_chat * 0.70) and (h < h_chat - 10):
 
                 print("First contour reference: ", self.first_contour_reference)
-                is_contour_invalid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
+                is_contour_valid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
                     if self.first_contour_reference is not None and use_first_contour_reference \
                     else True
 
+                print("x_chat ", x_chat, " y_chat ", y_chat, " w_chat ", w_chat, " h_chat ", h_chat)
+                print(x, y, w, h)
+                print("is_contour_invalid: ", is_contour_valid)
+                print(x >= x_chat)
+                print(x + w < x_chat + w_chat)
+                print(y >= y_chat)
+                print(y + h < y_chat + h_chat)
                 # is_contour_invalid = True
 
                 # Verifica si está DENTRO del chat_contour
-                if ((x > x_chat) and (x + w < x_chat + w_chat)) and ((y > y_chat) and (y + h < y_chat + h_chat)) and is_contour_invalid:
+                if ((x > x_chat) and (x + w < x_chat + w_chat)) and ((y > y_chat) and (y + h < y_chat + h_chat)) and is_contour_valid:
                     possible_text_contours.append(contour)
 
         # cv2.drawContours(self.current_screenshot, possible_text_contours, -1, (0, 255, 0), 3)
@@ -778,11 +785,13 @@ class Bot:
             if not is_overflow:
                 self.show_contours(contours=[chat_contour],
                                    title="chat area contour")
-                self.take_screenshot()
+
                 conours_found = self.find_text_area_contours(
                     use_first_contour_reference=False)
 
-                self.show_contours(contours=[conours_found],
+                print("conours_found: ", len(conours_found))
+
+                self.show_contours(contours=conours_found,
                                    title="find_text_area_contours")
 
                 if not conours_found:
