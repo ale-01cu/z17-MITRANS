@@ -35,8 +35,8 @@ def process_post(comments_file, post_text, post_date, output_excel_file, profile
     
     # Read comments from CSV
     try:
-        comments_df = pd.read_csv(comments_file, encoding='latin1')
-        if 'comments' not in comments_df.columns:
+        comments_df = pd.read_csv(comments_file, encoding='utf-8')
+        if 'comment' not in comments_df.columns:
             raise ValueError("El archivo CSV debe contener una columna llamada 'comments'")
     except Exception as e:
         print(f"Error leyendo CSV: {e}")
@@ -48,13 +48,13 @@ def process_post(comments_file, post_text, post_date, output_excel_file, profile
             existing_df = pd.read_excel(output_excel_file, engine='openpyxl')
             
             # Check for duplicate post
-            if post_already_exists(existing_df, post_text, post_date):
-                print(f"⚠️ El post ya existe en el dataset. No se agregarán datos duplicados.")
-                print(f"📌 Post: {post_text[:50]}...")
-                print(f"📅 Fecha: {post_date}")
-                print(f"👤 Perfil: {profile}")
-                print(f"🌐 Fuente: {fuente}")
-                return
+            # if post_already_exists(existing_df, post_text, post_date):
+            #     print(f"⚠️ El post ya existe en el dataset. No se agregarán datos duplicados.")
+            #     print(f"📌 Post: {post_text[:50]}...")
+            #     print(f"📅 Fecha: {post_date}")
+            #     print(f"👤 Perfil: {profile}")
+            #     print(f"🌐 Fuente: {fuente}")
+            #     return
                 
         except Exception as e:
             print(f"Error leyendo Excel: {e}")
@@ -77,7 +77,7 @@ def process_post(comments_file, post_text, post_date, output_excel_file, profile
         'profile': [profile] * len(comments_df),
         'fuente': [fuente] * len(comments_df),
         'comment_id': [f"comm_{post_id}_{i}" for i in range(len(comments_df))],
-        'comment_text': comments_df['comments'].tolist(),
+        'comment_text': comments_df['comment'].tolist(),
         'label': [""] * len(comments_df),
         'processing_date': [current_timestamp] * len(comments_df)
     }
@@ -122,22 +122,56 @@ def process_post(comments_file, post_text, post_date, output_excel_file, profile
     except Exception as e:
         print(f"Error guardando Excel: {e}")
 
+
+folders = [
+    'agua',
+    'banco',
+    'electrica',
+    'mlc_tienda',
+    'salud',
+    'otros',
+    'postal',
+    'permutas',
+    'transporte',
+    'telecomunicaciones',
+]
+
+files = [
+    'facebook-cubadebate(viernes, 28 de marzo de 2025 a las 922).csv',
+    'facebook-mitrans(martes, 1 de abril de 2025 a las 1606).csv',
+]
+
+ia_files = [
+    '(jueves. 3 de abril de 2025).csv',
+    '(jueves. 4 de abril de 2025).csv',
+    '(sabado. 5 de abril de 2025).csv'
+]
+
 # Example usage
 if __name__ == "__main__":
     # Configuration (modify these values)
-    comments_file = "./input/facebook-mitrans(martes, 1 de abril de 2025 a las 1606).csv"  # CSV with 'comments' column
-    post_text = """Presidido por el Primer Ministro, Manuel Marrero Cruz, quedó inaugurada en la mañana de hoy, la III edición de la Feria Internacional de Transporte y Logística, #FITL2025, principal evento comercial para los profesionales del sector del transporte en el país. #TransporteCuba"""
-    profile = "mitrans"               # Nombre del perfil/autor
-    fuente = "Facebook"                        # Plataforma de origen
-    post_date = "2025-01-04 16:06:00"  # Format: YYYY-MM-DD HH:MM:SS
+    # for i in folders:
+    comments_file = f"input/{folders[9]}/ia-{folders[9]}(sabado. 5 de abril de 2025).csv"  # CSV with 'comments' column
+    # comments_file = f"input/{folders[0]}/prueba.csv"  # CSV with 'comments' column
+    post_text = """generado con ia"""
+    profile = "ia"               # Nombre del perfil/autor
+    fuente = "ia"                        # Plataforma de origen
+    post_date = "2025-04-03 14:30:00"  # Format: YYYY-MM-DD HH:MM:SS
     dataset_excel = "./output/opicuba-dataset.xlsx"  # Excel that accumulates all data
-    
-    # Process the post
-    process_post(
-        comments_file=comments_file,
-        post_text=post_text,
-        post_date=post_date,
-        output_excel_file=dataset_excel,
-        profile=profile,
-        fuente=fuente
-    )
+
+    for file in files:
+        comments_file = f"input/{file}"  # CSV with 'comments' column
+        post_text = """"""
+        profile = ""  # Nombre del perfil/autor
+        fuente = "ia"  # Plataforma de origen
+        post_date = "2025-04-03 14:30:00"  # Format: YYYY-MM-DD HH:MM:SS
+
+        # Process the post
+        process_post(
+            comments_file=comments_file,
+            post_text=post_text,
+            post_date=post_date,
+            output_excel_file=dataset_excel,
+            profile=profile,
+            fuente=fuente
+        )
