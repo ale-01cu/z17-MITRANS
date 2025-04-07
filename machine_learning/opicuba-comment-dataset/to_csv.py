@@ -60,9 +60,6 @@ comentarios_sugerencia = [
 
 
 
-
-
-
 # Import pandas at the top of the file
 import pandas as pd
 import os
