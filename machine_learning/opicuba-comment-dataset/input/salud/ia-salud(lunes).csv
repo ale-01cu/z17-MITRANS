@@ -1,0 +1,55 @@
+comment,label
+"¿Cómo obtener una cita con un oftalmólogo en el Hospital Clínico-Quirúrgico de Santiago?",pregunta
+"¿El medicamento Metformina está disponible en la farmacia de Marianao?",pregunta
+"¿Qué documentos necesito para solicitar una prótesis auditiva en el Centro de Discapacitados?",pregunta
+"¿El Policlínico de Playa realiza pruebas de VIH de forma anónima?",pregunta
+"¿Hay stock de vacunas contra la hepatitis B en la provincia de Holguín?",pregunta
+"Llevo 3 meses esperando una cita con el traumatólogo en el Hospital Calixto García. ¿Van a atenderme o me quedaré cojo?",crítica
+"La ambulancia llegó 2 horas tarde a mi casa. Mi abuela casi muere por su lentitud.",crítica
+"El medicamento para la presión arterial está agotado en todas las farmacias de La Habana. ¿Cómo sobrevivo?",crítica
+"En el quirófano del Policlínico de Centro Habana no tienen gasas esterilizadas. ¿Operan con trapos?",crítica
+"Denuncio que en el Hospital de Matanzas piden 'regalos' para acelerar cirugías. Es indignante.",crítica
+"Las sillas de ruedas en el Hermanos Ameijeiras están oxidadas y rotas. ¿Dónde está el mantenimiento?",denuncia
+"El termómetro del consultorio #5 de Marianao está dañado. ¿Cómo diagnostican sin herramientas básicas?",denuncia
+"El inspector de farmacias roba medicamentos y los vende en el mercado negro.",denuncia
+"El desayuno en el hogar de ancianos de Camagüey es agua con pan duro. ¿Es esto digno?",denuncia
+"En Urgencias del Hospital de Holguín no hay camillas: los pacientes yacen en el suelo.",denuncia
+"En el Policlínico de Marianao la espera es larga, pero los médicos son atentos.",neutral
+"La libreta de medicamentos ayuda, pero faltan fármacos crónicos como la insulina.",neutral
+"La atención en urgencias es rápida, pero falta empatía en algunos enfermeros.",neutral
+"El sistema de donación de sangre funciona bien, pero deberían dar algún incentivo a los donantes.",neutral
+"Los consultorios de barrio son útiles, pero faltan recursos para emergencias graves.",neutral
+
+"El programa de vacunación infantil es ejemplar; casi no hay casos de polio gracias a eso.",elogio
+"Los médicos de familia son héroes anónimos, sobre todo en barrios marginados.",elogio
+"El Hospital Hermanos Ameijeiras tiene equipos modernos; ojalá todos los centros tuvieran esa suerte.",elogio
+"Los cursos de primeros auxilios comunitarios han salvado vidas en apagones y huracanes.",elogio
+"El apoyo a madres embarazadas con consultas gratuitas es un acierto del sistema.",elogio
+
+"¿Cómo reportar la falta de agua potable en el Hospital General de Matanzas?",pregunta
+"¿Dónde puedo donar sangre en La Habana este fin de semana?",pregunta
+"¿El servicio de ambulancias en zonas rurales de Granma opera las 24 horas?",pregunta
+"¿Qué hacer si la farmacia no acepta la receta médica por falta de sello oficial?",pregunta
+"¿Existen talleres para cuidadores de pacientes con Alzheimer?",pregunta
+
+"La pastilla para la tiroides desapareció de las farmacias. ¿Qué hacemos los pacientes crónicos?",crítica
+"El medicamento para el VIH llegó vencido. ¿Quién responde por esto?",denuncia
+"La insulina que necesito solo la venden en el mercado negro a precios abusivos.",crítica
+"El tratamiento para la artritis desapareció del país. ¿Nos dejan sufrir a propósito?",crítica
+"El medicamento para la depresión desapareció de las farmacias. ¿Qué hacemos?",crítica
+
+"La ambulancia se quedó sin gasolina en medio del traslado. ¿Esto es una broma?",denuncia
+"El ventilador mecánico en la UCI de Matanzas está obsoleto. ¿Van a esperar que muramos?",crítica
+"La máquina de diálisis en Granma se averió hace un mes. Los pacientes están desesperados.",denuncia
+"La quimioterapia en el Oncológico se suspendió por falta de insumos. ¿Dejaremos morir a los pacientes?",denuncia
+"El servicio de diálisis tiene lista de espera de 6 meses. ¿Sobreviviremos?",crítica
+"Los hospitales necesitan más insumos básicos: jeringuillas y gasas no deberían ser un lujo en pleno siglo XXI.",crítica_constructiva
+"Las farmacias deberían digitalizar sus inventarios: evitarían colas inútiles por medicamentos agotados.",crítica_constructiva
+"Los turnos para especialistas son cada 6 meses. Es desesperante para pacientes con cáncer.",crítica_constructiva
+"Las prótesis auditivas deberían ser más accesibles: no todos pueden pagar en MLC.",crítica_constructiva
+"Los equipos de rayos X en hospitales rurales están obsoletos; urge modernizarlos.",crítica_constructiva
+"Deberían implementar un sistema de citas en línea para evitar colas en hospitales.",sugerencia
+"Necesitamos más talleres de prevención de enfermedades en comunidades vulnerables.",sugerencia
+"Sería útil crear una app con el inventario actualizado de farmacias.",sugerencia
+"Deberían asignar ambulancias adicionales en zonas rurales durante la noche.",sugerencia
+"Propongo crear bancos de medicamentos donados por la comunidad.",sugerencia

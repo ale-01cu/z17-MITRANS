@@ -1,0 +1,65 @@
+comment,label
+"¿Cómo solicitar un medidor nuevo en zona rural de Granma?",pregunta
+"¿Hay subsidios para familias de bajos ingresos en el pago de la electricidad?",pregunta
+"¿Qué hacer si el medidor registra consumo durante un apagón?",pregunta
+"¿Dónde reportar un poste de luz inclinado en la calle San Rafael?",pregunta
+"¿Cuál es el horario de atención en la oficina de Unión Eléctrica en Camagüey?",pregunta
+"¿Aceptan pagos de facturas en MLC en las oficinas de La Habana?",pregunta
+"¿Cómo verificar si mi factura incluye cobros de meses anteriores?",pregunta
+"¿Existen talleres para aprender a ahorrar energía en el hogar?",pregunta
+"¿Qué requisitos piden para instalar paneles solares en una vivienda?",pregunta
+"¿Por qué hubo un corte de luz no programado en Centro Habana ayer?",pregunta
+"Ladrones, cobran por un servicio que solo existe en sus sueños.",crítica
+"¿Sus técnicos son tortugas? Llevan meses sin arreglar el transformador.",crítica
+"Estafadores, mi factura subió más que la temperatura en el infierno.",crítica
+"¿Trabajan con velas? Parece que no saben qué es la electricidad.",crítica
+"Incompetentes, ni un niño con un kit de ciencia haría peor trabajo.",crítica
+"Sin alma, dejan a ancianos sin ventilación en pleno verano.",crítica
+"¿Sus postes son de papel? Se caen con una brisa.",crítica
+"Corruptos, los inspectores piden ‘regalos’ para aprobar instalaciones.",crítica
+"Mentirosos, anuncian cortes de una hora y son días enteros.",crítica
+"¿Sus cables los robaron de un museo? Parecen de la época de Edison.",crítica
+
+"Instalar medidores inteligentes que permitan monitorear consumo en tiempo real desde una app.",sugerencia
+"Crear programa de paneles solares comunitarios en zonas con apagones frecuentes.",sugerencia
+"Implementar bonos de descuento para hogares que reduzcan su consumo en un 20%.",sugerencia
+"Desarrollar mapa interactivo de cortes programados y averías, actualizado en tiempo real.",sugerencia
+"Establecer talleres gratuitos para enseñar a reparar instalaciones eléctricas básicas.",sugerencia
+"Habilitar línea de emergencia 24/7 para reportar cables pelados o postes caídos.",sugerencia
+"Crear cooperativas de mantenimiento locales para reparar fallos menores sin depender de la empresa.",sugerencia
+"Instalar alumbrado público solar en carreteras y barrios oscuros.",sugerencia
+"Lanzar programa de reciclaje de baterías de inversores y paneles solares viejos.",sugerencia
+"Implementar facturación por correo electrónico para reducir papel y errores.",sugerencia
+
+"¿Cómo reportar un transformador que hace ruidos extraños en Arroyo Naranjo?",pregunta
+"¿Hay multas por conexiones ilegales a la red eléctrica?",pregunta
+"¿Dónde reclamo si el inspector dijo que mi instalación no cumple normas?",pregunta
+"¿La empresa ofrece préstamos para comprar sistemas de energía solar?",pregunta
+"¿Qué hacer si un árbol está tocando cables de alta tensión?",pregunta
+"¿Cómo solicitar un grupo electrógeno para un evento comunitario?",pregunta
+"¿Hay plan para modernizar la red eléctrica en Santiago de Cuba?",pregunta
+"¿Por qué mi factura subió un 200% sin cambio en el consumo?",pregunta
+"¿Dónde denunciar a un trabajador que pide 'regalos' para reparar fallos?",pregunta
+"¿A qué número llamar para reportar un incendio por cortocircuito?",pregunta
+Críticas adicionales
+
+"Hijos de la oscuridad, ustedes son la razón por la que Cuba retrocede.",crítica
+"Vagos, pasan más tiempo tomando café que arreglando fallos.",crítica
+"¿Sus medidores miden fantasmas? Cobran consumo que no existe.",crítica
+"Criminales, los cables pelados matarán a alguien y ni les importa.",crítica
+"Inútiles, un apagón los deja corriendo como gallinas sin cabeza.",crítica
+"¿Sus gerentes viven en una burbuja? No saben lo que es un apagón.",crítica
+"Parásitos, viven del sudor del pueblo y no dan nada a cambio.",crítica
+"Sinvergüenzas, culpan al bloqueo pero roban más que los yanquis.",crítica
+"¿Sus empleados son fantasmas? Nadie responde en emergencias.",crítica
+"Traidores, priorizan hoteles turísticos y dejan al pueblo a oscuras.",crítica
+"Crear tarifas diferenciadas para horarios de bajo consumo (ej: madrugada).",sugerencia
+"Establecer centros de carga solar donde vecinos recarguen lámparas y dispositivos.",sugerencia
+"Habilitar pago de facturas en MLC con descuentos del 5% por pronto pago.",sugerencia
+"Desarrollar app de consejos para ahorrar energía con retos y premios simbólicos.",sugerencia
+"Instalar grupos electrógenos comunitarios en zonas rurales sin acceso estable.",sugerencia
+"Crear programa de auditorías energéticas gratuitas para hogares y negocios.",sugerencia
+"Implementar sistema de alertas SMS sobre cortes programados y duración estimada.",sugerencia
+"Establecer puntos de venta subsidiados de bombillos LED y reguladores de voltaje.",sugerencia
+"Habilitar microcréditos para familias que quieran instalar paneles solares.",sugerencia
+"Crear huertos solares comunitarios en terrenos baldíos para generar energía local.",sugerencia
