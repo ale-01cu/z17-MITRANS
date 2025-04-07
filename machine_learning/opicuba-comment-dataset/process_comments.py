@@ -142,12 +142,13 @@ def combinar_csv_a_excel(ruta_principal, archivo_salida):
         print("No se encontraron datos válidos para procesar")
 
 
-# Configuración
-ruta_principal = r"./input/banco/"  # Ruta absoluta explícita
-archivo_salida = r"D:\Z17-MITR\comentarios_combinados.xlsx"
+# # Configuración
+# ruta_principal = r"./input/"  # Ruta absoluta explícita
+# archivo_salida = r"D:\Z17-MITR\comentarios_combinados.xlsx"
 
-# ruta_principal = r"D:\Z17-MITR\z17-MITRANS-1\machine_learning\opicuba-comment-dataset\input\transporte"  # Ruta absoluta explícita
-# archivo_salida = r"D:\Z17-MITR\z17-MITRANS-1\machine_learning\opicuba-comment-dataset\comentarios_combinados11.xlsx"
+ruta_principal = r"C:\Users\Carlos\PycharmProjects\z17-MITRANS\machine_learning\opicuba-comment-dataset\input\face"  # Ruta absoluta explícita
+archivo_salida = (r"D:\Z17-MITR\z17-MITRANS-1\machine_learning\opicuba-comment-dataset\comentarios_combinados_carpetas"
+                  r".xlsx")
 
 # Ejecutar función
 combinar_csv_a_excel(ruta_principal, archivo_salida)
