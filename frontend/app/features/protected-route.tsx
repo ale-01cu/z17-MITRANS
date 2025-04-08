@@ -1,6 +1,6 @@
 import type { Route } from "./+types/protected-route";
 import { Outlet, redirect } from "react-router";
-import { getCookieFromCookies, getCookie } from "~/utils/cookies";
+import { getCookie } from "~/utils/cookies";
 import postVerifyApi from "~/api/auth/post-verify-api";
 
 export const clientLoader = async ({ request }: Route.ClientLoaderArgs) => {
