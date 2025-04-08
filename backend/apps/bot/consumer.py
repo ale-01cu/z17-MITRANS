@@ -9,6 +9,9 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import async_to_sync
 
+from apps.classification.ml.model_loader import predict_comment_label
+
+
 class ChatConsumer(AsyncWebsocketConsumer):
     """
     Este consumer debe de atender a un bot y devolver lo que envie.
@@ -69,6 +72,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Reenviar el mensaje al grupo correspondiente
         if sender == 'bot':
+            label = predict_comment_label(text_data)
             # Mensaje de bot a web
             print("manda a la web")
             await self.channel_layer.group_send(
@@ -76,12 +80,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'send_to_web',
                     'content': message_content,
-                    'sender': 'bot'
+                    'label': label,
+                    'sender': 'bot',
                 }
             )
         elif sender == 'web':
             # Mensaje de web a bot
-            print("manda a; bot")
+            print("manda al bot")
 
             await self.channel_layer.group_send(
                 self.room_group_name,
