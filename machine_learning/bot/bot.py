@@ -752,10 +752,6 @@ class Bot:
         result_image = self.repair_irregular_top_edge(
             image=self.current_screenshot, contour=chat_contour)
 
-        # self.show_contours(image=result_image, contours=[], title="La imagen reparada")
-
-        # img_handler = ImgHandler(image=result_image)
-        # conours_found = img_handler.find_contours_by_large_contours_mask()
         conours_found = self.find_text_area_contours(image=result_image, use_first_contour_reference=False)
 
         largest_contour_found = None
@@ -772,8 +768,8 @@ class Bot:
 
 
         print("Contornos ", len(conours_found))
-        self.show_contours(contours=conours_found, title="Los contornos de La imagen reparada")
-        self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
+        # self.show_contours(contours=conours_found, title="Los contornos de La imagen reparada")
+        # self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
 
         x_contour_overflow_end = None
         y_contour_overflow_end = None
@@ -783,6 +779,7 @@ class Bot:
             x_contour_overflow_end = x + w
             y_contour_overflow_end = y + h
             end_scroll_reference = self.scroll_reference
+            self.first_contour_reference = (x, y , w, h)
 
 
             print("x_contour_overflow_end: ", x_contour_overflow_end)
@@ -917,27 +914,30 @@ class Bot:
         # Chequear si hay overflow
         while True:
             self.take_screenshot()
+            # self.show_contours(contours=[], title="testing overflow")
             is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
+            print("is overflow: ", is_overflow)
             if not is_overflow:
                 break
             possible_text_contours = self.find_text_area_contours()
 
-            if is_overflow and len(possible_text_contours) == 0:
+            if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
                 await self.handle_overflow_text(chat_contour=chat_contour,
                                                 amount_scrolled=scrolled,
                                                 texts=texts)
+
+            else:
+                break
+
             await asyncio.sleep(1)
 
 
+        self.take_screenshot()
+        possible_text_contours = self.find_text_area_contours()
 
-        # self.show_contours(contours=possible_text_contours,
-        #                    title="Testeando todos los contornos posibles al inicio de la funcion.")
+        self.show_contours(contours=possible_text_contours,
+                           title="Testeando todos los contornos posibles al inicio de la funcion.")
 
-        img_Handler = ImgHandler(image=self.current_screenshot)
-        contours = img_Handler.find_contours_by_large_contours_mask()
-
-        # self.show_contours(contours=contours,
-                        #    title="Testeando todos los contornos posibles")
 
         print("chats_contour: ", len(chats_contour))
         print("chat_contour: ", len(chat_contour))
