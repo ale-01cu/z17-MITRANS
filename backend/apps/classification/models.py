@@ -34,15 +34,16 @@ class Classification(models.Model):
             self.external_id = f"clas_{unique_id}"
         super().save(*args, **kwargs)
 
-    comment = models.ForeignKey(
+    comment = models.OneToOneField(
         'comment.Comment',
         on_delete=models.CASCADE,
-        related_name='classifications',
+        related_name='classifications_comment',
         null=True,
         blank=True
     )
     
     classification_type = models.CharField(
         max_length=100,
-        verbose_name="Tipo de clasificación"
+        verbose_name="Tipo de clasificación",
+        default=True,
     )

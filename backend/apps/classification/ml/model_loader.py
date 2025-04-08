@@ -1,6 +1,6 @@
 from sentence_transformers import SentenceTransformer
 import xgboost as xgb
-from sklearn.externals import joblib
+import joblib
 from django.conf import settings
 import os
 import pandas as pd
