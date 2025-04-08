@@ -912,24 +912,24 @@ class Bot:
         scrolled = 0
 
         # Chequear si hay overflow
-        while True:
-            self.take_screenshot()
-            # self.show_contours(contours=[], title="testing overflow")
-            is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
-            print("is overflow: ", is_overflow)
-            if not is_overflow:
-                break
-            possible_text_contours = self.find_text_area_contours()
-
-            if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
-                await self.handle_overflow_text(chat_contour=chat_contour,
-                                                amount_scrolled=scrolled,
-                                                texts=texts)
-
-            else:
-                break
-
-            await asyncio.sleep(1)
+        # while True:
+        #     self.take_screenshot()
+        #     # self.show_contours(contours=[], title="testing overflow")
+        #     is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
+        #     print("is overflow: ", is_overflow)
+        #     if not is_overflow:
+        #         break
+        #     possible_text_contours = self.find_text_area_contours()
+        #
+        #     if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
+        #         await self.handle_overflow_text(chat_contour=chat_contour,
+        #                                         amount_scrolled=scrolled,
+        #                                         texts=texts)
+        #
+        #     else:
+        #         break
+        #
+        #     await asyncio.sleep(1)
 
 
         self.take_screenshot()
