@@ -1,7 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from apps.classification.ml.model_loader import predict_comment_label
-
+from asgiref.sync import sync_to_async
 
 class ChatConsumer(AsyncWebsocketConsumer):
     """
@@ -55,29 +55,43 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         from apps.comment.models import Comment
+        from apps.classification.models import Classification
+        from apps.source.models import Source
 
         text_data_json = json.loads(text_data)
         # message_type = text_data_json.get('type')
         message_content = text_data_json.get('content')
-
         sender = text_data_json.get('sender')  # 'web' o 'bot'
 
         print("data: ", text_data_json)
 
         # Reenviar el mensaje al grupo correspondiente
         if sender == 'bot':
-            label = predict_comment_label(text_data)
-            Comment.objects.create(text=message_content,
-                                   user=None,
-                                   classification=label)
+            message = message_content.get('message')
+            chat_id = message_content.get('chat_id')
+
+            if not chat_id or not message:
+                label = ''
+
+            else:
+                label = predict_comment_label(text_data)
+                classification = await sync_to_async(Classification.objects.get)(name=label)
+                source = await sync_to_async(Source.objects.get)(name='Messenger')
+
+                await sync_to_async(Comment.objects.create)(
+                    text=message,
+                    user=None,
+                    classification=classification,
+                    source=source,
+                )
+
             # Mensaje de bot a web
             print("manda a la web")
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'send_to_web',
-                    'content':f"{'content'} :{label} ",
-                    # 'label': label,
+                    'content': {**message_content, **{'label': label}},
                     'sender': 'bot',
                 }
             )

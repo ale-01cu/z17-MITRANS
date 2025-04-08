@@ -607,7 +607,7 @@ class Bot:
                 desactivate_scroll=True
             )
 
-            # await self.send_websocket_message(message_type="bot_message", message=text)
+            await self.send_websocket_message(message_type="bot_message", message=text)
 
             # if i == 4:
             #     return False
@@ -935,8 +935,8 @@ class Bot:
         self.take_screenshot()
         possible_text_contours = self.find_text_area_contours()
 
-        self.show_contours(contours=possible_text_contours,
-                           title="Testeando todos los contornos posibles al inicio de la funcion.")
+        # self.show_contours(contours=possible_text_contours,
+        #                    title="Testeando todos los contornos posibles al inicio de la funcion.")
 
 
         print("chats_contour: ", len(chats_contour))
@@ -1126,7 +1126,7 @@ class Bot:
 
 
     async def run(self):
-        # await self.establish_connection()
+        await self.establish_connection()
         counter = 1
 
         chats_scrroll_done = False
