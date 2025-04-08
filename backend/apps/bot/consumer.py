@@ -1,14 +1,5 @@
-from channels.generic.websocket import WebsocketConsumer
-import json
-
-import json
-from channels.generic.websocket import WebsocketConsumer
-
-
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import async_to_sync
-
 from apps.classification.ml.model_loader import predict_comment_label
 
 
@@ -63,6 +54,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
+        from apps.comment.models import Comment
+
         text_data_json = json.loads(text_data)
         # message_type = text_data_json.get('type')
         message_content = text_data_json.get('content')
@@ -74,6 +67,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Reenviar el mensaje al grupo correspondiente
         if sender == 'bot':
             label = predict_comment_label(text_data)
+            Comment.objects.create(text=message_content,
+                                   user=None,
+                                   classification=label)
             # Mensaje de bot a web
             print("manda a la web")
             await self.channel_layer.group_send(

@@ -22,7 +22,9 @@ class Comment(models.Model):
     user = models.ForeignKey(
         'user.UserAccount',
         on_delete=models.CASCADE,
-        verbose_name="Usuario"
+        verbose_name="Usuario",
+        default=None,
+        null=True
     )
 
     user_owner = models.ForeignKey(
