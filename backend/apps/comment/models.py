@@ -43,7 +43,7 @@ class Comment(models.Model):
     classification = models.ForeignKey(
         'classification.Classification',
         on_delete=models.CASCADE,
-        verbose_name="Clasificación",
+        related_name="comments",
         default=None,
         null=True
     )
