@@ -66,6 +66,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         # message_type = text_data_json.get('type')
         message_content = text_data_json.get('content')
+
         sender = text_data_json.get('sender')  # 'web' o 'bot'
 
         print("data: ", text_data_json)
@@ -79,8 +80,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 {
                     'type': 'send_to_web',
-                    'content': message_content,
-                    'label': label,
+                    'content':f"{'content'} :{label} ",
+                    # 'label': label,
                     'sender': 'bot',
                 }
             )
@@ -96,6 +97,86 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'sender': 'web'
                 }
             )
+    # Prueba para el receive
+    # async def receive(self, text_data):
+    #     try:
+    #         text_data_json = json.loads(text_data)
+    #         message_content = text_data_json.get('content')
+    #         sender = text_data_json.get('sender')  # 'web' o 'bot'
+    #
+    #         print("Datos recibidos:", text_data_json)
+    #
+    #         if sender == 'bot':
+    #             try:
+    #                 # Obtenemos la predicción
+    #                 label = predict_comment_label(message_content)
+    #
+    #                 # Preparamos el mensaje formateado
+    #                 response_content = f"comentario: {message_content}, label: {label}"
+    #
+    #                 print("Enviando a web...")
+    #                 await self.channel_layer.group_send(
+    #                     self.room_group_name,
+    #                     {
+    #                         'type': 'send_to_web',
+    #                         'content': response_content,
+    #                         'sender': 'bot',
+    #                         'status': 'success'
+    #                     }
+    #                 )
+    #
+    #             except ValueError as ve:
+    #                 await self.channel_layer.group_send(
+    #                     self.room_group_name,
+    #                     {
+    #                         'type': 'send_to_web',
+    #                         'content': f"Error de validación: {str(ve)}",
+    #                         'sender': 'bot',
+    #                         'status': 'error'
+    #                     }
+    #                 )
+    #
+    #             except RuntimeError as re:
+    #                 await self.channel_layer.group_send(
+    #                     self.room_group_name,
+    #                     {
+    #                         'type': 'send_to_web',
+    #                         'content': f"Error en predicción: {str(re)}",
+    #                         'sender': 'bot',
+    #                         'status': 'error'
+    #                     }
+    #                 )
+    #
+    #         elif sender == 'web':
+    #             print("Enviando al bot...")
+    #             await self.channel_layer.group_send(
+    #                 self.room_group_name,
+    #                 {
+    #                     'type': 'send_to_bot',
+    #                     'content': message_content,
+    #                     'sender': 'web',
+    #                     'status': 'success'
+    #                 }
+    #             )
+    #
+    #         else:
+    #             raise ValueError("Sender no reconocido")
+    #
+    #     except json.JSONDecodeError:
+    #         await self.send(text_data=json.dumps({
+    #             'type': 'error',
+    #             'content': 'Formato JSON inválido',
+    #             'sender': 'system',
+    #             'status': 'error'
+    #         }))
+    #
+    #     except Exception as e:
+    #         await self.send(text_data=json.dumps({
+    #             'type': 'error',
+    #             'content': f'Error inesperado: {str(e)}',
+    #             'sender': 'system',
+    #             'status': 'error'
+    #         }))
 
     # Método para manejar mensajes enviados al grupo
     # def bot_message(self, event):
