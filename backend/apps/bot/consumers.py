@@ -1,0 +1,160 @@
+from asgiref.sync import sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
+import json
+from apps.classification.ml.model_loader import predict_comment_label
+
+
+class ChatConsumer(AsyncWebsocketConsumer):
+    # Diccionario de clase para seguimiento de bots por sala
+    bot_channels = {}
+
+    async def connect(self):
+        self.room_name = self.scope['url_route']['kwargs']['room_name']
+        self.room_group_name = f"chat_{self.room_name}"
+        self.user_type = self.scope['url_route']['kwargs']['user_type']
+
+        # Registrar el canal del bot si es necesario
+        if self.user_type == 'bot':
+            self.__class__.bot_channels[self.room_group_name] = self.channel_name
+            print(f"Bot registrado en sala: {self.room_name}")
+
+        # Unirse al grupo
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        await self.accept()
+        print(f"Conexión establecida: {self.user_type} en {self.room_name}")
+
+    async def disconnect(self, close_code):
+        # Limpiar registro del bot si se desconecta
+        if self.user_type == 'bot' and self.__class__.bot_channels.get(self.room_group_name) == self.channel_name:
+            del self.__class__.bot_channels[self.room_group_name]
+            print(f"Bot desconectado de: {self.room_name}")
+
+        # Salir del grupo
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+            sender = data.get('sender')
+            content = data.get('content')
+
+            # Manejar control del bot
+            if message_type == 'control_bot' and sender == 'web':
+                await self.handle_bot_control(data.get('action'))
+                return
+
+            # Procesamiento normal de mensajes
+            if sender == 'bot':
+                await self.process_bot_message(content)
+            elif sender == 'web':
+                await self.process_web_message(content)
+
+        except Exception as e:
+            print(f"Error procesando mensaje: {str(e)}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Error procesando mensaje'
+            }))
+
+    async def handle_bot_control(self, action):
+        """Controla el bot desde el frontend"""
+        bot_channel = self.__class__.bot_channels.get(self.room_group_name)
+
+        if action == 'disconnect' and bot_channel:
+            # Enviar comando de cierre al bot
+            await self.channel_layer.send(
+                bot_channel,
+                {
+                    "type": "websocket.close",
+                    "code": 1000
+                }
+            )
+            await self.notify_group('system', 'Bot desconectado')
+
+        elif action == 'connect':
+            # Aquí iría la lógica para iniciar el bot automáticamente
+            await self.notify_group('system', 'Comando para conectar bot recibido')
+
+    async def process_bot_message(self, text_data):
+        from apps.comment.models import Comment
+        from apps.classification.models import Classification
+        from apps.source.models import Source
+
+        text_data_json = json.loads(text_data)
+
+        # "Procesa mensajes entrantes del bot"
+        message_content = text_data_json.get('content')
+        message = message_content.get('message')
+        chat_id = message_content.get('chat_id')
+        sender = text_data_json.get('sender')
+
+        if not chat_id or not message:
+            label = ''
+        else:
+            label = predict_comment_label(text_data)
+            classification = await sync_to_async(Classification.objects.get)(name=label)
+            source = await sync_to_async(Source.objects.get)(name='Messenger')
+
+            await sync_to_async(Comment.objects.create)(
+                text=message,
+                user=None,
+                classification=classification,
+                source=source,
+            )
+
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'send_to_web',
+                'content': {**message, **{'label': label}},
+                'sender': 'bot',
+            }
+        )
+
+    async def process_web_message(self, content):
+        """Procesa mensajes entrantes del frontend"""
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'send_to_bot',
+                'content': content,
+                'sender': 'web'
+            }
+        )
+
+    async def send_to_web(self, event):
+        """Envía mensajes a los clientes web"""
+        if self.user_type == 'frontend':
+            await self.send(text_data=json.dumps({
+                'type': 'message',
+                'content': event['content'],
+                'sender': event['sender']
+            }))
+
+    async def send_to_bot(self, event):
+        """Envía mensajes al bot"""
+        if self.user_type == 'bot':
+            await self.send(text_data=json.dumps({
+                'type': 'message',
+                'content': event['content'],
+                'sender': event['sender']
+            }))
+
+    async def notify_group(self, msg_type, message):
+        """Notifica al grupo"""
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'send_to_web',
+                'content': {'message': message},
+                'sender': 'system'
+            }
+        )
+
