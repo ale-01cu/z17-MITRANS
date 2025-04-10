@@ -113,8 +113,9 @@ class Bot:
             return
 
         try:
+            pass
             # Send status update through WebSocket
-            await self.send_websocket_message("status", True)
+            # await self.send_websocket_message("status", True)
 
         except Exception as e:
             print(f"Error in run_async: {e}")
@@ -607,7 +608,7 @@ class Bot:
                 desactivate_scroll=True
             )
 
-            await self.send_websocket_message(message_type="bot_message", message=text)
+            # await self.send_websocket_message(message_type="bot_message", message=text)
 
             # if i == 4:
             #     return False
@@ -1126,7 +1127,7 @@ class Bot:
 
 
     async def run(self):
-        await self.establish_connection()
+        # await self.establish_connection()
         counter = 1
 
         chats_scrroll_done = False
