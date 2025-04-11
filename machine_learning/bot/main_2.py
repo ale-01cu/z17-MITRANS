@@ -19,7 +19,7 @@ def main():
             messenger_template_path,
             # messenger_template_2_path
         ],
-        websocket_uri="ws://localhost:8000/ws/chat/"
+        websocket_uri="ws://localhost:8000/ws/chat/sala1/bot/"
     )
     asyncio.run(bot.run())
 

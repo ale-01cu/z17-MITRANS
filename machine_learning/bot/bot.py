@@ -56,6 +56,7 @@ class Bot:
         self.window_handler = WindowHandler(title=target_name)
         self.first_contour_reference: Tuple[int, int, int, int] | None = None
         self.is_in_message_requests_view = False
+        self.is_offline = True
 
     # =================================================== Web Socket connection (Start) =============================================================
     async def connect_websocket(self):
@@ -67,20 +68,36 @@ class Bot:
         await self.websocket.disconnect()
 
     async def send_websocket_message(self, message_type: str, message: str):
-        """Sends a message through the WebSocket connection"""
-
+        """Improved message sending with error handling"""
         print("Mandando mensaje...")
-        message = {
+        message_data = {
             "type": message_type,
             "sender": 'bot',
             "content": {
                 "chat_id": self.current_chat_id,
                 "message": message,
                 "bot_name": self.name,
-                "timestamp": time.time()
+                "timestamp": time.time(),
+                "sequence": int(time.time() * 1000)  # Add sequencing
             }
         }
-        return await self.websocket.send_message(message)
+        
+        try:
+            success = await self.websocket.send_message(message_data, require_ack=False)
+            print("success ", success)
+            if not success:
+                print(f"Falló el envío del mensaje, reintentando...")
+                await asyncio.sleep(1)
+                return await self.send_websocket_message(message_type, message)
+                
+            print("Mensaje enviado correctamente con ACK")
+            return True
+            
+        except Exception as e:
+            print(f"Error crítico enviando mensaje: {e}")
+            await self.websocket.disconnect()
+            await self.websocket.connect()
+            return False
 
 
     async def handle_websocket_message(self, message: dict):
@@ -104,24 +121,41 @@ class Bot:
 
 
     async def establish_connection(self):
-        """Asynchronous version of the run method"""
+        """Improved connection handling"""
         print("Running async...")
         
-        # Connect to WebSocket server
-        if not await self.connect_websocket():
-            print("Failed to connect to WebSocket server")
+        # Connection loop with exponential backoff
+        retry_delays = [1, 2, 5, 10, 30]
+        for delay in retry_delays:
+            if await self.websocket.connect():
+                break
+            print(f"Reintentando conexión en {delay} segundos...")
+            await asyncio.sleep(delay)
+        else:
+            print("Failed to establish WebSocket connection after multiple attempts")
             return
 
-        try:
-            pass
-            # Send status update through WebSocket
-            # await self.send_websocket_message("status", True)
+        # Start monitoring task
+        asyncio.create_task(self._connection_monitor())
 
-        except Exception as e:
-            print(f"Error in run_async: {e}")
+    async def _connection_monitor(self):
+        """New connection health monitor"""
+        while True:
+            if not self.websocket.is_connected:
+                print("Conexión perdida, intentando reconectar...")
+                await self.establish_connection()
+                
+            await asyncio.sleep(5)
+            # Send heartbeat
+            try:
+                await self.websocket.send_message({
+                    "type": "heartbeat",
+                    "content": "ping"
+                }, require_ack=False)
+            except:
+                pass
 
     # =================================================== Web Socket connection (End) =============================================================
-
 
     def is_watching_target(self, threshold: float = 0.8) -> bool:
         if self.current_screenshot is None:
@@ -334,19 +368,20 @@ class Bot:
             circularity = (4 * np.pi * area) / (perimeter ** 2)
 
             is_into_chats_contour = (
-                        x > (x_chats + 0.30 * w_chats) and x < (x_chats + w_chats) and
-                        (y > y_chats and y > (y_chats + 0.10 * h_chats))
+                x > (x_chats + 0.70 * w_chats) and  # Comienza después del 70% del ancho (últimos 30%)
+                x < (x_chats + w_chats) and  # Termina al final del ancho
+                y > (y_chats + 0.10 * h_chats) and  # Comienza después del 10% del alto
+                y < (y_chats + h_chats)  # Termina al final del alto
             )
 
-
-
             is_in_size_range = (
-                (12 < w < 20) and (12 < h < 20) and w == h
+                (12 < w < 20) and (12 < h < 20)
             )
 
             # Filtrar contornos basados en la circularidad (ajusta el umbral según sea necesario)
             if 0.7 < circularity <= 1.0 and is_into_chats_contour and is_in_size_range:  # Umbral de circularidad
                 contours_found.append(contour)
+
 
         # print(len(contours_found))
         # cv2.drawContours(self.current_screenshot, contours_found, -1, (0, 255, 0), 3)
@@ -608,7 +643,8 @@ class Bot:
                 desactivate_scroll=True
             )
 
-            # await self.send_websocket_message(message_type="bot_message", message=text)
+            if not self.is_offline: await self.send_websocket_message(
+                message_type="bot_message", message=text)
 
             # if i == 4:
             #     return False
@@ -748,25 +784,30 @@ class Bot:
         return result_image
 
 
-    async def handle_overflow_text(self, chat_contour, amount_scrolled, texts):
+    async def handle_overflow_text(self, chat_contour, amount_scrolled, texts, is_inicial_overflow=True):
         # Caso cuando hay texto desbordado (tratamiento diferente)
         result_image = self.repair_irregular_top_edge(
             image=self.current_screenshot, contour=chat_contour)
 
-        conours_found = self.find_text_area_contours(image=result_image, use_first_contour_reference=False)
+        conours_found = self.find_text_area_contours(image=result_image,
+                                                     use_first_contour_reference=False)
 
         largest_contour_found = None
 
-        for contour in conours_found:
+        for i, contour in enumerate(conours_found):
             x, y, w, h = cv2.boundingRect(contour)
 
-            if largest_contour_found is None:
-                largest_contour_found = contour
+            if is_inicial_overflow:
 
-            x_aux, y_aux, w_aux, h_aux = cv2.boundingRect(largest_contour_found)
-            if largest_contour_found is not None and (w > w_aux and h > h_aux):
-                largest_contour_found = contour
+                if largest_contour_found is None:
+                    largest_contour_found = contour
 
+                x_aux, y_aux, w_aux, h_aux = cv2.boundingRect(largest_contour_found)
+                if largest_contour_found is not None and (w > w_aux and h > h_aux):
+                    largest_contour_found = contour
+
+            else:
+                if i == 0: largest_contour_found = contour
 
         print("Contornos ", len(conours_found))
         # self.show_contours(contours=conours_found, title="Los contornos de La imagen reparada")
@@ -913,24 +954,24 @@ class Bot:
         scrolled = 0
 
         # Chequear si hay overflow
-        # while True:
-        #     self.take_screenshot()
-        #     # self.show_contours(contours=[], title="testing overflow")
-        #     is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
-        #     print("is overflow: ", is_overflow)
-        #     if not is_overflow:
-        #         break
-        #     possible_text_contours = self.find_text_area_contours()
-        #
-        #     if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
-        #         await self.handle_overflow_text(chat_contour=chat_contour,
-        #                                         amount_scrolled=scrolled,
-        #                                         texts=texts)
-        #
-        #     else:
-        #         break
-        #
-        #     await asyncio.sleep(1)
+        while True:
+            self.take_screenshot()
+            # self.show_contours(contours=[], title="testing overflow")
+            is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
+            print("is overflow: ", is_overflow)
+            if not is_overflow:
+                break
+            possible_text_contours = self.find_text_area_contours()
+
+            if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
+                await self.handle_overflow_text(chat_contour=chat_contour,
+                                                amount_scrolled=scrolled,
+                                                texts=texts, is_inicial_overflow=False)
+
+            else:
+                break
+
+            await asyncio.sleep(1)
 
 
         self.take_screenshot()
@@ -1027,7 +1068,7 @@ class Bot:
                 scroll_move=scroll_pos_end,
                 move_to_chat=False
             )
-        pyautogui.moveTo(x=x_end, y=y_end, duration=1)
+        pyautogui.moveTo(x=x_end, y=y_end)
 
         pyperclip.copy(None)
         pyautogui.hotkey('ctrl', 'c')
@@ -1127,7 +1168,7 @@ class Bot:
 
 
     async def run(self):
-        # await self.establish_connection()
+        if not self.is_offline: await self.establish_connection()
         counter = 1
 
         chats_scrroll_done = False
@@ -1166,9 +1207,6 @@ class Bot:
             while True:
                 chats = self.find_chat_references()
                 print("chats: ", len(chats))
-
-                # self.show_contours(contours=chats,
-                #                    title="chats")
 
                 if chats is not None and len(chats) > 0:
                     print("entra a iterar los chats...")

@@ -8,7 +8,7 @@ import pandas as pd
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'apps/classification/ml/model/')  # Ruta absoluta al archivo
 
 try:
-    sentence_model = SentenceTransformer(MODEL_PATH + 'st_ft_epoch_5')
+    sentence_model = SentenceTransformer(MODEL_PATH + 'paraphrase-MiniLM-L6-v2-tunned')
     xgb_model = xgb.Booster()
     xgb_model.load_model(MODEL_PATH + "xgboost_model.json")
     label_encoder = joblib.load(MODEL_PATH + "label_encoder.pkl")

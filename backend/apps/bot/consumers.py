@@ -2,7 +2,8 @@ from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
 from apps.classification.ml.model_loader import predict_comment_label
-
+from datetime import datetime
+import uuid
 
 class ChatConsumer(AsyncWebsocketConsumer):
     # Diccionario de clase para seguimiento de bots por sala
@@ -44,13 +45,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message_type = data.get('type')
             sender = data.get('sender')
             content = data.get('content')
+            message_id = data.get('message_id')  # Nuevo: Extraer el message_id
 
-            # Manejar control del bot
+            print("data: ", data)
+
+            # Enviar ACK inmediatamente si el mensaje tiene message_id
+            if message_id:
+                ack_message = {
+                    'type': 'ack',
+                    'message_id': message_id,
+                    'status': 'received',
+                    'timestamp': datetime.now().isoformat()
+                }
+                await self.send(text_data=json.dumps(ack_message))
+
+            # Resto de tu lógica existente...
             if message_type == 'control_bot' and sender == 'web':
                 await self.handle_bot_control(data.get('action'))
                 return
 
-            # Procesamiento normal de mensajes
             if sender == 'bot':
                 await self.process_bot_message(content)
             elif sender == 'web':
@@ -144,7 +157,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 'type': 'message',
                 'content': event['content'],
-                'sender': event['sender']
+                'sender': event['sender'],
+                'message_id': str(uuid.uuid4())  # Añadir ID único para el ACK
             }))
 
     async def notify_group(self, msg_type, message):
