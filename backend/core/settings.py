@@ -231,6 +231,7 @@ EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://localhost:5173",
+    "http://localhost:1234",
     "http://localhost:6379",# esto es para redis probando los channels
     "ws://localhost:8000",#Esto es websocket
 ]
@@ -248,3 +249,7 @@ CHANNEL_LAYERS = {
 }
 # CELERY_BROKER_URL = "redis://localhost:6379/0"
 # CELERY_RESULT_BACKEND = "redis://localhost:6379/"
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Para collectstatic
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Tus archivos estáticos

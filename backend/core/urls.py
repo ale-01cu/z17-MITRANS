@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -38,4 +40,4 @@ urlpatterns = [
     path('api/source/', include('apps.source.urls')),
     path('api/img-proc/', include('apps.img_process.urls')),
     path('api/user-owner/', include('apps.comment_user_owner.urls')),
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
