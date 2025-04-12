@@ -22,3 +22,6 @@ class ClassifyCommentByIdSerializer(serializers.Serializer):
         allow_empty=False  # No se permiten listas vacías
     )
 
+
+class CommentTextSerializer(serializers.Serializer):
+    text = serializers.CharField(required=True, max_length=500)  # Ajusta el max_length según necesites

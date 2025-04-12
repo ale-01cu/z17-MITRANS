@@ -18,10 +18,15 @@ class ImgToTextView(APIView):
 
     def post(self, request):
         # Validación básica del serializer
+        device_type = request.query_params.get('device_type', 'desktop').lower()
+        if device_type not in ['mobile', 'desktop']:
+            device_type = 'desktop'
+
         file_upload_serializer = FileUploadSerializer(data=request.data)
 
         if not file_upload_serializer.is_valid():
-            return Response(file_upload_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(file_upload_serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         file = file_upload_serializer.validated_data['file']
 
@@ -29,7 +34,6 @@ class ImgToTextView(APIView):
         allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
         extension_validator = FileExtensionValidator(allowed_extensions)
 
-        print('test 1')
         try:
             extension_validator(file)
         except ValidationError:
@@ -37,8 +41,6 @@ class ImgToTextView(APIView):
                 {"detail": f"Formato de archivo no soportado. Formatos permitidos: {', '.join(allowed_extensions)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        print('test 2')
 
         # 2. Validación del tipo MIME
         valid_mime_types = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp']
@@ -48,7 +50,6 @@ class ImgToTextView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        print('test 3')
         # 3. Validación del tamaño del archivo (ejemplo: máximo 5MB)
         max_size = 5 * 1024 * 1024  # 5MB
         if file.size > max_size:
@@ -72,7 +73,6 @@ class ImgToTextView(APIView):
         #     )
 
         # Si pasa todas las validaciones, procesamos la imagen
-        print('test 4')
         try:
             file_bytes = file.read()  # Leer bytes del archivo
             np_array = np.frombuffer(file_bytes, np.uint8)  # Convertir a numpy array
