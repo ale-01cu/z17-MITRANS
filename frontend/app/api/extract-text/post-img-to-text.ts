@@ -2,11 +2,12 @@ import { Axios } from "../config";
 import { API_IMG_TO_TEXT } from "~/config";
 
 interface ImageToTextResponse {
+  id: string,
   text: string;
-  success: boolean;
+  classification: string | null
 }
 
-export default async function extractTextFromImages(files: File[]): Promise<ImageToTextResponse> {
+export default async function extractTextFromImages(files: File[]): Promise<ImageToTextResponse[]> {
   const formData = new FormData();
   
   files.forEach((file, index) => {

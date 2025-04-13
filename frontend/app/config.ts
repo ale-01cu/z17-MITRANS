@@ -12,6 +12,7 @@ export const API_SIGNUP = '/auth/users/'
 
 
 export const API_COMMENTS = "/api/comment/"
+export const API_CREATE_COMMENT_LIST = "/api/comment/create-list/"
 export const API_SOURCE = "/api/source/"
 export const API_USER_OWNER = "/api/user-owner"
 export const API_CLASSIFICATION = "/api/classification/"

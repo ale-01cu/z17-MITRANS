@@ -1,9 +1,9 @@
 import UploadFiles from "~/components/upload-files";
 import ExtractLoading from "./extract-loading";
 import React, { useState } from "react";
-import { extractTextFromMedia } from "./actions";
 import TextSection from "./text-section";
 import ActionSection from "./actions-section";
+import postImgToTextApi from '~/api/extract-text/post-img-to-text'
 
 interface Statement {
   id: string,
@@ -15,7 +15,6 @@ const ExtractText = () => {
   const [isUploading, setIsUploading] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractedStatements, setExtractedStatements] = useState<Statement[]>([])
-  const [extractedUsers, setExtractedUsers] = useState<string[]>([])
   const [selectedStatements, setSelectedStatements] = useState<Statement[]>([])
   const [files, setFiles] = useState<File[]>([])
 
@@ -38,16 +37,11 @@ const ExtractText = () => {
         formData.append("files", file)
       })
 
-      const result = await extractTextFromMedia(formData)
+      const res = await postImgToTextApi(files)
 
       // Simulate text extraction (replace with actual server response)
-      setTimeout(() => {
-        setIsExtracting(false)
-        setExtractedStatements(result.statements)
-        setExtractedUsers(result.users)
-        // Pre-select some statements by default (in a real app, this might come from the server)
-        setSelectedStatements(result.preSelectedStatements)
-      }, 2000)
+      setIsExtracting(false)
+      setExtractedStatements(res)
 
     } catch (error) {
       console.error("Error extracting text:", error)
@@ -134,10 +128,10 @@ const ExtractText = () => {
           <TextSection 
             deselectAll={deselectAll}
             extractedStatements={extractedStatements}
+            extractedUsers={[]}
             selectAll={selectAll}
             selectedStatements={selectedStatements}
             toggleStatement={toggleStatement}
-            extractedUsers={extractedUsers}
           />
         }
       </div>
@@ -148,6 +142,7 @@ const ExtractText = () => {
           handleDownload={handleDownload}
           handleProcess={handleProcess}
           selectedStatements={selectedStatements}
+          setSelectedStatements={setSelectedStatements}
         />
       </div>
     </div>

@@ -24,7 +24,6 @@ const TextSection = ({
   selectAll, 
   deselectAll, 
   extractedStatements, 
-  extractedUsers,
   selectedStatements, 
   toggleStatement }: Props
 ) => {
@@ -37,7 +36,7 @@ const TextSection = ({
           <div className="flex space-x-2">
             <div className="flex gap-4">
               <Label>Usuario</Label>
-              <UserSelector users={extractedUsers}/>
+              {/* <UserSelector users={extractedUsers}/> */}
             </div>
             <Button variant="outline" size="sm" onClick={selectAll}>
               <CheckSquare className="h-4 w-4 mr-2" />
@@ -64,7 +63,7 @@ const TextSection = ({
                 </Label>
               </div>
 
-              {statement.classification && 
+              {statement?.classification && 
                 <div className="flex gap-2 items-center">
                   <Label className="text-sm leading-relaxed w-full">
                     Clasificación:
