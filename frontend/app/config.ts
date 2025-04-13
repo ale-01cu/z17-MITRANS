@@ -15,4 +15,6 @@ export const API_COMMENTS = "/api/comment/"
 export const API_SOURCE = "/api/source/"
 export const API_USER_OWNER = "/api/user-owner"
 export const API_CLASSIFICATION = "/api/classification/"
+export const API_CLASSIFICATION_CLASSIFY_COMMENT = '/api/classification/classify-comment/'
+export const API_CLASSIFICATION_CLASSIFY_COMMENT_BY_ID = '/api/classification/classify-comment-by-id/'
 export const API_IMG_TO_TEXT = "/api/img-to-text/"

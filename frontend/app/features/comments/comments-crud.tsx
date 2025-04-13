@@ -17,7 +17,7 @@ import UserOwnerSelector from "~/components/user-owner/user-owner-selector"
 import updateCommentApi from "~/api/comments/update-comment-api"
 import { Card } from "~/components/ui/card"
 import CommentListPagination from "./comment-list-pagination"
-import { useLocation, useSearchParams } from "react-router"
+import { useSearchParams } from "react-router"
 
 
 export default function CommentsCrud() {

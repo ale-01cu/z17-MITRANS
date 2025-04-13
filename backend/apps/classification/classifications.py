@@ -1,11 +1,20 @@
 classifications = [
     {
-        "name": "Positivo",
+        "name": "ofensa",
     },
     {
-        "name": "Negativo",
+        "name": "sugerencia",
     },
     {
-        "name": "Neutral",
+        "name": "criterio_general",
     },
+    {
+        "name": "queja",
+    },
+    {
+        "name": "denuncia",
+    },
+    {
+        "name": "pregunta",
+    }
 ]

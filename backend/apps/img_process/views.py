@@ -5,23 +5,35 @@ from rest_framework.views import status, Response
 from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
 from apps.img_process.img_to_text import img_to_text
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+import cv2
+import numpy as np
 
 # Create your views here.
-class ImgToTextView(generics.GenericAPIView):
+class ImgToTextView(APIView):
     serializer_class = FileUploadSerializer
     parser_classes = [MultiPartParser]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         # Validación básica del serializer
-        file_upload_serializer = self.get_serializer(data=request.data)
+        device_type = request.query_params.get('device_type', 'desktop').lower()
+        if device_type not in ['mobile', 'desktop']:
+            device_type = 'desktop'
+
+        file_upload_serializer = FileUploadSerializer(data=request.data)
+
         if not file_upload_serializer.is_valid():
-            return Response(file_upload_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(file_upload_serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         file = file_upload_serializer.validated_data['file']
 
         # 1. Validación de extensión del archivo
         allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
         extension_validator = FileExtensionValidator(allowed_extensions)
+
         try:
             extension_validator(file)
         except ValidationError:
@@ -62,10 +74,15 @@ class ImgToTextView(generics.GenericAPIView):
 
         # Si pasa todas las validaciones, procesamos la imagen
         try:
-            texts = img_to_text(image_path=file)
-            return Response({'data': texts}, status=status.HTTP_200_OK)
+            file_bytes = file.read()  # Leer bytes del archivo
+            np_array = np.frombuffer(file_bytes, np.uint8)  # Convertir a numpy array
+            img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)  # Decodificar a imagen OpenCV
+            text = img_to_text(image=img)
+            sentences = [line.strip() for line in text.split('\n') if line.strip()]
+            return Response({'data': sentences}, status=status.HTTP_200_OK)
 
         except Exception as e:
+            print('Error: ', e)
             return Response(
                 {"detail": "Error al procesar la imagen. Por favor intente con otra imagen."},
                 status=status.HTTP_400_BAD_REQUEST,
