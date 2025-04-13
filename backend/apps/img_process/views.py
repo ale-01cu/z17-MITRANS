@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 import cv2
 import numpy as np
+import uuid
 
 # Create your views here.
 class ImgToTextView(APIView):
@@ -79,7 +80,20 @@ class ImgToTextView(APIView):
             img = cv2.imdecode(np_array, cv2.IMREAD_COLOR)  # Decodificar a imagen OpenCV
             text = img_to_text(image=img)
             sentences = [line.strip() for line in text.split('\n') if line.strip()]
-            return Response({'data': sentences}, status=status.HTTP_200_OK)
+
+            # Creamos lista de diccionarios con ID único
+            sentences_with_ids = [
+                {
+                    "id": str(uuid.uuid4()),  # Generamos un UUID único para cada oración
+                    "text": sentence
+                }
+                for sentence in sentences
+            ]
+
+            return Response(
+                sentences_with_ids,
+                status=status.HTTP_200_OK
+            )
 
         except Exception as e:
             print('Error: ', e)
