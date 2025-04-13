@@ -22,8 +22,14 @@ class CommentSerializer(serializers.ModelSerializer):
         max_length=50, write_only=True, required=False)
     user_owner = UserOwnerSerializer(read_only=True)
 
-    source_id = serializers.CharField(max_length=50, write_only=True)
     source = SourceSerializer(read_only=True)
+    source_id = serializers.CharField(  # Para la entrada por ID
+        max_length=50,
+        write_only=True,
+        required=False,  # <--- AQUÍ: Hace que el campo no sea obligatorio en la entrada
+        allow_null=True,  # <--- AQUÍ: Permite enviar 'null' explícitamente
+        source='source'  # <--- IMPORTANTE: Vincula este campo de entrada al campo 'source' del modelo
+    )
 
     class Meta:
         model = Comment

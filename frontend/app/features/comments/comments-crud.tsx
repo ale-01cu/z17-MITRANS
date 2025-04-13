@@ -5,9 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Search, Plus } from "lucide-react"
 import CommentForm from "./comment-form"
 import DeleteConfirmation from "./delete-confirmation"
-import type { Comment, User, CommentServerResponse } from "~/types/comments"
-import type { Source } from "~/types/source"
-import { getUsers, getSources } from "~/lib/comment-api"
+import type { Comment, CommentServerResponse } from "~/types/comments"
 import createCommentApi from "~/api/comments/create-comment-api"
 import CommentsListTable from "./comments-list-table"
 import listCommentsApi from "~/api/comments/list-comments-api"
@@ -18,6 +16,7 @@ import updateCommentApi from "~/api/comments/update-comment-api"
 import { Card } from "~/components/ui/card"
 import CommentListPagination from "./comment-list-pagination"
 import { useSearchParams } from "react-router"
+import ClassifyBtnByCommentId from "~/components/classification/classify-btn-by-comment-id"
 
 
 export default function CommentsCrud() {
@@ -31,32 +30,27 @@ export default function CommentsCrud() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [currentComment, setCurrentComment] = useState<CommentServerResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [ deleteIsLoading, setDeleteIsLoading ] = useState<boolean>(false)
-  const [ pages, setPages ] = useState<number>(0)
+  const [deleteIsLoading, setDeleteIsLoading] = useState<boolean>(false)
+  const [pages, setPages] = useState<number>(0)
+  const [selectedComments, setSelectedComments] = useState<CommentServerResponse[]>([])
   const [searchParams, _] = useSearchParams();
   const currentPage = Number(searchParams.get("page") || 1)
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        listCommentsApi({ page: currentPage })
-          .then(data => {
-            setComments(data.results)
-            setFilteredComments(data.results)
-            setPages(data.pages)
-          })
-          .catch(e => console.error(e))
+      setIsLoading(true)
+      listCommentsApi({ page: currentPage })
+        .then(data => {
+          setComments(data.results)
+          setFilteredComments(data.results)
+          setPages(data.pages)
+        })
+        .catch(e => {
+          console.error("Error fetching data:", e)
+        })
+       .finally(() => {
+         setIsLoading(false)
+       })
 
-      } catch (error) {
-        console.error("Error fetching data:", error)
-
-      } finally {
-        setIsLoading(false)
-
-      }
-    }
-
-    fetchData()
   }, [currentPage])
 
   useEffect(() => {
@@ -75,6 +69,15 @@ export default function CommentsCrud() {
       .catch(e => console.error(e))
       
   }, [comments, selectedUser, selectedSource, searchTerm, currentPage])
+
+  useEffect(() => {
+    setFilteredComments(prev => 
+      prev.map(comment => {
+        const updatedComment = selectedComments.find(c => c.id === comment.id);
+        return updatedComment ? updatedComment : comment;
+      })
+    );
+  }, [selectedComments]);
 
   const handleCreateComment = async (data: Omit<Comment, "id">) => {
     try {
@@ -128,6 +131,9 @@ export default function CommentsCrud() {
     setIsDeleteOpen(true)
   }
 
+  console.log({filteredComments});
+  
+
   return (
     <div className="space-y-6 flex gap-6">
 
@@ -137,6 +143,8 @@ export default function CommentsCrud() {
           isLoading={isLoading}
           openEditDialog={openEditDialog}
           openDeleteDialog={openDeleteDialog}
+          selectedComments={selectedComments}
+          setSelectedComments={setSelectedComments}
         />
         <CommentListPagination
           nextUrl={`/comment?page=${currentPage+1}`}
@@ -159,7 +167,7 @@ export default function CommentsCrud() {
             />
           </div>
 
-          <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2">
+          <Button onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
             <Plus className="h-4 w-4" /> Nuevo Comentario
           </Button>
 
@@ -175,6 +183,11 @@ export default function CommentsCrud() {
             handleChange={setSelectedSource}
             className="w-full"
             isFilter
+          />
+
+          <ClassifyBtnByCommentId 
+            comments={selectedComments}
+            setComments={setSelectedComments}
           />
         </Card>
       </div>

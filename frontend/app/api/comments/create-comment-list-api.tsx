@@ -2,8 +2,8 @@ import { Axios } from "../config";
 import { API_CREATE_COMMENT_LIST } from "~/config";
 
 interface Params {
-  sourceId: string,
   text: string
+  classification_id: string | null,
 }
  
 export default async function createCommentListApi(data: Params[]) {

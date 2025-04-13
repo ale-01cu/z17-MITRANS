@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from core.errors import Errors
 from django.db.models import Count
 from apps.classification.models import Classification
+from apps.source.models import Source
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
@@ -81,7 +82,8 @@ class GetCommentsFromExcelView(GenericAPIView):
 
 class CreateCommentsView(GenericAPIView):
     serializer_class = CommentSerializer
-    parser_classes = [MultiPartParser]
+    queryset = CommentSerializer.Meta.model.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         try:
@@ -89,7 +91,8 @@ class CreateCommentsView(GenericAPIView):
 
             if comments_serializer.is_valid():
                 user = request.user
-                comments = comments_serializer.save(user=user)
+                source = Source.objects.get(name='Messenger')
+                comments = comments_serializer.save(user=user, source_id=source.external_id)
 
                 response_serializer = CommentSerializer(comments, many=True)
                 return Response(response_serializer.data,
@@ -101,6 +104,7 @@ class CreateCommentsView(GenericAPIView):
                                 )
 
         except Exception as e:
+            print("CreateCommentsView Error: " + e.__str__())
             return Response(
                 {"detail": Errors.INTERNAL_SERVER_ERROR},
                 status=status.HTTP_400_BAD_REQUEST,

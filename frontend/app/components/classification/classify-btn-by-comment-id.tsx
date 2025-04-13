@@ -1,14 +1,25 @@
 import { Button } from "~/components/ui/button";
 import { Tag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
 import React, { useState } from "react";
 import getClassifyCommentByIdApi from "~/api/classification/get-classify-comment-by-id-api";
+import { type UserOwner } from "../../types/user-owner"
+import { type Source } from "../../types/source"
+import type { ClassificationServerResponse } from "../../types/classification"
+
+export interface User {
+  id: string
+  username: string
+}
 
 interface Statement {
-  id: string,
-  text: string;          // El texto del statement
-  classification: string | null; // La clasificación (inicialmente vacía)
+  id: string
+  text: string
+  classification: ClassificationServerResponse | null
+  user: User
+  user_owner: UserOwner | null
+  source: Source
+  created_at: string
 }
 
 interface Props {
@@ -20,9 +31,15 @@ const ClassifyBtnByCommentId = ({ comments, setComments }: Props) => {
   const [ isClassifying, setIsClassifying ] = useState(false)
 
   const handleClassify = () => {
+    setIsClassifying(true)
     getClassifyCommentByIdApi(comments.map(e => e.id))
       .then((data) => {
-        setComments(data)
+        setComments(prev => prev.map(comment => {
+          const updatedComment = data.data.find(d => d.id === comment.id);
+          return updatedComment 
+            ? { ...comment, classification: updatedComment.classification }
+            : comment;
+        }));
         toast.success('Comentarios clasificados correctamente.')
       })
       .catch(e => {
@@ -33,7 +50,7 @@ const ClassifyBtnByCommentId = ({ comments, setComments }: Props) => {
   }
 
   return ( 
-    <Button className=" flex justify-start w-48" onClick={handleClassify} disabled={comments.length === 0}>
+    <Button className=" flex justify-start w-full" onClick={handleClassify} disabled={comments.length === 0}>
       {isClassifying ? (
         <>
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -3,12 +3,17 @@ import { Button } from "~/components/ui/button";
 import { CheckSquare, XSquare } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
-import UserSelector from "./user-selector";
+
+interface Classification {
+  id: string,
+  name: string
+}
+
 
 interface Statement {
   id: string,
   text: string;          // El texto del statement
-  classification: string | null; // La clasificación (inicialmente vacía)
+  classification: Classification | null; // La clasificación (inicialmente vacía)
 }
 
 interface Props {
@@ -27,6 +32,9 @@ const TextSection = ({
   selectedStatements, 
   toggleStatement }: Props
 ) => {
+
+  console.log({selectedStatements});
+  
 
   return ( 
     <div className="lg:col-span-2">
@@ -55,21 +63,27 @@ const TextSection = ({
               <div key={index} className="flex w-full items-center space-x-3 py-2 border-b last:border-0 cursor-pointer">
                 <Checkbox
                   id={`statement-${index}`}
-                  checked={selectedStatements.map(s => s.text).includes(statement.text)}
+                  checked={selectedStatements.map(s => s.id).includes(statement.id)}
                   onCheckedChange={() => toggleStatement(statement)}
                 />
                 <Label htmlFor={`statement-${index}`} className="cursor-pointer text-sm leading-relaxed w-full">
                   {statement.text}
                 </Label>
+
               </div>
 
-              {statement?.classification && 
-                <div className="flex gap-2 items-center">
-                  <Label className="text-sm leading-relaxed w-full">
-                    Clasificación:
-                  </Label>
-                  <span className="text-sm">Neutral</span>
-                </div>
+
+              {
+                selectedStatements.map(s => s.id).includes(statement.id) && 
+                selectedStatements.find(e => e.id === statement.id)?.classification && 
+                  <div className="flex gap-2 items-center">
+                    <Label className="text-sm leading-relaxed w-full">
+                      Clasificación:
+                    </Label>
+                    <span className="text-sm">
+                      {selectedStatements.find(e => e.id === statement.id)?.classification?.name}
+                    </span>
+                  </div>
               }
             </div>
           ))}

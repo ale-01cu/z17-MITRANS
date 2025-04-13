@@ -20,7 +20,7 @@ export interface CommentServerResponse {
   text: string
   classification: ClassificationServerResponse | null
   user: User
-  user_owner: UserOwner
+  user_owner: UserOwner | null
   source: Source
   created_at: string
 

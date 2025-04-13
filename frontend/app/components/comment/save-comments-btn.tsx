@@ -1,34 +1,63 @@
 import createCommentListApi from "~/api/comments/create-comment-list-api";
-import { Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { Button } from "../ui/button";
 import { useState } from "react";
+import { toast } from "sonner";
 
-const SaveCommentsBtn = ({}) => {
+interface Classification {
+  id: string,
+  name: string
+}
+
+interface Statement {
+  id: string,
+  text: string;          // El texto del statement
+  classification: Classification | null; // La clasificación (inicialmente vacía)
+}
+
+interface Props {
+  comments: Statement[],
+}
+
+const SaveCommentsBtn = ({ comments }: Props) => {
   const [ isLoading, setIsLoading ] = useState(false)
 
 
   const handleClick = () => {
-    createCommentListApi()
-      .then(data => {
-
+    setIsLoading(true)
+    createCommentListApi(comments.map(e => ({
+      text: e.text,
+      classification_id: e.classification?.id || null
+    })))
+      .then(() => {
+        toast.success("Las opiniones han sido guardadas correctamente.")
       })
       .catch(e => {
-
+        toast.error('Ha ocurrido un error al guardar las opiniones.')
       })
       .finally(() => {
-
+        setIsLoading(false)
       })
   }
 
   return ( 
     <Button 
-      className="w-full flex justify-start" 
+      className="w-full flex justify-center" 
       variant="secondary" 
       onClick={handleClick} 
-      disabled={selectedStatements.length === 0}
+      disabled={comments.length === 0}
     >
-      <Send className="h-4 w-4 mr-2" />
-      Procesar opiniones
+      {isLoading ? (
+        <div className="flex items-center">
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Guardando...
+        </div>
+      ) : (
+        <div className="flex items-center">
+          <Send className="h-4 w-4 mr-2" />
+          Guardar opiniones
+        </div>
+      )}
     </Button>
    );
 }

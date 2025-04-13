@@ -24,8 +24,8 @@ export default function CommentForm({ comment, onSubmit, onCancel }: CommentForm
   const [formData, setFormData] = useState({
     id: comment?.id || "",
     text: comment?.text || "",
-    user_owner_id: comment?.user_owner.id || "",
-    user_owner_name: comment?.user_owner.name || "",
+    user_owner_id: comment?.user_owner?.id || "",
+    user_owner_name: comment?.user_owner?.name || "",
     source_id: comment?.source.id || "",
     classification_id: comment?.classification?.id || "",
     

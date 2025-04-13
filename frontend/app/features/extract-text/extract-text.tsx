@@ -5,10 +5,16 @@ import TextSection from "./text-section";
 import ActionSection from "./actions-section";
 import postImgToTextApi from '~/api/extract-text/post-img-to-text'
 
+interface Classification {
+  id: string,
+  name: string
+}
+
+
 interface Statement {
   id: string,
   text: string;          // El texto del statement
-  classification: string | null; // La clasificación (inicialmente vacía)
+  classification: Classification | null; // La clasificación (inicialmente vacía)
 }
 
 const ExtractText = () => {
@@ -37,11 +43,16 @@ const ExtractText = () => {
         formData.append("files", file)
       })
 
-      const res = await postImgToTextApi(files)
+      const res = await postImgToTextApi({files})
 
-      // Simulate text extraction (replace with actual server response)
       setIsExtracting(false)
-      setExtractedStatements(res)
+      setExtractedStatements(res.flatMap(item => 
+        item.data.map(statement => ({
+          id: statement.id,
+          text: statement.text,
+          classification: null
+        }))
+      ))
 
     } catch (error) {
       console.error("Error extracting text:", error)
@@ -70,42 +81,11 @@ const ExtractText = () => {
     setSelectedStatements([])
   }
 
-  const handleClassify = (setIsClassifying: React.Dispatch<React.SetStateAction<boolean>>) => {
-    setIsClassifying(true)
-    setTimeout(() => {
-      const statementsClassificated = extractedStatements.map((item) => {
-        // Buscar el elemento correspondiente en el array pequeño
-        const selectedItem = selectedStatements.find((selected) => selected.id === item.id);
-    
-        // Si el elemento existe en el array pequeño, actualizarlo
-        if (selectedItem) {
-          return {
-            ...item, // Copiar las propiedades originales
-            classification: "Neutral", // Actualizar la propiedad classification
-          };
-        }
-    
-        // Si no existe, devolver el elemento sin cambios
-        return item;
-      });
-  
-      setExtractedStatements(statementsClassificated)
-      setIsClassifying(false)
-      
-    }, 2000)
-
-    // Implement classification logic
-  }
-
   const handleDownload = () => {
     console.log("Downloading statements:", selectedStatements)
     // Implement download logic
   }
 
-  const handleProcess = () => {
-    console.log("Processing statements:", selectedStatements)
-    // Implement processing logic
-  }
 
   return (
     <div className="flex justify-between w-full px-8 gap-8">
@@ -138,9 +118,7 @@ const ExtractText = () => {
 
       <div>
         <ActionSection
-          handleClassify={handleClassify}
           handleDownload={handleDownload}
-          handleProcess={handleProcess}
           selectedStatements={selectedStatements}
           setSelectedStatements={setSelectedStatements}
         />
