@@ -954,31 +954,31 @@ class Bot:
         scrolled = 0
 
         # Chequear si hay overflow
-        while True:
-            self.take_screenshot()
-            # self.show_contours(contours=[], title="testing overflow")
-            is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
-            print("is overflow: ", is_overflow)
-            if not is_overflow:
-                break
-            possible_text_contours = self.find_text_area_contours()
-
-            if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
-                await self.handle_overflow_text(chat_contour=chat_contour,
-                                                amount_scrolled=scrolled,
-                                                texts=texts, is_inicial_overflow=False)
-
-            else:
-                break
-
-            await asyncio.sleep(1)
+        # while True:
+        #     self.take_screenshot()
+        #     # self.show_contours(contours=[], title="testing overflow")
+        #     is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
+        #     print("is overflow: ", is_overflow)
+        #     if not is_overflow:
+        #         break
+        #     possible_text_contours = self.find_text_area_contours()
+        #
+        #     if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
+        #         await self.handle_overflow_text(chat_contour=chat_contour,
+        #                                         amount_scrolled=scrolled,
+        #                                         texts=texts, is_inicial_overflow=False)
+        #
+        #     else:
+        #         break
+        #
+        #     await asyncio.sleep(1)
 
 
         self.take_screenshot()
         possible_text_contours = self.find_text_area_contours()
 
-        # self.show_contours(contours=possible_text_contours,
-        #                    title="Testeando todos los contornos posibles al inicio de la funcion.")
+        self.show_contours(contours=possible_text_contours,
+                           title="Testeando todos los contornos posibles al inicio de la funcion.")
 
 
         print("chats_contour: ", len(chats_contour))
@@ -1010,8 +1010,8 @@ class Bot:
             is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
 
             print("is overflow: ", is_overflow)
-            # self.show_contours(contours=[chat_contour],
-            #                    title="chat area contour")
+            self.show_contours(contours=[chat_contour],
+                               title="chat area contour")
             amount_scrolled = 0
 
             if is_overflow:

@@ -14,5 +14,8 @@ class UserAddSerializer(UserCreateSerializer):
             'email',
             'first_name',
             'last_name',
-            'password'
+            'password',
+            'is_superuser',
+            'is_staff',
+            'role',
         )

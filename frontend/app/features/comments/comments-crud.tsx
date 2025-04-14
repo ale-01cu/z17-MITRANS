@@ -17,7 +17,7 @@ import { Card } from "~/components/ui/card"
 import CommentListPagination from "./comment-list-pagination"
 import { useSearchParams } from "react-router"
 import ClassifyBtnByCommentId from "~/components/classification/classify-btn-by-comment-id"
-
+import useIsConsultant from "~/hooks/useIsConsultant"
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
@@ -35,6 +35,7 @@ export default function CommentsCrud() {
   const [selectedComments, setSelectedComments] = useState<CommentServerResponse[]>([])
   const [searchParams, _] = useSearchParams();
   const currentPage = Number(searchParams.get("page") || 1)
+  const isConsultant = useIsConsultant()
 
   useEffect(() => {
       setIsLoading(true)
@@ -145,6 +146,7 @@ export default function CommentsCrud() {
           openDeleteDialog={openDeleteDialog}
           selectedComments={selectedComments}
           setSelectedComments={setSelectedComments}
+          isConsultant={isConsultant}
         />
         <CommentListPagination
           nextUrl={`/comment?page=${currentPage+1}`}
@@ -167,9 +169,9 @@ export default function CommentsCrud() {
             />
           </div>
 
-          <Button onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
+          {!isConsultant && <Button onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
             <Plus className="h-4 w-4" /> Nuevo Comentario
-          </Button>
+          </Button>}
 
           <UserOwnerSelector
             value={selectedUser}
@@ -185,15 +187,15 @@ export default function CommentsCrud() {
             isFilter
           />
 
-          <ClassifyBtnByCommentId 
+          {!isConsultant && <ClassifyBtnByCommentId 
             comments={selectedComments}
             setComments={setSelectedComments}
-          />
+          />}
         </Card>
       </div>
       
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+     {!isConsultant &&  <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Comentario</DialogTitle>
@@ -204,9 +206,9 @@ export default function CommentsCrud() {
             onCancel={() => setIsCreateOpen(false)}
           />
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      {!isConsultant && <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Comentario</DialogTitle>
@@ -220,16 +222,16 @@ export default function CommentsCrud() {
             />
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
-      <DeleteConfirmation
+      {!isConsultant && <DeleteConfirmation
         isOpen={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         isLoading={deleteIsLoading}
         onConfirm={() => currentComment && handleDeleteComment(currentComment.id)}
         title="Eliminar Comentario"
         description="¿Está seguro que desea eliminar este comentario? Esta acción no se puede deshacer."
-      />
+      />}
     </div>
   )
 }

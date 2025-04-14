@@ -10,13 +10,15 @@ interface CommentsListTableProps {
   openEditDialog: (comment: CommentServerResponse) => void
   openDeleteDialog: (comment: CommentServerResponse) => void
   selectedComments: CommentServerResponse[]
-  setSelectedComments: (comments: CommentServerResponse[]) => void
+  setSelectedComments: (comments: CommentServerResponse[]) => void,
+  isConsultant: boolean
 }
 
 const CommentsListTable = ({ 
   filteredComments, isLoading, 
   openEditDialog, openDeleteDialog,
-  selectedComments, setSelectedComments
+  selectedComments, setSelectedComments,
+  isConsultant
 }: CommentsListTableProps) => {
 
   const toggleComment = (comment: CommentServerResponse) => {
@@ -50,7 +52,7 @@ const CommentsListTable = ({
           <TableHead>Usuario</TableHead>
           <TableHead>Fuente</TableHead>
           <TableHead>Clasificacón</TableHead>
-          <TableHead className="text-right">Acciones</TableHead>
+          {!isConsultant && <TableHead className="text-right">Acciones</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -83,7 +85,7 @@ const CommentsListTable = ({
               <TableCell>{comment.user_owner?.name}</TableCell>
               <TableCell>{comment.source?.name}</TableCell>
               <TableCell>{comment.classification ? comment.classification.name : "-"}</TableCell>
-              <TableCell className="text-right">
+              {!isConsultant && <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(comment)}>
                     <Edit className="h-4 w-4" />
@@ -92,7 +94,7 @@ const CommentsListTable = ({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              </TableCell>
+              </TableCell>}
             </TableRow>
           ))
         )}

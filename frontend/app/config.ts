@@ -9,6 +9,7 @@ export const API_SIGNIN = '/auth/jwt/create/'
 export const API_TOKEN_VERIFY = '/auth/jwt/verify/'
 export const API_TOKEN_REFRESH = '/auth/jwt/refresh/'
 export const API_SIGNUP = '/auth/users/'
+export const API_USER_ME = '/auth/users/me/'
 
 
 export const API_COMMENTS = "/api/comment/"

@@ -6,6 +6,7 @@ import { Card } from "~/components/ui/card"
 import { Badge } from "~/components/ui/badge"
 import { Play, Pause, Power, RefreshCw } from "lucide-react"
 import BotView from "./bot-view"
+import useIsSuperuser from "~/hooks/useIsSuperuser"
 
 export default function Main() {
   // Sample chat messages
@@ -19,6 +20,7 @@ export default function Main() {
 
   // Bot status
   const [botStatus, setBotStatus] = useState<"running" | "suspended" | "off" | "working">("running")
+  const isSuperUser = useIsSuperuser()
 
   // Handle bot actions
   const handleStart = () => setBotStatus("running")
@@ -86,7 +88,7 @@ export default function Main() {
           <Badge className={`${getStatusColor()} text-white`}>{getStatusText()}</Badge>
         </div>
 
-        <div className="space-y-3 mt-auto">
+        {isSuperUser && <div className="space-y-3 mt-auto">
           <h3 className="font-medium mb-2">Controles:</h3>
           <Button
             className="w-full flex items-center justify-center"
@@ -126,7 +128,7 @@ export default function Main() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Ejecutar Tarea
           </Button> */}
-        </div>
+        </div>}
       </Card>
     </div>
   )

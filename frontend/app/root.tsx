@@ -9,12 +9,14 @@ import {
 import { Toaster } from "~/components/ui/sonner";
 import { createContext, useContext } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { UserProvider } from "./hooks/useAuth";
 
 import type { Route } from "./+types/root";
 import "./app.css";
 
 // Mantenemos la definición del contexto aquí ya que es global
 export const WebSocketContext = createContext<ReturnType<typeof useWebSocket> | null>(null);
+
 
 export const useWebSocketContext = () => {
   const context = useContext(WebSocketContext);
@@ -57,7 +59,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <UserProvider> {/* <-- Envolver aquí */}
+      <Outlet />
+    </UserProvider>
+  )
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
