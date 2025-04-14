@@ -19,7 +19,21 @@ const timelineData = [
   { date: "Mar 5", neutral: 10, positivo: 7, negativo: 4, pregunta: 2, urgente: 3 },
 ];
 
-const ClassificationTimeline = () => {
+type ClassificationType = 
+  | 'sugerencia' 
+  | 'pregunta' 
+  | 'ofensa' 
+  | 'queja' 
+  | 'denuncia' 
+  | 'criterio_general';
+
+interface Props {
+  data: Array<{
+    date: string; // Formato YYYY-MM-DD
+  } & Record<ClassificationType, number>> | null
+}
+
+const ClassificationTimeline = ({ data }: Props) => {
   return (
     <Card className="lg:col-span-4">
       <CardHeader>
@@ -29,7 +43,7 @@ const ClassificationTimeline = () => {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart
-            data={timelineData}
+            data={data || []}
             margin={{
               top: 5,
               right: 30,
@@ -42,11 +56,12 @@ const ClassificationTimeline = () => {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="neutral" stroke="#06B6D4" activeDot={{ r: 8 }} />
-            <Line type="monotone" dataKey="positivo" stroke="#1E3A8A" />
-            <Line type="monotone" dataKey="negativo" stroke="#3B82F6" />
+            <Line type="monotone" dataKey="sugerencia" stroke="#06B6D4" activeDot={{ r: 8 }} />
+            <Line type="monotone" dataKey="queja" stroke="#1E3A8A" />
+            <Line type="monotone" dataKey="denuncia" stroke="#3B82F6" />
             <Line type="monotone" dataKey="pregunta" stroke="#DB2777" />
-            <Line type="monotone" dataKey="urgente" stroke="#7C3AED" />
+            <Line type="monotone" dataKey="criterio_general" stroke="#7C3AED" />
+            <Line type="monotone" dataKey="ofensa" stroke="#FFC300" />
           </LineChart>
         </ResponsiveContainer>
       </CardContent>

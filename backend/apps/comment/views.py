@@ -1,5 +1,5 @@
 from apps.comment.serializers import CommentSerializer, FileUploadSerializer, ClassificationsByCommentsSerializer
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, generics
 from rest_framework.views import status, Response
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import MultiPartParser
@@ -11,6 +11,9 @@ from core.errors import Errors
 from django.db.models import Count
 from apps.classification.models import Classification
 from apps.source.models import Source
+from rest_framework.generics import ListAPIView
+from datetime import timedelta
+from django.utils import timezone
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
@@ -21,6 +24,7 @@ class CommentAPIView(viewsets.ModelViewSet):
     lookup_field = 'external_id'
 
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+
     search_fields = [
         'text',
         'post__content',
@@ -139,3 +143,69 @@ class ClassificationsByCommentsView(GenericAPIView):
                 {"detail": Errors.INTERNAL_SERVER_ERROR},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+
+class NewCommentsListView(generics.ListAPIView):
+    """
+    Vista para listar comentarios no leídos creados en las últimas 24 horas.
+    Opcionalmente filtra por user_id y/o post_id pasados como query params.
+    """
+    serializer_class = CommentSerializer
+
+    def get_queryset(self):
+        # Calcula la fecha y hora de hace 24 horas
+        now = timezone.now()
+        twenty_four_hours_ago = now - timedelta(hours=24)
+
+        # Filtra comentarios no leídos Y creados desde hace 24 horas
+        queryset = CommentSerializer.Meta.model.objects.filter(
+            is_read=False,
+            created_at__gte=twenty_four_hours_ago # __gte significa "greater than or equal to"
+        )
+
+        # Obtiene los parámetros opcionales de la URL
+        user_id = self.request.query_params.get('user_id')
+        post_id = self.request.query_params.get('post_id')
+
+        # Aplica filtros opcionales si se proporcionaron
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        if post_id:
+            queryset = queryset.filter(post_id=post_id)
+
+        # Opcional: Ordena los resultados por fecha de creación (más nuevos primero)
+        queryset = queryset.order_by('-created_at')
+
+        return queryset
+
+
+class UrgentCommentsView(ListAPIView):
+    """
+    API View para listar comentarios clasificados como 'pregunta' o 'denuncia'.
+    """
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated] # Requiere autenticación
+    pagination_class = ResultsSetPagination
+
+    def get_queryset(self):
+        """
+        Sobrescribe el método para devolver solo los comentarios urgentes.
+        """
+        # Nombres de las clasificaciones consideradas urgentes
+        urgent_classification_names = ['pregunta', 'denuncia']
+
+        # Filtra los comentarios cuya clasificación relacionada (FK)
+        # tiene un nombre que está en la lista 'urgent_classification_names'
+        queryset = CommentSerializer.Meta.model.objects.filter(
+            classification__name__in=urgent_classification_names
+        )
+
+        # Optimización: Pre-carga las relaciones que usará el serializer
+        # para evitar consultas N+1 a la base de datos.
+        queryset = queryset.select_related('classification', 'user', 'source', 'post', 'user_owner')
+
+        # Opcional: Ordena los resultados (ej: los más recientes primero)
+        queryset = queryset.order_by('-created_at')
+
+        return queryset

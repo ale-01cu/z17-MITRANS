@@ -51,6 +51,7 @@ LOCAL_APPS = [
     'apps.img_process',
     'apps.comment_user_owner',
     'apps.bot',
+    'apps.stats'
 ]
 
 THIRD_APPS = [

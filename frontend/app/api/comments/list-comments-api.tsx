@@ -14,7 +14,6 @@ interface Response {
   next: string
   previous: string,
   results: CommentServerResponse[]
-  pages: number
 }
 
 const PAGE_SIZE = 100

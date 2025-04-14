@@ -16,7 +16,25 @@ const classificationData = [
   { name: "Urgente", value: 12, color: "#CFEAFF" },
 ];
 
-const CommentClassification = () => {
+type ClassificationType = 
+  | 'sugerencia' 
+  | 'pregunta' 
+  | 'ofensa' 
+  | 'queja' 
+  | 'denuncia' 
+  | 'criterio_general';
+
+interface ClassificationItem {
+  name: ClassificationType;
+  value: number;
+  color: string;
+}
+
+interface Props {
+  data: ClassificationItem[] | null
+}
+
+const CommentClassification = ({ data }: Props) => {
   return (
     <Card className="lg:col-span-3">
       <CardHeader>
@@ -27,7 +45,7 @@ const CommentClassification = () => {
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
-              data={classificationData}
+              data={data || []}
               cx="50%"
               cy="50%"
               labelLine={false}
@@ -36,7 +54,7 @@ const CommentClassification = () => {
               fill="#8884d8"
               dataKey="value"
             >
-              {classificationData.map((entry, index) => (
+              {data?.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>

@@ -19,3 +19,7 @@ export const API_CLASSIFICATION = "/api/classification/"
 export const API_CLASSIFICATION_CLASSIFY_COMMENT = '/api/classification/classify-comment/'
 export const API_CLASSIFICATION_CLASSIFY_COMMENT_BY_ID = '/api/classification/classify-comments-by-id/'
 export const API_IMG_TO_TEXT = "/api/img-proc/img-to-text"
+
+export const API_STATS = "/api/stats/"
+export const API_COMMENTS_URGENT = "/api/comment/urgent/"
+export const API_COMMENTS_UNREAD = "/api/comment/unread/"

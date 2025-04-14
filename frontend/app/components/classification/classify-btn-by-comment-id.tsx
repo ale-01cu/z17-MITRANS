@@ -59,7 +59,7 @@ const ClassifyBtnByCommentId = ({ comments, setComments }: Props) => {
       ) : (
         <>
           <Tag className="h-4 w-4 mr-2" />
-          Clasificar opiniones
+          Clasificar comentarios
         </>
       )}
     </Button>
