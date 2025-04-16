@@ -18,6 +18,7 @@ import CommentListPagination from "./comment-list-pagination"
 import { useSearchParams } from "react-router"
 import ClassifyBtnByCommentId from "~/components/classification/classify-btn-by-comment-id"
 import useIsConsultant from "~/hooks/useIsConsultant"
+import ClassificationsSelector from "~/components/classification/classifications-selector"
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
@@ -36,6 +37,7 @@ export default function CommentsCrud() {
   const [searchParams, _] = useSearchParams();
   const currentPage = Number(searchParams.get("page") || 1)
   const isConsultant = useIsConsultant()
+  const [ classificationSelected, setClassificationSelected ] = useState<string | null>(null)
 
   useEffect(() => {
       setIsLoading(true)
@@ -61,6 +63,7 @@ export default function CommentsCrud() {
       query: term, 
       sourceId: selectedSource === 'all' ? '' : selectedSource, 
       userOwnerId: selectedUser === 'all' ? '' : selectedUser,
+      classificationName: classificationSelected === 'all' ? '' : classificationSelected,
       page: currentPage
     })
       .then(data => {
@@ -69,7 +72,7 @@ export default function CommentsCrud() {
       })
       .catch(e => console.error(e))
       
-  }, [comments, selectedUser, selectedSource, searchTerm, currentPage])
+  }, [comments, selectedUser, selectedSource, searchTerm, currentPage, classificationSelected])
 
   useEffect(() => {
     setFilteredComments(prev => 
@@ -183,6 +186,13 @@ export default function CommentsCrud() {
           <SourceSelector
             value={selectedSource}
             handleChange={setSelectedSource}
+            className="w-full"
+            isFilter
+          />
+
+          <ClassificationsSelector
+            value={classificationSelected}
+            handleChange={setClassificationSelected}
             className="w-full"
             isFilter
           />

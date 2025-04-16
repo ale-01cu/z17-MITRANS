@@ -54,7 +54,9 @@ class CommentSerializer(serializers.ModelSerializer):
             if 'user_owner_id' in validated_data else None
         user_owner_name = validated_data.pop('user_owner_name') \
             if 'user_owner_name' in validated_data else None
-        source_data = validated_data.pop('source_id')
+        source_data = validated_data.pop('source') \
+            if 'source' in validated_data \
+            else validated_data.pop('source_id')
         classification_id = validated_data.pop('classification_id') \
             if 'classification_id' in validated_data else None
 
@@ -131,8 +133,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
         else: instance.user_owner = None
 
-        if 'source_id' in validated_data:
-            external_id = validated_data.pop('source_id')
+
+        if 'source' in validated_data:
+            external_id = validated_data.pop('source')
             try:
                 # Buscamos el objeto por external_id y actualizamos la instancia
                 source = Source.objects.get(external_id=external_id)
