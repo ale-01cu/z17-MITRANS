@@ -33,6 +33,7 @@ const SaveCommentsBtn = ({ comments }: Props) => {
         toast.success("Las opiniones han sido guardadas correctamente.")
       })
       .catch(e => {
+        console.error(e)
         toast.error('Ha ocurrido un error al guardar las opiniones.')
       })
       .finally(() => {

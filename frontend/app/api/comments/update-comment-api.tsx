@@ -12,18 +12,22 @@ interface Params {
 }
 
 export default async function updateCommentApi(
-  data: Params): Promise<CommentServerResponse> 
-{
+  data: Params
+): Promise<CommentServerResponse> {
+  // Crear un objeto base sin user_owner_id y user_owner_name
+  const commentRequest: Partial<Params> = { ...data };
 
-  const commentRequest: Params = {
-    ...data,
-    user_owner_id: null,
-    user_owner_name: null,
+  // Eliminar las propiedades si están vacías
+  if (!data.user_owner_id) {
+    delete commentRequest.user_owner_id;
+  }
+  if (!data.user_owner_name) {
+    delete commentRequest.user_owner_name;
   }
 
-  if (data.user_owner_id) commentRequest.user_owner_id = data.user_owner_id
-  else commentRequest.user_owner_name = data.user_owner_name
-  
-  const res = await Axios.patch(API_COMMENTS + data.id + "/", data)
-  return res.data 
+  const res = await Axios.patch(
+    API_COMMENTS + data.id + "/",
+    commentRequest  // Envía solo los campos no vacíos
+  );
+  return res.data;
 }

@@ -1,12 +1,12 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Label } from "~/components/ui/label"
 import { cn } from "~/lib/utils";
 import type { ClassificationServerResponse } from "~/types/classification";
 import ListClassificationsApi from "~/api/classification/list-classifications-api";
 
 interface ClassificationsSelectorProps {
-  value: string
+  value: string | null
   handleChange: (value: string) => void
   classificationsError?: boolean
   isFilter?: boolean
@@ -34,14 +34,14 @@ const ClassificationsSelector = ({
       {!isFilter && <Label htmlFor="fuente" className="required">
         Classificación
       </Label>}
-      <Select value={value} onValueChange={handleChange}>
+      <Select value={value || undefined} onValueChange={handleChange}>
         <SelectTrigger id="fuente" className={`w-full ${classificationsError ? "border-red-500" : ""}`}>
           <SelectValue placeholder="Seleccione una clasificación" />
         </SelectTrigger>
         <SelectContent>
-          {isFilter && <SelectItem value="all">Clasificaciones</SelectItem>}
+          {isFilter && <SelectItem value="all">Todas</SelectItem>}
           {classifications.map((classification) => (
-            <SelectItem key={classification.id} value={classification.id}>
+            <SelectItem key={classification.id} value={classification.name}>
               {classification.name}
             </SelectItem>
           ))}

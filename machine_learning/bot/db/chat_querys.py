@@ -52,12 +52,14 @@ class ChatQuerys:
 
 
     def update_chat_by_chat_id(self, chat_id: int,
-                    last_text_url: Optional[str] = None, last_text: Optional[str] = None) -> Optional[Chat]:
+                    last_text_url: Optional[str] = None, last_text: Optional[str] = None,
+                    last_text_index: int = 0) -> Optional[Chat]:
         """
         Actualiza un chat existente
         :param chat_id: ID del chat a actualizar
         :param id_scraped: Nuevo identificador manual (opcional)
         :param last_text_url: Nueva URL de imagen (opcional)
+        :param last_text_index: Índice del texto en la lista de textos (opcional)
         :return: Objeto Chat actualizado o None si no existe
         """
         db_chat = self.get_chat(chat_id)
@@ -66,17 +68,22 @@ class ChatQuerys:
                 db_chat.last_text_url = last_text_url
             if last_text is not None:
                 db_chat.last_text = last_text
+
+            db_chat.last_text_index = last_text_index
             self.db.commit()
             self.db.refresh(db_chat)
         return db_chat
 
 
     def update_chat_by_chat_id_scraped(self, id_scraped: str,
-                    last_text_url: Optional[str] = None, last_text: Optional[str] = None) -> Optional[Chat]:
+                    last_text_url: Optional[str] = None, last_text: Optional[str] = None,
+                    last_text_index: int = 0) -> Optional[Chat]:
+
         """
         Actualiza un chat existente
         :param id_scraped: Nuevo identificador manual (opcional)
         :param last_text_url: Nueva URL de imagen (opcional)
+        :param last_text_index: Índice del texto en la lista de textos (opcional)
         :return: Objeto Chat actualizado o None si no existe
         """
         db_chat = self.get_chat_by_id_scraped(id_scraped)
@@ -85,6 +92,8 @@ class ChatQuerys:
                 db_chat.last_text_url = last_text_url
             if last_text is not None:
                 db_chat.last_text = last_text
+
+            db_chat.last_text_index = last_text_index
             self.db.commit()
             self.db.refresh(db_chat)
         return db_chat

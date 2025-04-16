@@ -38,16 +38,16 @@ const baseItems = [
     url: "/comment",
     icon: MessageSquareTextIcon,
   },
-  {
-    title: "Configuraciones",
-    url: "#", // Considera usar rutas reales o deshabilitar si es solo visual
-    icon: Settings,
-  },
-  {
-    title: "Acerca de",
-    url: "#", // Considera usar rutas reales o deshabilitar si es solo visual
-    icon: Calendar,
-  },
+  // {
+  //   title: "Configuraciones",
+  //   url: "#", // Considera usar rutas reales o deshabilitar si es solo visual
+  //   icon: Settings,
+  // },
+  // {
+  //   title: "Acerca de",
+  //   url: "#", // Considera usar rutas reales o deshabilitar si es solo visual
+  //   icon: Calendar,
+  // },
 ];
 
 export function AppSidebar() {

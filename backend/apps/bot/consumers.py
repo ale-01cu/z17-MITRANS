@@ -144,7 +144,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def send_to_web(self, event):
         """Envía mensajes a los clientes web"""
-        if self.user_type == 'frontend':
+        if self.user_type == 'web':
             await self.send(text_data=json.dumps({
                 'type': 'message',
                 'content': event['content'],
