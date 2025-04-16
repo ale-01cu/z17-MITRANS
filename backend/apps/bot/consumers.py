@@ -45,8 +45,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message_type = data.get('type')
             sender = data.get('sender')
             content = data.get('content')
-            message_id = data.get('message_id')  # Nuevo: Extraer el message_id
-
+            message_id = data.get('message_id')
+            timestamp_str = data.get('timestamp')
             print("data: ", data)
 
             # Enviar ACK inmediatamente si el mensaje tiene message_id
@@ -95,38 +95,45 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Aquí iría la lógica para iniciar el bot automáticamente
             await self.notify_group('system', 'Comando para conectar bot recibido')
 
-    async def process_bot_message(self, text_data):
+    async def process_bot_message(self, content_data):
         from apps.comment.models import Comment
         from apps.classification.models import Classification
         from apps.source.models import Source
 
-        text_data_json = json.loads(text_data)
 
         # "Procesa mensajes entrantes del bot"
-        message_content = text_data_json.get('content')
+        message_content = content_data.get('message')
         message = message_content.get('message')
         chat_id = message_content.get('chat_id')
-        sender = text_data_json.get('sender')
+        sender = content_data.get('sender')
+
+        print('message: ', message)
 
         if not chat_id or not message:
             label = ''
         else:
-            label = predict_comment_label(text_data)
+            label = predict_comment_label(message_content)
             classification = await sync_to_async(Classification.objects.get)(name=label)
             source = await sync_to_async(Source.objects.get)(name='Messenger')
 
-            await sync_to_async(Comment.objects.create)(
-                text=message,
-                user=None,
-                classification=classification,
-                source=source,
-            )
+            await sync_to_async(
+                lambda: Comment.objects.create(
+                    text=message,
+                    user=None,
+                    classification=classification,
+                    source=source,
+                )
+            )()
 
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'send_to_web',
-                'content': {**message, **{'label': label}},
+                'content': {
+                'message': message,
+                'label': label,
+                # 'chat_id': chat_id
+                },
                 'sender': 'bot',
             }
         )
@@ -144,7 +151,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def send_to_web(self, event):
         """Envía mensajes a los clientes web"""
-        if self.user_type == 'frontend':
+        if self.user_type == 'web':
             await self.send(text_data=json.dumps({
                 'type': 'message',
                 'content': event['content'],
