@@ -14,6 +14,7 @@ from apps.source.models import Source
 from rest_framework.generics import ListAPIView
 from datetime import timedelta
 from django.utils import timezone
+from django.utils.timezone import now
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
@@ -42,6 +43,21 @@ class CommentAPIView(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+    def get_queryset(self):
+        # Obtener el parámetro de horas desde la solicitud
+        hours = self.request.query_params.get('last_hours')
+        if hours:
+            try:
+                hours = int(hours)
+                # Calcular la fecha y hora hace X horas
+                time_threshold = now() - timedelta(hours=hours)
+                # Filtrar comentarios creados después de esa fecha
+                return self.queryset.filter(created_at__gte=time_threshold)
+            except ValueError:
+                pass  # Ignorar si el parámetro no es un número válido
+        return self.queryset
 
 
 class GetCommentsFromExcelView(GenericAPIView):

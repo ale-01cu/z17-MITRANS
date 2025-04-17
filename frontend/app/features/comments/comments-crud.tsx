@@ -19,6 +19,10 @@ import { useSearchParams } from "react-router"
 import ClassifyBtnByCommentId from "~/components/classification/classify-btn-by-comment-id"
 import useIsConsultant from "~/hooks/useIsConsultant"
 import ClassificationsSelector from "~/components/classification/classifications-selector"
+import { toast } from "sonner"
+import { useDebounce } from '@uidotdev/usehooks'
+import TimeSelector from "~/components/time-selector"
+import DatePickerWithRange from "~/components/date-picker-with-range"
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
@@ -38,6 +42,9 @@ export default function CommentsCrud() {
   const currentPage = Number(searchParams.get("page") || 1)
   const isConsultant = useIsConsultant()
   const [ classificationSelected, setClassificationSelected ] = useState<string | null>(null)
+  const debounceSearchTerm = useDebounce(searchTerm, 200)
+  const [ newCommentCounter, setNewCommentCounter ] = useState(0)
+  const [ lastHours, setLastHours ] = useState<string | undefined>()
 
   useEffect(() => {
       setIsLoading(true)
@@ -57,14 +64,15 @@ export default function CommentsCrud() {
   }, [currentPage])
 
   useEffect(() => {
-    const term = searchTerm?.toLowerCase() || ""
+    const term = debounceSearchTerm?.toLowerCase() || ""
 
     listCommentsApi({ 
       query: term, 
       sourceId: selectedSource === 'all' ? '' : selectedSource, 
       userOwnerId: selectedUser === 'all' ? '' : selectedUser,
       classificationName: classificationSelected === 'all' ? '' : classificationSelected,
-      page: currentPage
+      page: currentPage,
+      lastHours: lastHours === 'all' ? '' : lastHours
     })
       .then(data => {
         setFilteredComments(data.results)
@@ -72,7 +80,12 @@ export default function CommentsCrud() {
       })
       .catch(e => console.error(e))
       
-  }, [comments, selectedUser, selectedSource, searchTerm, currentPage, classificationSelected])
+  }, [
+    comments, selectedUser, 
+    selectedSource, debounceSearchTerm, 
+    currentPage, classificationSelected,
+    lastHours
+  ])
 
   useEffect(() => {
     setFilteredComments(prev => 
@@ -86,10 +99,15 @@ export default function CommentsCrud() {
   const handleCreateComment = async (data: Omit<Comment, "id">) => {
     try {
       const newComment = await createCommentApi(data)
+      toast.success('Nuevo comentario creado correctamente.')
       setComments((prev) => [...prev, newComment])
       setIsCreateOpen(false)
+      setNewCommentCounter(prev => prev+=1)
+
     } catch (error) {
+      toast.error('Ocurrio un error al crear el comentario.')
       console.error("Error creating comment:", error)
+      
     }
   }
 
@@ -97,6 +115,7 @@ export default function CommentsCrud() {
     try {
       await updateCommentApi(data)
         .then(data => {
+          toast.success('Se ha actualizado correctamente.')
           setComments(prev => {
             return prev.map(comment => 
                 comment.id === data.id ? data : comment
@@ -107,6 +126,7 @@ export default function CommentsCrud() {
         .catch(e => console.error(e))
 
     } catch (error) {
+      toast.error('Ocurrio un error al actualizar el comentario.')
       console.error("Error updating comment:", error)
     }
   }
@@ -123,6 +143,10 @@ export default function CommentsCrud() {
       console.error("Error deleting comment:", error)
     
     } finally { setDeleteIsLoading(false) }
+  }
+
+  const handleSelectTime = (hours: string) => {
+    setLastHours(hours)
   }
 
   const openEditDialog = (comment: CommentServerResponse) => {
@@ -180,6 +204,7 @@ export default function CommentsCrud() {
             value={selectedUser}
             handleChange={setSelectedUser}
             className="w-full"
+            newCommentCounter={newCommentCounter}
             isFilter
           />
 
@@ -196,6 +221,15 @@ export default function CommentsCrud() {
             className="w-full"
             isFilter
           />
+
+          <TimeSelector
+            handleChange={handleSelectTime}
+            value={lastHours}
+            isFilter
+          />
+
+          <DatePickerWithRange/>
+
 
           {!isConsultant && <ClassifyBtnByCommentId 
             comments={selectedComments}

@@ -94,9 +94,9 @@ export default function SigninForm() {
           )}
         </div>
 
-        <Link to="/signup" className="text-sm text-center">
+        {/* <Link to="/signup" className="text-sm text-center">
           ¿No tienes una cuenta?
-        </Link>
+        </Link> */}
 
         <Button type="submit" data-testid="signin-btn-submit">
           {isLoading && <Loader2 className="animate-spin" />}

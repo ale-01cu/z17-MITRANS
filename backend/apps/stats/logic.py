@@ -7,13 +7,13 @@ from collections import defaultdict
 from django.utils import timezone
 
 CLASSIFICATION_COLORS = {
-    'criterio_general': "#3366FF", # Era "Neutral" en el ejemplo JS
-    'sugerencia': "#4DABFF",     # Era "Positivo"
-    'queja': "#3D85FF",         # Era "Negativo" (Puedes cambiarlo a un rojo/naranja si prefieres)
-    'pregunta': "#ADDDFF",       # Era "Preguntas"
-    'denuncia': "#CFEAFF",       # Era "Urgente"
+    'criterio_general': "#8C52FF", # Era "Neutral" en el ejemplo JS
+    'sugerencia': "#6FCF97",     # Era "Positivo"
+    'queja': "#FCE788",         # Era "Negativo" (Puedes cambiarlo a un rojo/naranja si prefieres)
+    'pregunta': "#4287F5",       # Era "Preguntas"
+    'denuncia': "#6C3483",       # Era "Urgente"
     # 'ofensa' no estaba en el ejemplo JS, asignamos uno o usamos default
-    'ofensa': "#FFC300",         # Asignando un color amarillo/naranja
+    'ofensa': "#FF4D4D",         # Asignando un color amarillo/naranja
     'default': "#CCCCCC"         # Color por defecto si falta alguna clasificación
 }
 

@@ -9,18 +9,19 @@ interface UserOwnerSelectorProps {
   handleChange: (value: string) => void,
   error?: boolean
   isFilter?: boolean
-  className?: string
+  className?: string,
+  newCommentCounter: number
 }
 
 
-const UserOwnerSelector = ({ value, handleChange, error, isFilter = false, className }: UserOwnerSelectorProps) => {
+const UserOwnerSelector = ({ value, handleChange, error, isFilter = false, className, newCommentCounter }: UserOwnerSelectorProps) => {
   const [ users, setUsers ] = useState<UserOwner[]>([])
 
   useEffect(() => {
     listUserOwnerApi()
       .then(data => setUsers(data.results))
       .catch(e => console.error(e))
-  }, [])
+  }, [newCommentCounter])
 
   return ( 
     <div className={className}>

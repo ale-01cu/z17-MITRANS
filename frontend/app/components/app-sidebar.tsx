@@ -14,6 +14,7 @@ import { Button } from "./ui/button"
 import { useLocation, useNavigate } from "react-router"
 import { removeCookie } from "~/utils/cookies"
 import useIsSuperuser from "~/hooks/useIsSuperuser"
+import useIsManager from "~/hooks/useIsManager"
 
 const baseItems = [
   {
@@ -25,13 +26,14 @@ const baseItems = [
     title: "Bot",
     url: "/bot",
     icon: Bot,
+    requiresSuperuser: true, // Añadimos una bandera para identificarlo
   },
   // El item "Extraer" se manejará condicionalmente
   {
     title: "Extraer",
     url: "/extract",
     icon: Pickaxe,
-    requiresSuperuser: true, // Añadimos una bandera para identificarlo
+    requiresSuperuserOrManager: true, // Añadimos una bandera para identificarlo
   },
   {
     title: "Gestionar Quejas",
@@ -54,6 +56,7 @@ export function AppSidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate(); // Cambié navegate a navigate (convención)
   const isSuperuser = useIsSuperuser(); // Obtienes el estado de superusuario
+  const isManager = useIsManager(); // Estado de manager
 
   const handleLogout = () => {
     removeCookie("access");
@@ -62,13 +65,14 @@ export function AppSidebar() {
   };
 
   // Filtra los items basado en la condición de superusuario
-  const items = baseItems.filter(item => {
-    // Si el item requiere superusuario, solo incluirlo si isSuperuser es true
+  const items = baseItems.filter((item) => {
     if (item.requiresSuperuser) {
-      return isSuperuser;
+      return isSuperuser; // Solo incluir si el usuario es superusuario
     }
-    // Si no requiere superusuario, incluirlo siempre
-    return true;
+    if (item.requiresSuperuserOrManager) {
+      return isSuperuser || isManager; // Incluir si el usuario es superusuario o manager
+    }
+    return true; // Incluir siempre si no tiene restricciones
   });
 
   return (

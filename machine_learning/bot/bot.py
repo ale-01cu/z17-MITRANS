@@ -58,6 +58,12 @@ class Bot:
         self.is_in_message_requests_view = False
         self.is_offline = True
 
+        # Esta propiedad sirve para activar o desactivar a funcion
+        # de guardar el ultimo texto visto en la base de datos y de
+        # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
+        self.is_memory_active = False
+        self.is_only_check = True # Solo para en base al ultimo comentario que ha visto pero no guarda
+
     # =================================================== Web Socket connection (Start) =============================================================
     async def connect_websocket(self):
         """Connects to the WebSocket server"""
@@ -458,7 +464,7 @@ class Bot:
         #                  )
         pyautogui.moveTo(x=x_chats + (w_chats - 15),
                          y=y_chats + (h_chats / 2),
-                         duration=0.3
+                         duration=1
                          )
 
 
@@ -488,7 +494,7 @@ class Bot:
         if move_to_chats_area:
             pyautogui.moveTo(x=x_chats + w_chats / 2,
                              y=y_chats + h_chats / 2,
-                             duration=0.3
+                             duration=1
                              )
 
         if self.chats_area_scroll_reference is None:
@@ -585,6 +591,9 @@ class Bot:
         :param text: Texto a comprobar.
         :return: True si el texto ya ha sido visto, False en caso contrario.
         """
+        if not self.is_memory_active and not self.is_only_check:
+            return False
+
         last_text, last_text_index = self.get_last_chat_id_text_and_index()
 
         if not last_text or not text:
@@ -621,8 +630,8 @@ class Bot:
 
         self.move_to_chat()
 
-        self.show_contours(contours=possible_text_contours,
-            title="posible contornos de texts")
+        # self.show_contours(contours=possible_text_contours,
+        #     title="posible contornos de texts")
 
         if is_first_iter:
             first_text = possible_text_contours[0]
@@ -722,7 +731,7 @@ class Bot:
                 print("Detenido por el usuario.")
                 exit()
 
-        self.chat_querys.update_chat_by_chat_id_scraped(
+        if self.is_memory_active: self.chat_querys.update_chat_by_chat_id_scraped(
             id_scraped=self.current_chat_id, last_text=last_text,
         )
 
@@ -956,7 +965,7 @@ class Bot:
                 x, y, w, h = self.chat_area_reference
                 pyautogui.click((x + w) / 2, (y + h) / 2)
 
-                if is_initial_overflow:
+                if is_initial_overflow and self.is_memory_active:
                     self.chat_querys.update_chat_by_chat_id_scraped(
                         id_scraped=self.current_chat_id, last_text=text
                     )
@@ -1160,12 +1169,12 @@ class Bot:
         #     move_to_chat = False
         # )
 
-        pyautogui.moveTo(x=x_start, y=y_start)
+        pyautogui.moveTo(x=x_start, y=y_start, duration=1)
 
         pyautogui.doubleClick(button="left")
         pyautogui.mouseDown(button="left")
 
-        pyautogui.moveTo(x=x_end, y=y_end)
+        pyautogui.moveTo(x=x_end, y=y_end, duration=1)
 
         if not desactivate_scroll:
             self.scroll_chat_area(
@@ -1319,11 +1328,11 @@ class Bot:
 
                 print("contador ", counter)
 
-                if counter == 5 and not self.is_in_message_requests_view:
-                    counter = 0
-                    self.go_to_message_requests_view()
-
-                counter += 1
+                # if counter == 5 and not self.is_in_message_requests_view:
+                #     counter = 0
+                #     self.go_to_message_requests_view()
+                #
+                # counter += 1
 
                 while True:
                     chats = self.find_chat_references()

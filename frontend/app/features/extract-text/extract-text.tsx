@@ -112,6 +112,8 @@ const ExtractText = () => {
             selectAll={selectAll}
             selectedStatements={selectedStatements}
             toggleStatement={toggleStatement}
+            setExtractedStatements={setExtractedStatements} // <-- ADD THIS
+            setSelectedStatements={setSelectedStatements}   // <-- ADD THIS
           />
         }
       </div>

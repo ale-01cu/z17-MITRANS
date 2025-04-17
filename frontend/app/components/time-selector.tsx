@@ -1,48 +1,46 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import { useEffect, useState } from "react";
 import { Label } from "~/components/ui/label"
 import { cn } from "~/lib/utils";
-import type { ClassificationServerResponse } from "~/types/classification";
-import ListClassificationsApi from "~/api/classification/list-classifications-api";
 
-interface ClassificationsSelectorProps {
-  value: string | null
+interface TimeSelectorProps {
+  value: string | undefined
   handleChange: (value: string) => void
   classificationsError?: boolean
   isFilter?: boolean
   className?: string
 }
 
-const ClassificationsSelector = ({ 
+const HOURS = [
+  { label: '24 Horas', hours: '24' },
+  { label: '48 Horas', hours: '48' },
+  { label: '72 Horas', hours: '72' },
+  { label: '1 Semana', hours: '168' },
+  { label: '1 Mes', hours: '720' },
+]
+
+const TimeSelector = ({ 
   value, 
   handleChange, 
   classificationsError = false, 
   isFilter = false, 
   className 
-}: ClassificationsSelectorProps) => {
+}: TimeSelectorProps) => {
   // const sources = use(listSourceApi())
-  const [ classifications, setClassification ] = useState<ClassificationServerResponse[]>([])
-
-  useEffect(() => {
-    ListClassificationsApi()
-      .then(data => setClassification(data.results))
-      .catch(e => console.error(e))
-  }, [])
 
   return ( 
     <div className={cn("grid gap-2", className)}>
       {!isFilter && <Label htmlFor="fuente" className="required">
-        Classificación
+        Tiempo
       </Label>}
       <Select value={value || undefined} onValueChange={handleChange}>
         <SelectTrigger id="fuente" className={`w-full ${classificationsError ? "border-red-500" : ""}`}>
-          <SelectValue placeholder="Seleccione una clasificación" />
+          <SelectValue placeholder="Tiempo" />
         </SelectTrigger>
         <SelectContent>
           {isFilter && <SelectItem value="all">Todas</SelectItem>}
-          {classifications.map((classification) => (
-            <SelectItem key={classification.id} value={classification.id}>
-              {classification.name}
+          {HOURS.map((hour) => (
+            <SelectItem key={hour.label} value={hour.hours}>
+              Hace {hour.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -52,4 +50,4 @@ const ClassificationsSelector = ({
   );
 }
  
-export default ClassificationsSelector;
+export default TimeSelector;

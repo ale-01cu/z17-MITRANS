@@ -4,10 +4,8 @@ import { Clock, Loader2 } from "lucide-react";
 import { type CommentServerResponse } from "~/types/comments";
 import getUnreadCommentsApi from "~/api/comments/get-unread-comments-api";
 import { useEffect, useState } from "react";
-import { formatUserFriendlyDate } from "~/utils";
+import { transformDate, getClassificationColor } from "~/utils";
 import { useSearchParams } from "react-router"
-import ClassifyBtnByCommentId from "~/components/classification/classify-btn-by-comment-id";
-import useIsSuperuser from "~/hooks/useIsSuperuser";
 
 const UnReadComments = () => {
   const [ comments, setComments ] = useState<CommentServerResponse[]>()
@@ -16,7 +14,6 @@ const UnReadComments = () => {
   const [ isLoading, setIsLoading ] = useState<boolean>(false)
   const [ isLoadingMore, setIsLoadingMore ] = useState<boolean>(false)
   const [ hasMore, setHasMore ] = useState<boolean>(false)
-  const isSuperuser = useIsSuperuser()
 
   useEffect(() => {
     setIsLoading(true)
@@ -63,12 +60,6 @@ const UnReadComments = () => {
           <CardDescription>Comentarios nuevos que no han sido revisados</CardDescription>
         </div>
 
-        {isSuperuser && <div className="flex gap-2 w-64">
-          <ClassifyBtnByCommentId
-            comments={comments || []}
-            setComments={setComments}
-          />
-        </div>}
       </CardHeader>
       <CardContent className="w-full">
         <div className="space-y-4 w-full">
@@ -84,14 +75,14 @@ const UnReadComments = () => {
                 <p className="text-sm text-muted-foreground">{opinion.text}</p>
                 {
                   opinion?.classification && (
-                    <div className="text-sm font-semibold">
-                      Clasificación: {opinion.classification?.name}
+                    <div className="text-white rounded-lg text-xs p-2 text-center max-w-48" style={{ background: getClassificationColor(opinion.classification.name) }}>
+                      {opinion.classification?.name}
                     </div>
                   )
                 }
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{formatUserFriendlyDate(opinion.created_at)}</span>
+                  <span>{transformDate(opinion.created_at)}</span>
                 </div>
               </div>
 

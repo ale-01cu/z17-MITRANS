@@ -53,7 +53,10 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           // Si no está en localStorage, llama a la API
           console.log("No user in localStorage, fetching from API...");
           const data = await getUsersMe();
+          console.log({data});
+          
           setIsSuperuser(data?.is_superuser)
+          setIsManager(data?.is_staff)
           if (isMounted) {
             console.log("User fetched from API:", data);
             setUser(data);
@@ -98,7 +101,11 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   // Renderiza el Provider del contexto, pasando el valor
   // y asegurándose de renderizar los componentes hijos (children)
   // Solo renderiza children cuando la carga inicial ha terminado
-  if(pathname === '/extract' && !isSuperuser) 
+  
+  if(pathname === '/extract' && (!isSuperuser && !isManager)) 
+    return null
+
+  else if(pathname === '/bot' && (!isSuperuser && !isManager))
     return null
   
    return (

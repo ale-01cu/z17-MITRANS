@@ -5,7 +5,7 @@ import { Badge } from "~/components/ui/badge";
 import { type CommentServerResponse } from "~/types/comments";
 import getUrgentCommentsApi from "~/api/comments/get-urgent-comments-api";
 import { useEffect, useState } from "react";
-import { formatUserFriendlyDate } from "~/utils";
+import { transformDate } from "~/utils";
 import { useSearchParams } from "react-router"
 
 
@@ -116,7 +116,7 @@ const UrgentComments = () => {
                 <p className="text-sm text-muted-foreground">{opinion.text}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{formatUserFriendlyDate(opinion.created_at)}</span>
+                  <span>{transformDate(opinion.created_at)}</span>
                 </div>
               </div>
             </div>

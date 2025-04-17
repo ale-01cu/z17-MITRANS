@@ -7,6 +7,7 @@ from apps.comment_user_owner.serializers import UserOwnerSerializer
 from apps.source.serializers import SourceSerializer
 from apps.classification.serializers import ClassificationSerializer
 from apps.classification.models import Classification
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -85,7 +86,7 @@ class CommentSerializer(serializers.ModelSerializer):
         if classification_id:
             try:
                 classification = Classification.objects.get(external_id=classification_id)
-            except classification.DoesNotExist:
+            except Classification.DoesNotExist:
                 raise serializers.ValidationError(
                     "Clasificacón no encontrada con el external_id proporcionado.")
         else: classification = None
