@@ -1,6 +1,8 @@
+from django.http import HttpResponse
+
 from apps.comment.serializers import CommentSerializer, FileUploadSerializer, ClassificationsByCommentsSerializer
 from rest_framework import viewsets, filters, generics
-from rest_framework.views import status, Response
+from rest_framework.views import status, Response, APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -12,9 +14,10 @@ from django.db.models import Count
 from apps.classification.models import Classification
 from apps.source.models import Source
 from rest_framework.generics import ListAPIView
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
 from django.utils.timezone import now
+from openpyxl import Workbook
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
@@ -65,6 +68,7 @@ class GetCommentsFromExcelView(GenericAPIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request, *args, **kwargs):
+        # Validar el archivo cargado
         file_upload_serializer = self.get_serializer(data=request.data)
         if not file_upload_serializer.is_valid():
             return Response(file_upload_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -72,33 +76,109 @@ class GetCommentsFromExcelView(GenericAPIView):
         file = file_upload_serializer.validated_data['file']
 
         try:
+            # Leer el archivo Excel
             df = pd.read_excel(file)
-            columns = df.columns
 
-            if 'text' not in columns:
+            # Verificar que los campos obligatorios estén presentes
+            required_fields = ['text', 'source']
+            missing_fields = [field for field in required_fields if field not in df.columns]
+            if missing_fields:
                 return Response(
-                    {"detail": Errors.COMMENT_NOT_FOUND},
+                    {"detail": f"Los siguientes campos obligatorios faltan en el archivo: {', '.join(missing_fields)}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            comments = [{'text': row.get('text', "")}
-                        for _, row in df.iterrows()
-                        ]
+            # Convertir el DataFrame a una lista de diccionarios
+            comments = []
+            for _, row in df.iterrows():
+                comment_data = {
+                    'text': row.get('text', ""),
+                    'source': row.get('source', ""),
+                    'external_id': row.get('external_id', None),
+                    'user': row.get('user', None),
+                    'user_owner': row.get('user_owner', None),
+                    'post': row.get('post', None),
+                    'classification': row.get('classification', None),
+                }
+                comments.append(comment_data)
 
+            # Validar los datos con el serializador
             comment_serializer = CommentSerializer(data=comments, many=True)
             if not comment_serializer.is_valid():
-                raise Exception(Errors.INTERNAL_SERVER_ERROR)
+                return Response(
+                    {"detail": comment_serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-            return Response(comment_serializer.data,
-                            status=status.HTTP_201_CREATED
-                            )
+            # Devolver los datos validados
+            return Response(comment_serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             return Response(
-                {"detail": Errors.INTERNAL_SERVER_ERROR},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "Error interno del servidor al procesar el archivo."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+class ExportCommentsExcel(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Obtener el parámetro opcional 'ids' de la solicitud
+        ids_param = request.query_params.get('ids', None)
+
+        # Filtrar los comentarios según los IDs proporcionados o obtener todos
+        if ids_param:
+            try:
+                # Convertir los IDs de cadena separada por comas a una lista de enteros
+                ids_list = list(map(int, ids_param.split(',')))
+                comments = CommentSerializer.Meta.model.objects.filter(id__in=ids_list)
+            except ValueError:
+                # Manejar el caso en que los IDs no sean números válidos
+                return Response({"error": "Los IDs deben ser números enteros separados por comas."}, status=400)
+        else:
+            # Si no se proporcionan IDs, obtener todos los comentarios
+            comments = CommentSerializer.Meta.model.objects.all()
+
+        # Serializar los comentarios
+        serializer = CommentSerializer(comments, many=True)
+
+        # Crear el libro de Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Comentarios"
+
+        # Escribir los encabezados
+        headers = [
+            "ID Externo", "Comentario", "Usuario",
+            "Usuario Propietario", "Post", "Clasificación",
+            "Fuente", "Fecha de creación", "Leído"
+        ]
+        ws.append(headers)
+
+        # Escribir los datos
+        for comment in serializer.data:
+            ws.append([
+                comment['external_id'],
+                comment['text'],
+                comment['user'],
+                comment['user_owner'],
+                comment['post'],
+                comment['classification'],
+                comment['source'],
+                comment['created_at'],
+            ])
+
+        # Configurar la respuesta HTTP
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"comentarios_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+
+        # Guardar el libro de Excel en la respuesta
+        wb.save(response)
+
+        return response
 
 class CreateCommentsView(GenericAPIView):
     serializer_class = CommentSerializer

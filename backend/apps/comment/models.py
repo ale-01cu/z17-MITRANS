@@ -59,11 +59,6 @@ class Comment(models.Model):
         verbose_name="Fecha de creación"
     )
 
-    is_read = models.BooleanField(
-        default=False,
-        verbose_name="Leído"
-    )
-
     history = HistoricalRecords()
 
     def __str__(self):

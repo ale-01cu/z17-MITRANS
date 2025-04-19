@@ -23,6 +23,9 @@ import { toast } from "sonner"
 import { useDebounce } from '@uidotdev/usehooks'
 import TimeSelector from "~/components/time-selector"
 import DatePickerWithRange from "~/components/date-picker-with-range"
+import ExportToExcelBtn from "./export-to-excel-btn"
+import ExportAllToExcelBtn from "./export-all-to-excel-btn"
+import ImportFromExcelDialog from "./import-from-excel-dialog"
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
@@ -235,6 +238,14 @@ export default function CommentsCrud() {
             comments={selectedComments}
             setComments={setSelectedComments}
           />}
+
+
+          <ExportToExcelBtn comments={selectedComments}/>
+
+          <ExportAllToExcelBtn/>
+
+          <ImportFromExcelDialog />
+
         </Card>
       </div>
       
@@ -267,6 +278,7 @@ export default function CommentsCrud() {
           )}
         </DialogContent>
       </Dialog>}
+      
 
       {!isConsultant && <DeleteConfirmation
         isOpen={isDeleteOpen}
