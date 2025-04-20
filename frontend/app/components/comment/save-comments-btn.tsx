@@ -12,7 +12,7 @@ interface Classification {
 interface Statement {
   id: string,
   text: string;          // El texto del statement
-  classification: Classification | null; // La clasificación (inicialmente vacía)
+  classification: Classification | string | null; // La clasificación (inicialmente vacía)
 }
 
 interface Props {
@@ -27,7 +27,10 @@ const SaveCommentsBtn = ({ comments }: Props) => {
     setIsLoading(true)
     createCommentListApi(comments.map(e => ({
       text: e.text,
-      classification_id: e.classification?.id || null
+      classification_id: 
+      typeof e.classification === 'string' ? e.classification :
+        e.classification?.id ? e.classification.id.toString() :
+        null
     })))
       .then(() => {
         toast.success("Las opiniones han sido guardadas correctamente.")

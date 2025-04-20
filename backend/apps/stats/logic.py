@@ -99,7 +99,6 @@ def get_comment_statistics_with_percentages(): # Renombrado para claridad
         classified_comments=Count('pk', filter=Q(classification__isnull=False)),
         unclassified_comments=Count('pk', filter=Q(classification__isnull=True)),
         urgent_comments=Count('pk', filter=Q(classification__name__in=urgent_classification_names)),
-        new_unread_comments=Count('pk', filter=Q(is_read=False)),
         # Cuenta comentarios creados desde hace un mes hasta ahora
         comments_last_month=Count('pk', filter=Q(created_at__gte=one_month_ago))
     )

@@ -63,61 +63,66 @@ class CommentAPIView(viewsets.ModelViewSet):
         return self.queryset
 
 
-class GetCommentsFromExcelView(GenericAPIView):
+class GetCommentsFromExcelView(APIView):
     serializer_class = FileUploadSerializer
     parser_classes = [MultiPartParser]
+    permission_classes = [IsAuthenticated]
+
 
     def post(self, request, *args, **kwargs):
         # Validar el archivo cargado
-        file_upload_serializer = self.get_serializer(data=request.data)
+        file_upload_serializer = FileUploadSerializer(data=request.data)
         if not file_upload_serializer.is_valid():
             return Response(file_upload_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         file = file_upload_serializer.validated_data['file']
 
-        try:
-            # Leer el archivo Excel
-            df = pd.read_excel(file)
+        # try:
+        # Leer el archivo Excel
+        df = pd.read_excel(file)
+        print("columns: ", df.columns)
 
-            # Verificar que los campos obligatorios estén presentes
-            required_fields = ['text', 'source']
-            missing_fields = [field for field in required_fields if field not in df.columns]
-            if missing_fields:
-                return Response(
-                    {"detail": f"Los siguientes campos obligatorios faltan en el archivo: {', '.join(missing_fields)}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Convertir el DataFrame a una lista de diccionarios
-            comments = []
-            for _, row in df.iterrows():
-                comment_data = {
-                    'text': row.get('text', ""),
-                    'source': row.get('source', ""),
-                    'external_id': row.get('external_id', None),
-                    'user': row.get('user', None),
-                    'user_owner': row.get('user_owner', None),
-                    'post': row.get('post', None),
-                    'classification': row.get('classification', None),
-                }
-                comments.append(comment_data)
-
-            # Validar los datos con el serializador
-            comment_serializer = CommentSerializer(data=comments, many=True)
-            if not comment_serializer.is_valid():
-                return Response(
-                    {"detail": comment_serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Devolver los datos validados
-            return Response(comment_serializer.data, status=status.HTTP_201_CREATED)
-
-        except Exception as e:
+        # Verificar que los campos obligatorios estén presentes
+        required_fields = ['Comentario', 'Fuente']
+        missing_fields = [field for field in required_fields if field not in df.columns]
+        if missing_fields:
             return Response(
-                {"detail": "Error interno del servidor al procesar el archivo."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"detail": f"Los siguientes campos obligatorios faltan en el archivo: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Convertir el DataFrame a una lista de diccionarios
+        comments = []
+        for _, row in df.iterrows():
+            comment_data = {
+                'text': row.get('Comentario', ""),
+                'source': row.get('Fuente', ""),
+                'external_id': row.get('ID', None),
+                'user': row.get('Usuario', None),
+                'user_owner': row.get('Usuario Propietario', None),
+                'classification': row.get('Clasificación', None),
+                'created_at': row.get('Fecha de creación', None),
+            }
+            comments.append(comment_data)
+
+        print("comments: ", comments)
+
+        # Validar los datos con el serializador
+        comment_serializer = CommentSerializer(data=comments, many=True)
+        if not comment_serializer.is_valid():
+            return Response(
+                {"detail": comment_serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Devolver los datos validados
+        return Response(comment_serializer.data, status=status.HTTP_201_CREATED)
+        #
+        # except Exception as e:
+        #     return Response(
+        #         {"detail": "Error interno del servidor al procesar el archivo."},
+        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #     )
 
 class ExportCommentsExcel(APIView):
     permission_classes = [IsAuthenticated]
@@ -129,10 +134,11 @@ class ExportCommentsExcel(APIView):
         # Filtrar los comentarios según los IDs proporcionados o obtener todos
         if ids_param:
             try:
-                # Convertir los IDs de cadena separada por comas a una lista de enteros
-                ids_list = list(map(int, ids_param.split(',')))
-                comments = CommentSerializer.Meta.model.objects.filter(id__in=ids_list)
+            # Convertir los IDs de cadena separada por comas a una lista de enteros
+                ids_list = list(ids_param.split(','))
+                comments = CommentSerializer.Meta.model.objects.filter(external_id__in=ids_list)
             except ValueError:
+                print("Error: Los IDs deben ser números enteros separados por comas.")
                 # Manejar el caso en que los IDs no sean números válidos
                 return Response({"error": "Los IDs deben ser números enteros separados por comas."}, status=400)
         else:
@@ -149,22 +155,22 @@ class ExportCommentsExcel(APIView):
 
         # Escribir los encabezados
         headers = [
-            "ID Externo", "Comentario", "Usuario",
-            "Usuario Propietario", "Post", "Clasificación",
-            "Fuente", "Fecha de creación", "Leído"
+            "ID", "Comentario", "Usuario",
+            "Usuario Propietario", "Clasificación",
+            "Fuente", "Fecha de creación"
         ]
         ws.append(headers)
 
         # Escribir los datos
         for comment in serializer.data:
+            print("comment: ", comment)
             ws.append([
-                comment['external_id'],
+                comment['id'],
                 comment['text'],
-                comment['user'],
-                comment['user_owner'],
-                comment['post'],
-                comment['classification'],
-                comment['source'],
+                comment['user']['username'] if comment['user'] is not None else None,
+                comment['user_owner']['name'] if comment['user_owner'] is not None else None,
+                comment['classification']['name'] if comment['classification'] is not None else None,
+                comment['source']['name'],
                 comment['created_at'],
             ])
 
