@@ -7,14 +7,14 @@
 5 - Agrgar un filtro para las clasificaciones en gestionar quejas ------------------------------------------> LISTO
 6 - Quitar el registro, el admin es el que registra a los usuarios -----------------------------------------> LISTO
 7 - ldap coorporativo
-8 - Agregarinformacion del usuario como el role
+8 - Agregarinformacion del usuario como el role ------------------------------------------------------------> LISTO
 9 - No clasificar los comentario ya clasificados con el modelo de ia ---------------------------------------> LISTO
 10 - Filtro de fechas en el gestionar de cometarios --------------------------------------------------------> LIST -> FALTA EL CALENDARIO PARA FILTRAR POR RANGO
-11 - Descargar registros de los comentarios en un excel con todos los campos de la base de datos
+11 - Descargar registros de los comentarios en un excel con todos los campos de la base de datos -----------> LISTO
 12 - Crear un campo "seguimiento".
 13 - Dejar que el getor pueda extraer ----------------------------------------------------------------------> LISTO
 14 - En el extraer de la imagen que se puedan editar las lineas extraidas ----------------------------------> LISTO  
-15 - Importar las opiniones desde un excel
+15 - Importar las opiniones desde un excel -----------------------------------------------------------------> LISTO
 16 - poder mandar correos manualmente con quejas a personas
 17 - El rol de consultante que no vea al bot ----------------------------------------------------------------> LISTO
 18 - Darle un color identificativo a cada clasificacion -----------------------------------------------------> LISTO

@@ -42,6 +42,9 @@ class CommentAPIView(viewsets.ModelViewSet):
         'text',
         'post__content',
         'classification__name',
+        'user_owner__name',
+        'source__name',
+        'created_at',
         # 'user_owner_id',
         # 'source_id',
     ]
@@ -304,29 +307,29 @@ class CreateCommentsView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        # try:
-        comments_serializer = CommentSerializer(data=request.data, many=True)
+        try:
+            comments_serializer = CommentSerializer(data=request.data, many=True)
 
-        if comments_serializer.is_valid():
-            user = request.user
-            source = Source.objects.get(name='Messenger')
-            comments = comments_serializer.save(user=user, source_id=source.external_id)
+            if comments_serializer.is_valid():
+                user = request.user
+                source = Source.objects.get(name='Messenger')
+                comments = comments_serializer.save(user=user, source_id=source.external_id)
 
-            response_serializer = CommentSerializer(comments, many=True)
-            return Response(response_serializer.data,
-                            status=status.HTTP_201_CREATED
-                            )
-        else:
-            return Response(comments_serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST
-                            )
+                response_serializer = CommentSerializer(comments, many=True)
+                return Response(response_serializer.data,
+                                status=status.HTTP_201_CREATED
+                                )
+            else:
+                return Response(comments_serializer.errors,
+                                status=status.HTTP_400_BAD_REQUEST
+                                )
 
-        # except Exception as e:
-        #     print("CreateCommentsView Error: " + e.__str__())
-        #     return Response(
-        #         {"detail": Errors.INTERNAL_SERVER_ERROR},
-        #         status=status.HTTP_400_BAD_REQUEST,
-        #     )
+        except Exception as e:
+            print("CreateCommentsView Error: " + e.__str__())
+            return Response(
+                {"detail": Errors.INTERNAL_SERVER_ERROR},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class ClassificationsByCommentsView(GenericAPIView):
@@ -369,7 +372,7 @@ class NewCommentsListView(generics.ListAPIView):
     def get_queryset(self):
         # Calcula la fecha y hora de hace 24 horas
         now = timezone.now()
-        twenty_four_hours_ago = now - timedelta(hours=24)
+        twenty_four_hours_ago = now - timedelta(hours=72)
 
         # Filtra comentarios no leídos Y creados desde hace 24 horas
         queryset = CommentSerializer.Meta.model.objects.filter(

@@ -2,7 +2,7 @@ import { Edit, Trash2, Loader } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Checkbox } from "~/components/ui/checkbox";
-import type { CommentServerResponse, Comment } from "~/types/comments";
+import type { CommentServerResponse } from "~/types/comments";
 import { getClassificationColor, transformDate } from "~/utils";
 
 interface CommentsListTableProps {
@@ -97,7 +97,7 @@ const CommentsListTable = ({
               <TableCell>{comment.user_owner?.name}</TableCell>
               <TableCell>{comment.source?.name}</TableCell>
               <TableCell><div className="text-xs">{transformDate(comment.created_at)}</div></TableCell>
-              <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-96 truncate">{comment.text}</TableCell>
+              <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-56 truncate">{comment.text}</TableCell>
               <TableCell>
                 <div
                   className="text-white rounded-lg w-32 text-xs p-2 text-center"

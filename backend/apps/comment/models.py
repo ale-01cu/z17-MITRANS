@@ -15,8 +15,7 @@ class Comment(models.Model):
         editable=False,
         verbose_name="ID externo"
     )
-    text = models.CharField(
-        max_length=200,
+    text = models.TextField(
         verbose_name="Comentario"
     )
     user = models.ForeignKey(

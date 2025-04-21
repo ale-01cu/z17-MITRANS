@@ -2,13 +2,13 @@
 FROM node:20-alpine AS development-dependencies-env
 COPY . /app
 WORKDIR /app
-RUN npm ci
+RUN npm ci --force
 
 # Etapa 2: Dependencias de producción
 FROM node:20-alpine AS production-dependencies-env
 COPY ./package.json package-lock.json /app/
 WORKDIR /app
-RUN npm ci --omit=dev
+RUN npm ci --force --omit=dev
 
 # Etapa 3: Build
 FROM node:20-alpine AS build-env
