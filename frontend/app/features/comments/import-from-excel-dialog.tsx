@@ -17,7 +17,8 @@ import { Upload, Loader2, FileText } from "lucide-react";
 interface Comment {
   id: string
   text: string
-  classification: string | null
+  classification_id: string | null
+  classification_name: string | null
   user: string | null
   user_owner: string | null
   source: string | null
@@ -154,7 +155,8 @@ const ImportFromExcelDialog = () => {
 
 
           {/* Mostrar los comentarios recibidos */}
-          {comments.length > 0 && (
+          {isLoading ? <div className="w-full p-4 flex justify-center items-center"><Loader2 className="w-8 h-8 animate-spin"/></div> :
+           (
             <div className="mt-6">
               <h3 className="text-lg font-medium">Comentarios encontrados:</h3>
                 <Table className="overflow-auto">
@@ -197,15 +199,20 @@ const ImportFromExcelDialog = () => {
                       comments.map((comment) => (
                         <TableRow
                           key={comment.id}
-                          // No onClick here!
-                          >
+                          onClick={() => {
+                            // Seleccionar/deseleccionar el comentario al hacer clic en cualquier parte de la fila
+                            toggleComment(comment);
+                          }}
+                          className="cursor-pointer hover:bg-gray-100" // Agregar estilo visual para indicar que es clicable
+                        >
                           <TableCell>
                             <Checkbox
                               checked={selectedComments.some((c) => c === comment.id)}
-                              onCheckedChange={(_checked) => {
-                                // Prevent event bubbling and only toggle the clicked row
+                              onCheckedChange={(checked) => {
+                                // Prevenir la propagación del evento del Checkbox
                                 toggleComment(comment);
                               }}
+                              onClick={(e) => e.stopPropagation()} // Detener la propagación del evento del Checkbox
                             />
                           </TableCell>
                           <TableCell>{comment.user_owner}</TableCell>
@@ -215,9 +222,9 @@ const ImportFromExcelDialog = () => {
                           <TableCell>
                             <div
                               className="text-white rounded-lg text-xs p-2 text-center"
-                              style={{ background: getClassificationColor(comment?.classification) }}
+                              style={{ background: getClassificationColor(comment?.classification_name) }}
                             >
-                              {comment.classification ? comment?.classification : "-"}
+                              {comment.classification_name ? comment?.classification_name : "-"}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -227,12 +234,12 @@ const ImportFromExcelDialog = () => {
                 </Table>
 
               {/* Botón para seleccionar/deseleccionar todos */}
-              <button
+              {comments.length > 0 && <button
                 onClick={handleSelectAll}
                 className="mt-2 text-sm text-blue-600 hover:underline"
               >
                 {selectedComments.length === comments.length ? "Deseleccionar todos" : "Seleccionar todos"}
-              </button>
+              </button>}
             </div>
           )}
 
@@ -240,7 +247,12 @@ const ImportFromExcelDialog = () => {
           {selectedComments.length > 0 && (
             <div className="mt-6 w-full flex justify-center">
               <div className="w-64 text-center">
-                <SaveCommentsBtn comments={selectedCommentsData} />
+                <SaveCommentsBtn comments={selectedCommentsData.map(e => {
+                  return {
+                    ...e,
+                    classification: e.classification_id
+                  }
+                })} />
                 <p className="text-xs">Solo se guardaran las seleccionadas</p>
               </div>
             </div>

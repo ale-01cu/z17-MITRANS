@@ -97,10 +97,10 @@ const CommentsListTable = ({
               <TableCell>{comment.user_owner?.name}</TableCell>
               <TableCell>{comment.source?.name}</TableCell>
               <TableCell><div className="text-xs">{transformDate(comment.created_at)}</div></TableCell>
-              <TableCell className="max-w-md truncate">{comment.text}</TableCell>
+              <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-96 truncate">{comment.text}</TableCell>
               <TableCell>
                 <div
-                  className="text-white rounded-lg text-xs p-2 text-center"
+                  className="text-white rounded-lg w-32 text-xs p-2 text-center"
                   style={{ background: getClassificationColor(comment?.classification?.name) }}
                 >
                   {comment.classification ? comment?.classification?.name : "-"}

@@ -201,3 +201,14 @@ class ClassificationsByCommentsSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         allow_empty=False
     )
+
+
+class CommentFromExcelSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    text = serializers.CharField()
+    source = serializers.CharField()
+    user = serializers.CharField(required=False, allow_null=True)
+    user_owner = serializers.CharField(required=False, allow_null=True)
+    classification_id = serializers.CharField(required=False, allow_null=True)
+    classification_name = serializers.CharField(required=False, allow_null=True)
+    created_at = serializers.DateTimeField(required=False, allow_null=True)
