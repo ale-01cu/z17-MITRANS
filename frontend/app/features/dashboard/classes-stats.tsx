@@ -20,7 +20,7 @@ const ClassesStats = ({ data }: Props) => {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Comentarios Totales</CardTitle>
+          <CardTitle className="text-sm font-medium">Opiniones Totales</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{data?.total_comments}</div>

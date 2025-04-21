@@ -376,7 +376,6 @@ class NewCommentsListView(generics.ListAPIView):
 
         # Filtra comentarios no leídos Y creados desde hace 24 horas
         queryset = CommentSerializer.Meta.model.objects.filter(
-            is_read=False,
             created_at__gte=twenty_four_hours_ago  # __gte significa "greater than or equal to"
         )
 
@@ -413,7 +412,11 @@ class UrgentCommentsView(ListAPIView):
 
         # Filtra los comentarios cuya clasificación relacionada (FK)
         # tiene un nombre que está en la lista 'urgent_classification_names'
+        now = timezone.now()
+        twenty_four_hours_ago = now - timedelta(hours=24)
+
         queryset = CommentSerializer.Meta.model.objects.filter(
+            created_at__gte=twenty_four_hours_ago,  # __gte significa "greater than or equal to"
             classification__name__in=urgent_classification_names
         )
 

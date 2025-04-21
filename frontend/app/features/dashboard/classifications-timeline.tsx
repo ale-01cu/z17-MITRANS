@@ -38,7 +38,7 @@ const ClassificationTimeline = ({ data }: Props) => {
     <Card className="lg:col-span-4">
       <CardHeader>
         <CardTitle>Línea de Tiempo</CardTitle>
-        <CardDescription>Clasificación de comentarios a lo largo del tiempo</CardDescription>
+        <CardDescription>Clasificación de Opiniones a lo largo del tiempo</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>

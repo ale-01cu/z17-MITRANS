@@ -106,7 +106,7 @@ const ImportFromExcelDialog = () => {
   return (
     <>
       <Button onClick={() => setIsOpen(true)}>
-        Importar Comentarios
+        Importar Opiniones
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[80%] max-h-[90%] overflow-auto">
@@ -158,7 +158,7 @@ const ImportFromExcelDialog = () => {
           {isLoading ? <div className="w-full p-4 flex justify-center items-center"><Loader2 className="w-8 h-8 animate-spin"/></div> :
            (
             <div className="mt-6">
-              <h3 className="text-lg font-medium">Comentarios encontrados:</h3>
+              <h3 className="text-lg font-medium">Opiniones encontradas:</h3>
                 <Table className="overflow-auto">
                   <TableHeader>
                     <TableRow>
@@ -185,14 +185,14 @@ const ImportFromExcelDialog = () => {
                       <TableRow>
                         <TableCell colSpan={6} className="text-center w-full">
                           <div className="flex items-center justify-center gap-2 py-10">
-                            <Loader className="w-6 h-6 animate-spin" /> Cargando comentarios...
+                            <Loader className="w-6 h-6 animate-spin" /> Cargando Opiniones...
                           </div>
                         </TableCell>
                       </TableRow>
                     ) : comments.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center w-full">
-                          <div className="py-10">No se encontraron comentarios</div>
+                          <div className="py-10">No se encontraron Opiniones</div>
                         </TableCell>
                       </TableRow>
                     ) : (

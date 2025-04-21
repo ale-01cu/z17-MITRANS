@@ -102,13 +102,13 @@ export default function CommentsCrud() {
   const handleCreateComment = async (data: Omit<Comment, "id">) => {
     try {
       const newComment = await createCommentApi(data)
-      toast.success('Nuevo comentario creado correctamente.')
+      toast.success('Nueva Opinión creada correctamente.')
       setComments((prev) => [...prev, newComment])
       setIsCreateOpen(false)
       setNewCommentCounter(prev => prev+=1)
 
     } catch (error) {
-      toast.error('Ocurrio un error al crear el comentario.')
+      toast.error('Ocurrio un error al crear la Opinión.')
       console.error("Error creating comment:", error)
       
     }
@@ -129,7 +129,7 @@ export default function CommentsCrud() {
         .catch(e => console.error(e))
 
     } catch (error) {
-      toast.error('Ocurrio un error al actualizar el comentario.')
+      toast.error('Ocurrio un error al actualizar la Opinión.')
       console.error("Error updating comment:", error)
     }
   }
@@ -192,7 +192,7 @@ export default function CommentsCrud() {
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar comentarios..."
+              placeholder="Buscar Opiniones..."
               className="pl-8 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -200,7 +200,7 @@ export default function CommentsCrud() {
           </div>
 
           {!isConsultant && <Button onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
-            <Plus className="h-4 w-4" /> Nuevo Comentario
+            <Plus className="h-4 w-4" /> Nueva Opinión
           </Button>}
 
           <UserOwnerSelector
@@ -253,8 +253,8 @@ export default function CommentsCrud() {
      {!isConsultant &&  <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Crear Nuevo Comentario</DialogTitle>
-            <DialogDescription>Complete el formulario para crear un nuevo comentario.</DialogDescription>
+            <DialogTitle>Crear Nueva Opinión</DialogTitle>
+            <DialogDescription>Complete el formulario para crear un nueva Opinión.</DialogDescription>
           </DialogHeader>
           <CommentForm
             onSubmit={handleCreateComment}
@@ -266,8 +266,8 @@ export default function CommentsCrud() {
       {!isConsultant && <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Editar Comentario</DialogTitle>
-            <DialogDescription>Modifique los campos para actualizar el comentario.</DialogDescription>
+            <DialogTitle>Editar Opinión</DialogTitle>
+            <DialogDescription>Modifique los campos para actualizar la opnion.</DialogDescription>
           </DialogHeader>
           {currentComment && (
             <CommentForm
@@ -285,8 +285,8 @@ export default function CommentsCrud() {
         onOpenChange={setIsDeleteOpen}
         isLoading={deleteIsLoading}
         onConfirm={() => currentComment && handleDeleteComment(currentComment.id)}
-        title="Eliminar Comentario"
-        description="¿Está seguro que desea eliminar este comentario? Esta acción no se puede deshacer."
+        title="Eliminar Opinión"
+        description="¿Está seguro que desea eliminar esta Opinión? Esta acción no se puede deshacer."
       />}
     </div>
   )

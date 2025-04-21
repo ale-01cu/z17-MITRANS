@@ -35,11 +35,11 @@ const ClassifyByCommentTextBtn = ({ comments, setComments }: Props) => {
     }))
       .then((data) => {
         setComments(data.data)
-        toast.success('Comentarios clasificados correctamente.')
+        toast.success('Opiniones clasificadas correctamente.')
       })
       .catch(e => {
         console.error('Error get classify comment by id api: ', e)
-        toast.error('No se pudieron clasificar los comentarios.')
+        toast.error('No se pudieron clasificar las Opiniones.')
       })
       .finally(() => setIsClassifying(false))
     }
@@ -58,7 +58,7 @@ const ClassifyByCommentTextBtn = ({ comments, setComments }: Props) => {
       ) : (
         <>
           <Tag className="h-4 w-4 mr-2" />
-          Clasificar opiniones
+          Clasificar Opiniones
         </>
       )}
     </Button>

@@ -37,7 +37,7 @@ const CommentsByUsers = () => {
     <Card className="lg:col-span-3">
       <CardHeader>
         <CardTitle>Comentaios por usuarios</CardTitle>
-        <CardDescription>Número de comentarios por cada usuario</CardDescription>
+        <CardDescription>Número de Opiniones por cada usuario</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>

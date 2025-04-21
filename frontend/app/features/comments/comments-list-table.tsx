@@ -71,14 +71,14 @@ const CommentsListTable = ({
           <TableRow>
             <TableCell colSpan={6} className="text-center w-full">
               <div className="flex items-center justify-center gap-2 py-10">
-                <Loader className="w-6 h-6 animate-spin" /> Cargando comentarios...
+                <Loader className="w-6 h-6 animate-spin" /> Cargando Opiniones...
               </div>
             </TableCell>
           </TableRow>
         ) : filteredComments.length === 0 ? (
           <TableRow>
             <TableCell colSpan={6} className="text-center w-full">
-              <div className="py-10">No se encontraron comentarios</div>
+              <div className="py-10">No se encontraron Opiniones</div>
             </TableCell>
           </TableRow>
         ) : (

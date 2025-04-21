@@ -1,0 +1,18 @@
+{
+    "dataset": {
+        "size": 7121
+    },
+    "embedding_model": {
+        "num_epochs": 12,
+        "batch_size": 16,
+        "learning_rate": 2e-05
+    },
+    "xgboost_model": {
+        "max_depth": 8,
+        "eta": 0.3,
+        "objective": "multi:softmax",
+        "num_class": 6,
+        "eval_metric": "mlogloss",
+        "learning_rate": 0.01
+    }
+}

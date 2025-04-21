@@ -17,7 +17,7 @@ export const getExportToExcelApi = async (data: string[] | undefined) => {
 
     // Extraer el nombre del archivo del encabezado Content-Disposition
     const contentDisposition = response.headers['content-disposition'];
-    let filename = 'comentarios.xlsx'; // Nombre predeterminado
+    let filename = 'Opiniones.xlsx'; // Nombre predeterminado
     if (contentDisposition && contentDisposition.includes('filename=')) {
       filename = contentDisposition.split('filename=')[1].split(';')[0];
     }

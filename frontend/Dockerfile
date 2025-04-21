@@ -25,7 +25,8 @@ COPY --from=build-env /app/build /app/build
 WORKDIR /app
 
 # Instalar serve para servir archivos estáticos
-RUN npm install serve --save-prod
+RUN npm install serve --force --save-prod
+RUN npm install -g npx --force
 
 # Comando para servir los archivos estáticos
-CMD ["npx", "serve", "-s", "build/client"]
+CMD ["npx", "serve", "-s", "build/client", "-l", "5173", "--no-clipboard"]

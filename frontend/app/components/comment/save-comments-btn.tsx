@@ -33,11 +33,11 @@ const SaveCommentsBtn = ({ comments }: Props) => {
         null
     })))
       .then(() => {
-        toast.success("Las opiniones han sido guardadas correctamente.")
+        toast.success("Las Opiniones han sido guardadas correctamente.")
       })
       .catch(e => {
         console.error(e)
-        toast.error('Ha ocurrido un error al guardar las opiniones.')
+        toast.error('Ha ocurrido un error al guardar las Opiniones.')
       })
       .finally(() => {
         setIsLoading(false)
@@ -59,7 +59,7 @@ const SaveCommentsBtn = ({ comments }: Props) => {
       ) : (
         <div className="flex items-center">
           <Send className="h-4 w-4 mr-2" />
-          Guardar opiniones
+          Guardar Opiniones
         </div>
       )}
     </Button>

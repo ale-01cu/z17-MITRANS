@@ -45,11 +45,11 @@ const ClassifyBtnByCommentId = ({ comments, setComments }: Props) => {
               : comment;
           })
         );
-        toast.success("Comentarios clasificados correctamente.");
+        toast.success("Opiniones clasificadas correctamente.");
       })
       .catch((e) => {
         console.error("Error get classify comment by id api: ", e);
-        toast.error("No se pudieron clasificar los comentarios.");
+        toast.error("No se pudieron clasificar las Opiniones.");
       })
       .finally(() => setIsClassifying(false));
   };
@@ -68,7 +68,7 @@ const ClassifyBtnByCommentId = ({ comments, setComments }: Props) => {
       ) : (
         <>
           <Tag className="h-4 w-4 mr-2" />
-          Clasificar comentarios
+          Clasificar Opiniones
         </>
       )}
     </Button>

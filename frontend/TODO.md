@@ -14,7 +14,7 @@
 12 - Crear un campo "seguimiento".
 13 - Dejar que el getor pueda extraer ----------------------------------------------------------------------> LISTO
 14 - En el extraer de la imagen que se puedan editar las lineas extraidas ----------------------------------> LISTO  
-15 - Importar las opiniones desde un excel -----------------------------------------------------------------> LISTO
+15 - Importar las Opiniónes desde un excel -----------------------------------------------------------------> LISTO
 16 - poder mandar correos manualmente con quejas a personas
 17 - El rol de consultante que no vea al bot ----------------------------------------------------------------> LISTO
 18 - Darle un color identificativo a cada clasificacion -----------------------------------------------------> LISTO

@@ -91,7 +91,7 @@ export default function CommentForm({ comment, onSubmit, onCancel }: CommentForm
             id="texto"
             value={formData.text}
             onChange={(e) => handleChange("text", e.target.value)}
-            placeholder="Ingrese el texto del comentario"
+            placeholder="Ingrese el texto de la Opinión"
             className={errors.text ? "border-red-500" : ""}
             rows={4}
           />
