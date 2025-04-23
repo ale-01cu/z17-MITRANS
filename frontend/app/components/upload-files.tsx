@@ -2,7 +2,7 @@ import { Card } from "./ui/card";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Upload, Loader2, FileText } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 interface Props {
   isUploading: boolean,
@@ -25,6 +25,24 @@ const UploadFiles = ({
   btnText
   }: Props
 ) => {
+  // Estado para almacenar las URLs de vista previa
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!files || files.length === 0) {
+      setImagePreviews([]);
+      return;
+    }
+    // Solo imágenes
+    const previews = files
+      .filter(file => file.type.startsWith("image/"))
+      .map(file => URL.createObjectURL(file));
+    setImagePreviews(previews);
+    // Limpieza de URLs
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [files]);
 
   return (
     <Card className="p-6 mb-8">
@@ -51,12 +69,15 @@ const UploadFiles = ({
           </Label>
         </div>
 
-        {files.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {files.map((file, index) => (
-              <div key={index} className="text-sm bg-muted px-3 py-1 rounded-full">
-                {file.name}
-              </div>
+        {imagePreviews.length > 0 && (
+          <div className="flex flex-wrap gap-2 justify-center">
+            {imagePreviews.map((url, index) => (
+              <img
+                key={index}
+                src={url}
+                alt={`preview-${index}`}
+                className="w-32 h-32 object-cover rounded shadow border"
+              />
             ))}
           </div>
         )}
