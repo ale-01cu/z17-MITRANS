@@ -589,25 +589,36 @@ class Bot:
         Comprueba si el texto ya ha sido visto por el chat id actual.
 
         :param text: Texto a comprobar.
+        :param index: Índice del texto actual.
         :return: True si el texto ya ha sido visto, False en caso contrario.
         """
+        # Si la memoria no está activa o solo se está comprobando, no hay nada que comparar
         if not self.is_memory_active and not self.is_only_check:
             return False
 
+        # Obtener el último texto y su índice desde la base de datos
         last_text, last_text_index = self.get_last_chat_id_text_and_index()
 
+        # Si alguno de los textos es None o vacío, no hay coincidencia
         if not last_text or not text:
             return False
 
-        print(f"En la DB -> last text: {last_text}, last text index: {last_text_index}")
-        print(f"En el chat id actual -> text: {text}, index: {index}")
-        #
-        # if index > last_text_index:
-        #     return True
+        # Normalizar los textos antes de comparar
+        def normalize_text(input_text: str) -> str:
+            # Eliminar espacios adicionales, saltos de línea y tabulaciones
+            normalized = input_text.strip()
+            # Convertir a minúsculas para hacer la comparación insensible a mayúsculas/minúsculas
+            normalized = normalized.lower()
+            # Asegurarse de que no haya caracteres invisibles adicionales
+            normalized = " ".join(normalized.split())
+            return normalized
 
-        if last_text == text:
-            return True
-        return False
+        # Normalizar ambos textos
+        last_text_normalized = normalize_text(last_text)
+        text_normalized = normalize_text(text)
+
+        # Comparar los textos normalizados
+        return last_text_normalized == text_normalized
 
 
     def show_contours(self, contours, title: str = "title", image = None):
@@ -668,68 +679,70 @@ class Bot:
                     #     id_scraped=self.current_chat_id, last_text=text,
                     # )
 
+                if keyboard.is_pressed('esc'):
+                    print("Detenido por el usuario.")
+                    exit()
+
+                self.scroll_chat_area(direction="up",
+                                      scroll_move=35)
+
+                await asyncio.sleep(1)
+
+                self.take_screenshot()
+                possible_text_contours = self.find_text_area_contours()
+
             else:
                 has_more = False
 
-            if keyboard.is_pressed('esc'):
-                print("Detenido por el usuario.")
-                exit()
 
-            self.scroll_chat_area(direction="up",
-                                  scroll_move=35)
+        if has_more:
+            for i, contour in enumerate(possible_text_contours):
+                # Comparar img_roi con la ultima referencia del texto visto por el current chat id
+                x, y, w, h = cv2.boundingRect(contour)
 
-            await asyncio.sleep(1)
+                # self.show_contours(contours=[contour])
 
-            self.take_screenshot()
-            possible_text_contours = self.find_text_area_contours()
+                text = self.get_text_by_text_location(
+                    x_start=x + 15,
+                    y_start=y + 15,
+                    x_end=x + w,
+                    y_end=(y + h) - 15,
+                    scroll_pos_start=self.scroll_reference,
+                    scroll_pos_end=self.scroll_reference,
+                    desactivate_scroll=True
+                )
 
-        for i, contour in enumerate(possible_text_contours):
-            # Comparar img_roi con la ultima referencia del texto visto por el current chat id
-            x, y, w, h = cv2.boundingRect(contour)
+                if not self.is_offline: await self.send_websocket_message(
+                    message_type="bot_message", message=text)
 
-            # self.show_contours(contours=[contour])
-
-            text = self.get_text_by_text_location(
-                x_start=x + 15,
-                y_start=y + 15,
-                x_end=x + w,
-                y_end=(y + h) - 15,
-                scroll_pos_start=self.scroll_reference,
-                scroll_pos_end=self.scroll_reference,
-                desactivate_scroll=True
-            )
-
-            if not self.is_offline: await self.send_websocket_message(
-                message_type="bot_message", message=text)
-
-            # if i == 4:
-            #     return False
+                # if i == 4:
+                #     return False
 
 
-            # if i == 0 and self.first_contour_reference is None:
-            #      self.first_contour_reference = (x, y, w, h)
+                # if i == 0 and self.first_contour_reference is None:
+                #      self.first_contour_reference = (x, y, w, h)
 
 
-            is_watched = self.is_text_already_watched(text=text, index=i+1)
+                is_watched = self.is_text_already_watched(text=text, index=i+1)
 
-            print("text ", text)
-            print("is_watched ", is_watched)
+                print("text ", text)
+                print("is_watched ", is_watched)
 
-            if not is_watched:
-                start_location = (x, y, self.scroll_reference)
-                end_location = (x + w, y + h, self.scroll_reference)
-                texts_did_not_watched.append([start_location, end_location])
+                if not is_watched:
+                    start_location = (x, y, self.scroll_reference)
+                    end_location = (x + w, y + h, self.scroll_reference)
+                    texts_did_not_watched.append([start_location, end_location])
 
-                # if i == 0:
-                #     last_text = text
-            else:
-                has_more = False
-                break
+                    # if i == 0:
+                    #     last_text = text
+                else:
+                    has_more = False
+                    break
 
 
-            if keyboard.is_pressed('esc'):
-                print("Detenido por el usuario.")
-                exit()
+                if keyboard.is_pressed('esc'):
+                    print("Detenido por el usuario.")
+                    exit()
 
         if self.is_memory_active: self.chat_querys.update_chat_by_chat_id_scraped(
             id_scraped=self.current_chat_id, last_text=last_text,
@@ -910,7 +923,7 @@ class Bot:
 
         scroll_attempts = 0
 
-        # looking for the start of the overflow contour
+        # looking for the start of the overflow contourf
         while scroll_attempts < MAX_SCROLL_ATTEMPTS:
             if keyboard.is_pressed('esc'):
                 print("Detenido por el usuario.")
@@ -1115,6 +1128,8 @@ class Bot:
         # if not texts_did_not_watched: return
 
         texts += texts_did_not_watched
+
+        print("has_more_text ", has_more_text)
 
         if has_more_text:
             # Si no se encuentra el último texto visto
