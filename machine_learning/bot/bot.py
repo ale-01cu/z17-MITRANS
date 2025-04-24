@@ -62,7 +62,10 @@ class Bot:
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
         self.is_memory_active = False
-        self.is_only_check = True # Solo para en base al ultimo comentario que ha visto pero no guarda
+        self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
+
+
+        self.was_handled_overflow = False
 
     # =================================================== Web Socket connection (Start) =============================================================
     async def connect_websocket(self):
@@ -294,6 +297,7 @@ class Bot:
         #                    title="chat_contour-find_text_area_contours")
 
         x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
+        chat_limit_x = x_chat + int(w_chat * 0.6)   # Punto medio horizontal del chat
 
         # cv2.drawContours(self.current_screenshot, chat_contour, -1, (0, 255, 0), 3)
         # cv2.imshow('chats contour', self.current_screenshot)
@@ -306,16 +310,24 @@ class Bot:
             # Filtro de tamaño (ajusta según necesidad)
             min_w = 40 if take_all_texts else 100
             min_h = 0 if take_all_texts else 40
+
+            # Verifica si tiene el tamaño adecuado
             if (min_w < w < w_chat * 0.70) and (min_h < h < h_chat - 10):
 
+                # Verifica si no pasa el limite en el eje y inferior
                 is_contour_valid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
                     if self.first_contour_reference is not None and use_first_contour_reference \
                     else True
 
                 # is_contour_invalid = True
 
+                is_within_chat_wwidth_percent = x + w <= chat_limit_x
+
                 # Verifica si está DENTRO del chat_contour
-                if ((x > x_chat) and (x + w < x_chat + w_chat)) and ((y > y_chat) and (y + h < y_chat + h_chat)) and is_contour_valid:
+                if (((x > x_chat) and (x + w < x_chat + w_chat))
+                    and ((y > y_chat) and (y + h < y_chat + h_chat))
+                    and is_contour_valid and is_within_chat_wwidth_percent):
+
                     possible_text_contours.append(contour)
 
         # cv2.drawContours(self.current_screenshot, possible_text_contours, -1, (0, 255, 0), 3)
@@ -631,7 +643,7 @@ class Bot:
 
 
     async def get_texts_did_not_watched_list(self, possible_text_contours,
-                                             is_first_iter=False, texts=[]):
+                                             is_first_iter=False, texts=[], was_handled_overflow=False):
         texts_did_not_watched = []
         has_more = True
         last_text = None
@@ -664,7 +676,11 @@ class Bot:
             # if i == 4:
             #     return False
 
-            self.first_contour_reference = (x, y, w, h)
+            # self.show_contours(contours=[first_text],
+            #                    title="Primer texto")
+
+            if self.first_contour_reference is None:
+                self.first_contour_reference = (x, y, w, h)
 
             is_watched = self.is_text_already_watched(text=text, index=len(texts))
 
@@ -683,8 +699,9 @@ class Bot:
                     print("Detenido por el usuario.")
                     exit()
 
-                self.scroll_chat_area(direction="up",
-                                      scroll_move=35)
+                if not was_handled_overflow:
+                    self.scroll_chat_area(direction="up",
+                                          scroll_move=35)
 
                 await asyncio.sleep(1)
 
@@ -696,7 +713,10 @@ class Bot:
 
 
         if has_more:
-            for i, contour in enumerate(possible_text_contours):
+            iter_contours = enumerate(possible_text_contours[1:]) \
+                if is_first_iter else enumerate(possible_text_contours)
+
+            for i, contour in iter_contours:
                 # Comparar img_roi con la ultima referencia del texto visto por el current chat id
                 x, y, w, h = cv2.boundingRect(contour)
 
@@ -724,9 +744,6 @@ class Bot:
 
 
                 is_watched = self.is_text_already_watched(text=text, index=i+1)
-
-                print("text ", text)
-                print("is_watched ", is_watched)
 
                 if not is_watched:
                     start_location = (x, y, self.scroll_reference)
@@ -859,6 +876,88 @@ class Bot:
         return result_image
 
 
+    def find_closest_contour(self, contours_found):
+        best_contour = None
+        # NUEVA MÉTRICA: Distancia Y mínima desde el borde superior del contorno al borde superior del chat
+        min_distance_y_found = float('inf')
+        # Altura máxima encontrada en la distancia Y mínima (para desempate)
+        max_height_at_min_y_distance = -1
+        # Tolerancia para la distancia Y (pequeña, para agrupar contornos muy cercanos en Y)
+        y_distance_tolerance = 10  # Píxeles - Ajusta si es necesario
+        # Filtros para ignorar contornos muy pequeños (artefactos)
+        min_contour_height = 10  # Ignorar contornos con altura menor a esto
+        min_contour_width = 20  # Ignorar contornos con ancho menor a esto
+
+        if not self.chat_area_reference:
+            print("Error: chat_area_reference no está definido...")
+            return False
+
+        x_chat, y_chat, w_chat, h_chat = self.chat_area_reference
+        chat_top_edge = y_chat  # Coordenada Y superior del área del chat
+
+        print(f"--- Buscando contorno en overflow (Lógica v2) ---")
+        print(f"Chat Area Top Edge: {chat_top_edge}")
+        print(f"Tolerancia Distancia Y: {y_distance_tolerance}")
+        print(f"Filtros: Altura > {min_contour_height}, Ancho > {min_contour_width}")
+
+        if not contours_found:
+            print("No se encontraron contornos después de reparar la imagen.")
+            return False  # O manejar de otra forma
+
+        for contour in contours_found:
+            x, y, w, h = cv2.boundingRect(contour)
+
+            # Aplicar filtros básicos
+            if h < min_contour_height or w < min_contour_width:
+                print(f"Contorno: (x={x}, y={y}, w={w}, h={h}) -> Filtrado (tamaño pequeño)")
+                continue  # Ignorar contornos demasiado pequeños
+
+            # NUEVA MÉTRICA PRIMARIA: Distancia del borde SUPERIOR del contorno al borde SUPERIOR del chat
+            distance_y = abs(y - chat_top_edge)
+
+            print(f"Contorno: (x={x}, y={y}, w={w}, h={h}), DistanciaY={distance_y:.2f}")
+
+            # 1. ¿Es este contorno significativamente más cercano en Y que el mejor encontrado?
+            if distance_y < min_distance_y_found - y_distance_tolerance:
+                print(
+                    f"  -> Nuevo mejor: Más cercano en Y (DistanciaY {distance_y:.2f} < {min_distance_y_found:.2f} - {y_distance_tolerance})")
+                min_distance_y_found = distance_y
+                max_height_at_min_y_distance = h
+                best_contour = contour
+
+            # 2. ¿Está este contorno a una distancia Y muy similar al mejor encontrado?
+            elif abs(distance_y - min_distance_y_found) <= y_distance_tolerance:
+                print(
+                    f"  -> Similar distancia Y (abs({distance_y:.2f} - {min_distance_y_found:.2f}) <= {y_distance_tolerance})")
+                # Si está a una distancia Y similar, usamos la ALTURA como desempate
+                if h > max_height_at_min_y_distance:
+                    print(f"    -> Mejor por altura (Altura {h} > {max_height_at_min_y_distance})")
+                    # Mantenemos/actualizamos la min_distance_y_found y la altura
+                    min_distance_y_found = min(distance_y, min_distance_y_found)
+                    max_height_at_min_y_distance = h
+                    best_contour = contour
+                else:
+                    print(f"    -> No mejor por altura (Altura {h} <= {max_height_at_min_y_distance})")
+            else:
+                # Este caso es para contornos que están más lejos en Y (más abajo) que el mejor encontrado + tolerancia
+                print(
+                    f"  -> Ignorado: Más lejano en Y (DistanciaY {distance_y:.2f} > {min_distance_y_found:.2f} + {y_distance_tolerance})")
+
+        if best_contour is not None:
+            x_lcf, y_lcf, w_lcf, h_lcf = cv2.boundingRect(best_contour)
+            print(f"--- Contorno seleccionado para overflow (v2) ---")
+            print(
+                f"Contorno Final: (x={x_lcf}, y={y_lcf}, w={w_lcf}, h={h_lcf}), DistanciaY Final={min_distance_y_found:.2f}, Altura={max_height_at_min_y_distance}")
+            print(f"---------------------------------------------")
+            # self.show_contours(contours=[largest_contour_found], title="Contorno de Overflow Seleccionado (v2)")
+        else:
+            print(f"--- No se seleccionó ningún contorno para overflow (v2) ---")
+            return False  # O manejar adecuadamente
+
+
+        return best_contour
+
+
     async def handle_overflow_text(self, chat_contour,
                                    amount_scrolled, texts,
                                    is_initial_overflow=True,
@@ -872,32 +971,13 @@ class Bot:
                                                     use_first_contour_reference=False,
                                                     take_all_texts=True)
 
+        # self.show_contours(image=result_image,
+        #                    contours=contours_found,
+        #                    title="Contornos encontrados y la imagen resultante")
+
         has_more = True
 
-        # img_handler = ImgHandler(image=result_image)
-        # contours = img_handler.find_contours_by_large_contours_mask()
-        #
-        # self.show_contours(image=result_image,
-        #                    contours=contours,
-        #                    title="handle_overflow_text contours found")
-
-        largest_contour_found = None
-        max_height = 0
-        min_distance = float('inf')
-        x_chat, y_chat, w_chat, h_chat = self.chat_area_reference
-        chat_top_edge = y_chat
-
-        for contour in contours_found:
-            x, y, w, h = cv2.boundingRect(contour)
-            contour_bottom_edge = y + h
-            distance = abs(contour_bottom_edge - chat_top_edge)
-
-            has_max_height = h > max_height if is_initial_overflow else True
-
-            if has_max_height or (h == max_height and distance < min_distance):
-                max_height = h
-                min_distance = distance
-                largest_contour_found = contour
+        largest_contour_found = self.find_closest_contour(contours_found)  # Usamos la variable existente
 
         if is_initial_overflow and self.first_contour_reference is None:
             x, y, w, h = cv2.boundingRect(largest_contour_found)
@@ -966,11 +1046,15 @@ class Bot:
                 # await self.get_texts_did_not_watched_list(
                 #     possible_text_contours=[contour_overflow]
                 # )
+                contour_points = largest_contour_found.squeeze()
+                y_coords = contour_points[:, 1]  # [y1, y2, y3, ...]
+                y_inferior_real = np.percentile(y_coords, 90)  # Ajusta el percentil según necesidad
+
                 text = self.get_text_by_text_location(
                     x_start=x_contour_overflow_start + 15,
-                    y_start=y_contour_overflow_start + 20,
+                    y_start=y_contour_overflow_start + 25,
                     x_end=x_contour_overflow_end,
-                    y_end=y_contour_overflow_end - 20,
+                    y_end=y_inferior_real - 20,
                     scroll_pos_start=self.scroll_reference,
                     scroll_pos_end=amount_scrolled if len(conours_found) == 1 else 0,
                 )
@@ -1049,12 +1133,8 @@ class Bot:
 
         self.take_screenshot()
 
-        # Detecta un nuevo mensaje mientras esta revisando un chat
-        # chats = self.find_chat_references()
-        # if len(chats) > 0:
-        #     return texts
-        chats_contour = self.take_chats_container_contour()
         chat_contour = self.find_chat_area_contour()
+
 
         scrolled = 0
 
@@ -1070,10 +1150,12 @@ class Bot:
             # self.show_contours(contours=possible_text_contours,
             #                    title="first checker contours possible text contours")
 
-            if is_overflow and len(possible_text_contours) == 0 and iterations == 0:
+            if is_overflow and len(possible_text_contours) == 0:
                 has_more = await self.handle_overflow_text(chat_contour=chat_contour,
                                                 amount_scrolled=scrolled,
                                                 texts=texts, is_initial_overflow=True)
+                print("Se va a modificar la variable self.was_handled_overflow a True.................")
+                self.was_handled_overflow = True
                 scrolled = 0
                 if not has_more:
                     return texts
@@ -1083,32 +1165,42 @@ class Bot:
             await asyncio.sleep(1)
 
 
+        if not self.was_handled_overflow:
+            self.take_screenshot()
+            possible_text_contours = self.find_text_area_contours(use_first_contour_reference=False)
+            # self.show_contours(contours=possible_text_contours,
+            #                    title="possible text contour")
+            # self.show_contours(contours=[possible_text_contours[0]],
+            #                    title="last possible text contour")
+            all_texts_contours = self.find_text_area_contours(take_all_texts=True,
+                                                              use_first_contour_reference=False)
+            # self.show_contours(contours=all_texts_contours,
+            #                    title="all texts contour")
+            # self.show_contours(contours=[all_texts_contours[0]],
+            #                    title="last all texts contour")
+
+            if len(possible_text_contours) > 1 and len(all_texts_contours) > 1:
+                # self.show_contours(contours=possible_text_contours,
+                #                    title="possible text contour")
+                # self.show_contours(contours=all_texts_contours,
+                #                    title="all texts contour")
+                x_1, y_1, w_1, h_1 = cv2.boundingRect(possible_text_contours[0])
+                x_2, y_2, w_2, h_2 = cv2.boundingRect(all_texts_contours[0])
+
+                if w_2 != w_1 and iterations == 0:
+                    self.scroll_chat_area(direction="up",
+                                          scroll_move=45)
+                    await asyncio.sleep(1)
+
+        await asyncio.sleep(1)
         self.take_screenshot()
-        possible_text_contours = self.find_text_area_contours(use_first_contour_reference=False)
+        possible_text_contours = self.find_text_area_contours(
+            use_first_contour_reference=True if self.was_handled_overflow else False)
         # self.show_contours(contours=possible_text_contours,
-        #                    title="possible text contour")
-        # self.show_contours(contours=[possible_text_contours[0]],
-        #                    title="last possible text contour")
-        all_texts_contours = self.find_text_area_contours(take_all_texts=True,
-                                                          use_first_contour_reference=False)
-        # self.show_contours(contours=all_texts_contours,
-        #                    title="all texts contour")
-        # self.show_contours(contours=[all_texts_contours[0]],
-        #                    title="last all texts contour")
+        #                    title="Testeando todos los contornos posibles al inicio de la funcion cuando se hace scroll.")
 
-        if len(possible_text_contours) > 1 and len(all_texts_contours) > 1:
-            x_1, y_1, w_1, h_1 = cv2.boundingRect(possible_text_contours[0])
-            x_2, y_2, w_2, h_2 = cv2.boundingRect(all_texts_contours[0])
-
-            if w_2 != w_1 and iterations == 0:
-                self.scroll_chat_area(direction="up",
-                                      scroll_move=45)
-                await asyncio.sleep(1)
-
-        self.take_screenshot()
-        possible_text_contours = self.find_text_area_contours()
         # self.show_contours(contours=possible_text_contours,
-        #                    title="Testeando todos los contornos posibles al inicio de la funcion.")
+        #                    title=f"Testeando todos los contornos posibles al inicio de la funcion. use_first_contour_reference={aver}")
 
         if chat_contour is None or not isinstance(chat_contour, np.ndarray):
             raise ValueError("No se pudo obtener el contorno del chat.")
@@ -1122,46 +1214,31 @@ class Bot:
         has_more_text, texts_did_not_watched = await self.get_texts_did_not_watched_list(
             possible_text_contours=possible_text_contours,
             is_first_iter=iterations == 0,
-            texts=texts
+            texts=texts,
+            was_handled_overflow=self.was_handled_overflow
 
         )
         # if not texts_did_not_watched: return
 
         texts += texts_did_not_watched
 
-        print("has_more_text ", has_more_text)
-
         if has_more_text:
-            # Si no se encuentra el último texto visto
-            is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
 
-            # self.show_contours(contours=[chat_contour],
-            #                    title="chat area contour")
-            amount_scrolled = 0
+            if len(texts) > 0:
+                steps = get_subtraction_steps(
+                    initial_value=texts[-1][0][1],
+                    target_value=self.first_contour_reference[1]+self.first_contour_reference[-1],
+                    steps=10
+                    )
 
-            if is_overflow:
-                await self.handle_overflow_text(chat_contour=chat_contour,
-                                          amount_scrolled=amount_scrolled,
-                                          texts=texts, scroll_steps=False)
-                amount_scrolled = 0
+                for i, step in enumerate(steps):
+                    step = math.ceil(abs(step))
+                    if i == len(steps) - 1:
+                        step = math.ceil(step / 3)
 
-            else:
-                # Caso normal: hacer scroll y continuar el proceso
-                if len(texts) > 0:
-                    steps = get_subtraction_steps(
-                        initial_value=texts[-1][0][1],
-                        target_value=self.first_contour_reference[1]+self.first_contour_reference[-1],
-                        steps=10
-                        )
-
-                    for i, step in enumerate(steps):
-                        step = math.ceil(abs(step))
-                        if i == len(steps) - 1:
-                            step = math.ceil(step / 3)
-
-                        self.scroll_chat_area(direction='up',
-                                              scroll_move=step)
-                        await asyncio.sleep(1)
+                    self.scroll_chat_area(direction='up',
+                                          scroll_move=step)
+                    await asyncio.sleep(1)
 
 
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
@@ -1184,12 +1261,12 @@ class Bot:
         #     move_to_chat = False
         # )
 
-        pyautogui.moveTo(x=x_start, y=y_start, duration=1)
+        pyautogui.moveTo(x=x_start, y=y_start)
 
         pyautogui.doubleClick(button="left")
         pyautogui.mouseDown(button="left")
 
-        pyautogui.moveTo(x=x_end, y=y_end, duration=1)
+        pyautogui.moveTo(x=x_end, y=y_end)
 
         if not desactivate_scroll:
             self.scroll_chat_area(
@@ -1370,6 +1447,7 @@ class Bot:
                             # self.move_to_chat()
                             self.take_screenshot()
                             await self.review_chat()
+                            self.was_handled_overflow = False
                             print("salio del chat review")
                             self.scroll_chat_area(direction='down',
                                                    scroll_move=self.scroll_reference)
