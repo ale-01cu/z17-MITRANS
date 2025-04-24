@@ -1,4 +1,3 @@
-import CommentsSkeleton from "./comments-skeleton";
 import CommentsCrud from "./comments-crud";
 
 

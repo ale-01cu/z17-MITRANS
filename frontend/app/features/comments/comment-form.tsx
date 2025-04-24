@@ -4,8 +4,7 @@ import { Button } from "~/components/ui/button"
 import { Textarea } from "~/components/ui/textarea"
 import { Label } from "~/components/ui/label"
 import { DialogFooter } from "~/components/ui/dialog"
-import type { Comment, User, CommentServerResponse } from "~/types/comments"
-import type { Source } from "~/types/source"
+import type { CommentServerResponse } from "~/types/comments"
 import SourceSelector from "~/components/source/sources-selector"
 import { Input } from "~/components/ui/input"
 import { Loader2, Plus, TextSelect } from "lucide-react"
@@ -92,7 +91,7 @@ export default function CommentForm({ comment, onSubmit, onCancel }: CommentForm
             id="texto"
             value={formData.text}
             onChange={(e) => handleChange("text", e.target.value)}
-            placeholder="Ingrese el texto del comentario"
+            placeholder="Ingrese el texto de la Opinión"
             className={errors.text ? "border-red-500" : ""}
             rows={4}
           />

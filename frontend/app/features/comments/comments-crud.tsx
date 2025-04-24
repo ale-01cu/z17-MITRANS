@@ -19,6 +19,13 @@ import { useSearchParams } from "react-router"
 import ClassifyBtnByCommentId from "~/components/classification/classify-btn-by-comment-id"
 import useIsConsultant from "~/hooks/useIsConsultant"
 import ClassificationsSelector from "~/components/classification/classifications-selector"
+import { toast } from "sonner"
+import { useDebounce } from '@uidotdev/usehooks'
+import TimeSelector from "~/components/time-selector"
+import DatePickerWithRange from "~/components/date-picker-with-range"
+import ExportToExcelBtn from "./export-to-excel-btn"
+import ExportAllToExcelBtn from "./export-all-to-excel-btn"
+import ImportFromExcelDialog from "./import-from-excel-dialog"
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
@@ -38,6 +45,9 @@ export default function CommentsCrud() {
   const currentPage = Number(searchParams.get("page") || 1)
   const isConsultant = useIsConsultant()
   const [ classificationSelected, setClassificationSelected ] = useState<string | null>(null)
+  const debounceSearchTerm = useDebounce(searchTerm, 200)
+  const [ newCommentCounter, setNewCommentCounter ] = useState(0)
+  const [ lastHours, setLastHours ] = useState<string | undefined>()
 
   useEffect(() => {
       setIsLoading(true)
@@ -57,14 +67,15 @@ export default function CommentsCrud() {
   }, [currentPage])
 
   useEffect(() => {
-    const term = searchTerm?.toLowerCase() || ""
+    const term = debounceSearchTerm?.toLowerCase() || ""
 
     listCommentsApi({ 
       query: term, 
       sourceId: selectedSource === 'all' ? '' : selectedSource, 
       userOwnerId: selectedUser === 'all' ? '' : selectedUser,
       classificationName: classificationSelected === 'all' ? '' : classificationSelected,
-      page: currentPage
+      page: currentPage,
+      lastHours: lastHours === 'all' ? '' : lastHours
     })
       .then(data => {
         setFilteredComments(data.results)
@@ -72,7 +83,12 @@ export default function CommentsCrud() {
       })
       .catch(e => console.error(e))
       
-  }, [comments, selectedUser, selectedSource, searchTerm, currentPage, classificationSelected])
+  }, [
+    comments, selectedUser, 
+    selectedSource, debounceSearchTerm, 
+    currentPage, classificationSelected,
+    lastHours
+  ])
 
   useEffect(() => {
     setFilteredComments(prev => 
@@ -86,10 +102,15 @@ export default function CommentsCrud() {
   const handleCreateComment = async (data: Omit<Comment, "id">) => {
     try {
       const newComment = await createCommentApi(data)
+      toast.success('Nueva Opinión creada correctamente.')
       setComments((prev) => [...prev, newComment])
       setIsCreateOpen(false)
+      setNewCommentCounter(prev => prev+=1)
+
     } catch (error) {
+      toast.error('Ocurrio un error al crear la Opinión.')
       console.error("Error creating comment:", error)
+      
     }
   }
 
@@ -97,6 +118,7 @@ export default function CommentsCrud() {
     try {
       await updateCommentApi(data)
         .then(data => {
+          toast.success('Se ha actualizado correctamente.')
           setComments(prev => {
             return prev.map(comment => 
                 comment.id === data.id ? data : comment
@@ -107,6 +129,7 @@ export default function CommentsCrud() {
         .catch(e => console.error(e))
 
     } catch (error) {
+      toast.error('Ocurrio un error al actualizar la Opinión.')
       console.error("Error updating comment:", error)
     }
   }
@@ -123,6 +146,10 @@ export default function CommentsCrud() {
       console.error("Error deleting comment:", error)
     
     } finally { setDeleteIsLoading(false) }
+  }
+
+  const handleSelectTime = (hours: string) => {
+    setLastHours(hours)
   }
 
   const openEditDialog = (comment: CommentServerResponse) => {
@@ -165,7 +192,7 @@ export default function CommentsCrud() {
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar comentarios..."
+              placeholder="Buscar Opiniones..."
               className="pl-8 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -173,13 +200,14 @@ export default function CommentsCrud() {
           </div>
 
           {!isConsultant && <Button onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
-            <Plus className="h-4 w-4" /> Nuevo Comentario
+            <Plus className="h-4 w-4" /> Nueva Opinión
           </Button>}
 
           <UserOwnerSelector
             value={selectedUser}
             handleChange={setSelectedUser}
             className="w-full"
+            newCommentCounter={newCommentCounter}
             isFilter
           />
 
@@ -197,10 +225,27 @@ export default function CommentsCrud() {
             isFilter
           />
 
+          <TimeSelector
+            handleChange={handleSelectTime}
+            value={lastHours}
+            isFilter
+          />
+
+          {/* <DatePickerWithRange/> */}
+
+
           {!isConsultant && <ClassifyBtnByCommentId 
             comments={selectedComments}
             setComments={setSelectedComments}
           />}
+
+
+          <ExportToExcelBtn comments={selectedComments}/>
+
+          <ExportAllToExcelBtn/>
+
+          <ImportFromExcelDialog />
+
         </Card>
       </div>
       
@@ -208,8 +253,8 @@ export default function CommentsCrud() {
      {!isConsultant &&  <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Crear Nuevo Comentario</DialogTitle>
-            <DialogDescription>Complete el formulario para crear un nuevo comentario.</DialogDescription>
+            <DialogTitle>Crear Nueva Opinión</DialogTitle>
+            <DialogDescription>Complete el formulario para crear un nueva Opinión.</DialogDescription>
           </DialogHeader>
           <CommentForm
             onSubmit={handleCreateComment}
@@ -221,8 +266,8 @@ export default function CommentsCrud() {
       {!isConsultant && <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Editar Comentario</DialogTitle>
-            <DialogDescription>Modifique los campos para actualizar el comentario.</DialogDescription>
+            <DialogTitle>Editar Opinión</DialogTitle>
+            <DialogDescription>Modifique los campos para actualizar la opnion.</DialogDescription>
           </DialogHeader>
           {currentComment && (
             <CommentForm
@@ -233,14 +278,15 @@ export default function CommentsCrud() {
           )}
         </DialogContent>
       </Dialog>}
+      
 
       {!isConsultant && <DeleteConfirmation
         isOpen={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
         isLoading={deleteIsLoading}
         onConfirm={() => currentComment && handleDeleteComment(currentComment.id)}
-        title="Eliminar Comentario"
-        description="¿Está seguro que desea eliminar este comentario? Esta acción no se puede deshacer."
+        title="Eliminar Opinión"
+        description="¿Está seguro que desea eliminar esta Opinión? Esta acción no se puede deshacer."
       />}
     </div>
   )

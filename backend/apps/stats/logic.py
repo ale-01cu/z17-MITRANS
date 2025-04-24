@@ -7,13 +7,13 @@ from collections import defaultdict
 from django.utils import timezone
 
 CLASSIFICATION_COLORS = {
-    'criterio_general': "#3366FF", # Era "Neutral" en el ejemplo JS
-    'sugerencia': "#4DABFF",     # Era "Positivo"
-    'queja': "#3D85FF",         # Era "Negativo" (Puedes cambiarlo a un rojo/naranja si prefieres)
-    'pregunta': "#ADDDFF",       # Era "Preguntas"
-    'denuncia': "#CFEAFF",       # Era "Urgente"
+    'criterio_general': "#8C52FF", # Era "Neutral" en el ejemplo JS
+    'sugerencia': "#6FCF97",     # Era "Positivo"
+    'queja': "#FCE788",         # Era "Negativo" (Puedes cambiarlo a un rojo/naranja si prefieres)
+    'pregunta': "#4287F5",       # Era "Preguntas"
+    'denuncia': "#6C3483",       # Era "Urgente"
     # 'ofensa' no estaba en el ejemplo JS, asignamos uno o usamos default
-    'ofensa': "#FFC300",         # Asignando un color amarillo/naranja
+    'ofensa': "#FF4D4D",         # Asignando un color amarillo/naranja
     'default': "#CCCCCC"         # Color por defecto si falta alguna clasificación
 }
 
@@ -99,7 +99,6 @@ def get_comment_statistics_with_percentages(): # Renombrado para claridad
         classified_comments=Count('pk', filter=Q(classification__isnull=False)),
         unclassified_comments=Count('pk', filter=Q(classification__isnull=True)),
         urgent_comments=Count('pk', filter=Q(classification__name__in=urgent_classification_names)),
-        new_unread_comments=Count('pk', filter=Q(is_read=False)),
         # Cuenta comentarios creados desde hace un mes hasta ahora
         comments_last_month=Count('pk', filter=Q(created_at__gte=one_month_ago))
     )

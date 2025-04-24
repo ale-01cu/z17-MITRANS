@@ -5,7 +5,7 @@ const DashNav = () => {
     <TabsList>
       <TabsTrigger className="cursor-pointer" value="overview">General</TabsTrigger>
       <TabsTrigger className="cursor-pointer" value="urgent">Atencion urgente</TabsTrigger>
-      <TabsTrigger className="cursor-pointer" value="unclassified">Nuevos Comentarios</TabsTrigger>
+      <TabsTrigger className="cursor-pointer" value="unclassified">Nuevos Opiniones</TabsTrigger>
     </TabsList>
   );
 }

@@ -5,11 +5,11 @@ import { Badge } from "~/components/ui/badge";
 import { type CommentServerResponse } from "~/types/comments";
 import getUrgentCommentsApi from "~/api/comments/get-urgent-comments-api";
 import { useEffect, useState } from "react";
-import { formatUserFriendlyDate } from "~/utils";
+import { transformDate } from "~/utils";
 import { useSearchParams } from "react-router"
 
 
-const urgentOpinions = [
+const urgentOpinións = [
   {
     id: "urg-1",
     text: "El sitio web está completamente caído y los clientes no pueden realizar pedidos. Esto está causando una pérdida significativa de ingresos.",
@@ -103,20 +103,20 @@ const UrgentComments = () => {
               <Loader2 className="w-6 h-6 animate-spin"/>
             </div>
           }
-          {comments?.map((opinion) => (
-            <div key={opinion.id} className="flex items-start gap-4 rounded-lg border p-3">
+          {comments?.map((Opinión) => (
+            <div key={Opinión.id} className="flex items-start gap-4 rounded-lg border p-3">
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium leading-none">{opinion.user_owner?.name || "Desconocido"}</p>
+                  <p className="text-sm font-medium leading-none">{Opinión.user_owner?.name || "Desconocido"}</p>
                   <Badge variant="outline" className="ml-auto">
                     <AlertCircle className="mr-1 h-3 w-3 text-orange-500" />
                     Urgente
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{opinion.text}</p>
+                <p className="text-sm text-muted-foreground">{Opinión.text}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{formatUserFriendlyDate(opinion.created_at)}</span>
+                  <span>{transformDate(Opinión.created_at)}</span>
                 </div>
               </div>
             </div>

@@ -13,6 +13,8 @@ export const API_USER_ME = '/auth/users/me/'
 
 
 export const API_COMMENTS = "/api/comment/"
+export const API_COMMENTS_UPLOAD = "/api/comment/upload/"
+export const API_COMMENTS_EXPORT_TO_EXCEL = "/api/comment/export-to-excel/"
 export const API_CREATE_COMMENT_LIST = "/api/comment/create-list/"
 export const API_SOURCE = "/api/source/"
 export const API_USER_OWNER = "/api/user-owner"

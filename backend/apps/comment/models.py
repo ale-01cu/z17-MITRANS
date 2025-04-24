@@ -15,8 +15,7 @@ class Comment(models.Model):
         editable=False,
         verbose_name="ID externo"
     )
-    text = models.CharField(
-        max_length=200,
+    text = models.TextField(
         verbose_name="Comentario"
     )
     user = models.ForeignKey(
@@ -57,11 +56,6 @@ class Comment(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Fecha de creación"
-    )
-
-    is_read = models.BooleanField(
-        default=False,
-        verbose_name="Leído"
     )
 
     history = HistoricalRecords()

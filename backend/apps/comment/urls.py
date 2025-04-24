@@ -2,7 +2,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CommentAPIView, GetCommentsFromExcelView,
     CreateCommentsView, ClassificationsByCommentsView,
-    NewCommentsListView, UrgentCommentsView
+    NewCommentsListView, UrgentCommentsView,
+    ExportCommentsExcel
 )
 from django.urls import path
 
@@ -15,4 +16,5 @@ urlpatterns = [
     path('classifications/', ClassificationsByCommentsView.as_view(), name='classifications-by-comments'),
     path('unread/', NewCommentsListView.as_view(), name='unread-comments-list'),
     path('urgent/', UrgentCommentsView.as_view(), name='urgent-comments'),
+    path('export-to-excel/', ExportCommentsExcel.as_view(), name='export-comments-excel'),
 ] + router.urls

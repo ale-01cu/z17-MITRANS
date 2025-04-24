@@ -7,7 +7,8 @@ interface Params {
   userOwnerId?: string,
   sourceId?: string,
   classificationName?: string | null,
-  page?: number
+  page?: number,
+  lastHours?: string
 }
 
 interface Response {
@@ -18,10 +19,10 @@ interface Response {
   pages: number
 }
 
-const PAGE_SIZE = 100
+const PAGE_SIZE = 30
 
 export default async function listCommentsApi(
-  { query, userOwnerId, sourceId, classificationName, page }: Params = {}): Promise<Response> 
+  { query, userOwnerId, sourceId, classificationName, page, lastHours }: Params = {}): Promise<Response> 
 {
   const response = await Axios.get(API_COMMENTS, { 
     params: { 
@@ -30,7 +31,8 @@ export default async function listCommentsApi(
       source__external_id: sourceId,
       classification__name: classificationName,
       page_size: PAGE_SIZE,
-      page
+      page,
+      last_hours: lastHours
     } 
   });
 

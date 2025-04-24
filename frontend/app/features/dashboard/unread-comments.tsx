@@ -4,10 +4,8 @@ import { Clock, Loader2 } from "lucide-react";
 import { type CommentServerResponse } from "~/types/comments";
 import getUnreadCommentsApi from "~/api/comments/get-unread-comments-api";
 import { useEffect, useState } from "react";
-import { formatUserFriendlyDate } from "~/utils";
+import { transformDate, getClassificationColor } from "~/utils";
 import { useSearchParams } from "react-router"
-import ClassifyBtnByCommentId from "~/components/classification/classify-btn-by-comment-id";
-import useIsSuperuser from "~/hooks/useIsSuperuser";
 
 const UnReadComments = () => {
   const [ comments, setComments ] = useState<CommentServerResponse[]>()
@@ -16,7 +14,6 @@ const UnReadComments = () => {
   const [ isLoading, setIsLoading ] = useState<boolean>(false)
   const [ isLoadingMore, setIsLoadingMore ] = useState<boolean>(false)
   const [ hasMore, setHasMore ] = useState<boolean>(false)
-  const isSuperuser = useIsSuperuser()
 
   useEffect(() => {
     setIsLoading(true)
@@ -59,16 +56,10 @@ const UnReadComments = () => {
     <Card className="w-full">
       <CardHeader className="flex justify-between">
         <div className="">
-          <CardTitle>Comentarios sin revisar</CardTitle>
-          <CardDescription>Comentarios nuevos que no han sido revisados</CardDescription>
+          <CardTitle>Opiniones recientes</CardTitle>
+          <CardDescription>Opiniones nuevas que no han sido revisados</CardDescription>
         </div>
 
-        {isSuperuser && <div className="flex gap-2 w-64">
-          <ClassifyBtnByCommentId
-            comments={comments || []}
-            setComments={setComments}
-          />
-        </div>}
       </CardHeader>
       <CardContent className="w-full">
         <div className="space-y-4 w-full">
@@ -77,21 +68,21 @@ const UnReadComments = () => {
               <Loader2 className="w-6 h-6 animate-spin"/>
             </div>
           }
-          {comments?.map((opinion) => (
-            <div key={opinion.id} className="flex items-start gap-4 rounded-lg border p-3">
+          {comments?.map((Opinión) => (
+            <div key={Opinión.id} className="flex items-start gap-4 rounded-lg border p-3">
               <div className="flex-1 space-y-1">
-                <p className="text-sm font-medium leading-none">{opinion?.user?.username}</p>
-                <p className="text-sm text-muted-foreground">{opinion.text}</p>
+                <p className="text-sm font-medium leading-none">{Opinión?.user?.username}</p>
+                <p className="text-sm text-muted-foreground">{Opinión.text}</p>
                 {
-                  opinion?.classification && (
-                    <div className="text-sm font-semibold">
-                      Clasificación: {opinion.classification?.name}
+                  Opinión?.classification && (
+                    <div className="text-white rounded-lg text-xs p-2 text-center max-w-48" style={{ background: getClassificationColor(Opinión.classification.name) }}>
+                      {Opinión.classification?.name}
                     </div>
                   )
                 }
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{formatUserFriendlyDate(opinion.created_at)}</span>
+                  <span>{transformDate(Opinión.created_at)}</span>
                 </div>
               </div>
 

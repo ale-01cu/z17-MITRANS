@@ -38,8 +38,8 @@ const CommentClassification = ({ data }: Props) => {
   return (
     <Card className="lg:col-span-3">
       <CardHeader>
-        <CardTitle>Clasificación de Comentarios</CardTitle>
-        <CardDescription>Distribución de comentarios por tipo de clasificación</CardDescription>
+        <CardTitle>Clasificación de Opiniones</CardTitle>
+        <CardDescription>Distribución de Opiniones por tipo de clasificación</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={300}>

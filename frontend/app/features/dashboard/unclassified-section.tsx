@@ -2,7 +2,7 @@ import { Card, CardTitle, CardDescription, CardContent, CardHeader } from "~/com
 import { Button } from "~/components/ui/button";
 import { Clock } from "lucide-react";
 
-const unclassifiedOpinions = [
+const unclassifiedOpinións = [
   {
     id: "uncl-1",
     text: "He estado usando el producto durante una semana y no estoy seguro de que esté cumpliendo mis expectativas.",
@@ -45,8 +45,8 @@ const UnclassifiedSection = () => {
     <Card>
       <CardHeader className="flex justify-between">
         <div className="">
-          <CardTitle>Comentarios sin clasificar</CardTitle>
-          <CardDescription>Comentarios que aun no han sido clasificados</CardDescription>
+          <CardTitle>Opiniones sin clasificar</CardTitle>
+          <CardDescription>Opiniones que aun no han sido clasificados</CardDescription>
         </div>
 
         <div className="flex gap-2">
@@ -57,14 +57,14 @@ const UnclassifiedSection = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {unclassifiedOpinions.map((opinion) => (
-            <div key={opinion.id} className="flex items-start gap-4 rounded-lg border p-3">
+          {unclassifiedOpinións.map((Opinión) => (
+            <div key={Opinión.id} className="flex items-start gap-4 rounded-lg border p-3">
               <div className="flex-1 space-y-1">
-                <p className="text-sm font-medium leading-none">{opinion.user}</p>
-                <p className="text-sm text-muted-foreground">{opinion.text}</p>
+                <p className="text-sm font-medium leading-none">{Opinión.user}</p>
+                <p className="text-sm text-muted-foreground">{Opinión.text}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{opinion.date}</span>
+                  <span>{Opinión.date}</span>
                 </div>
               </div>
             </div>

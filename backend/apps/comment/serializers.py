@@ -7,6 +7,7 @@ from apps.comment_user_owner.serializers import UserOwnerSerializer
 from apps.source.serializers import SourceSerializer
 from apps.classification.serializers import ClassificationSerializer
 from apps.classification.models import Classification
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -36,16 +37,17 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'classification',
                   'user', 'created_at', 'user_owner_id',
                   'user_owner_name', 'user_owner',
-                  'source_id', 'source', 'classification_id'
+                  'source_id', 'source', 'classification_id', 'external_id'
                   ]
 
         read_only_fields = ['id', 'created_at', 'user',
                             'user_owner', 'source'
                             ]
 
-
     def get_id(self, obj):
-        return obj.external_id
+        if isinstance(obj, dict):
+            return obj.get('external_id')
+        return getattr(obj, 'external_id', None)  # Maneja caso None seguro
 
 
     def create(self, validated_data):
@@ -85,7 +87,7 @@ class CommentSerializer(serializers.ModelSerializer):
         if classification_id:
             try:
                 classification = Classification.objects.get(external_id=classification_id)
-            except classification.DoesNotExist:
+            except Classification.DoesNotExist:
                 raise serializers.ValidationError(
                     "Clasificacón no encontrada con el external_id proporcionado.")
         else: classification = None
@@ -163,22 +165,28 @@ class CommentSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        if instance.source_id:
+        # Si es un diccionario (durante validación)
+        if isinstance(instance, dict):
+            return representation
+
+        # Si es una instancia del modelo (durante serialización normal)
+        if getattr(instance, 'source_id', None):
             representation['source_detail'] = SourceSerializer(
                 Source.objects.get(id=instance.source_id)).data
-        else: representation['source_detail'] = None
+        else:
+            representation['source_detail'] = None
 
-        if instance.user_owner_id:
+        if getattr(instance, 'user_owner_id', None):
             representation['user_owner'] = UserOwnerSerializer(
                 UserOwner.objects.get(id=instance.user_owner_id)).data
+        else:
+            representation['user_owner'] = None
 
-        else: representation['user_owner'] = None
-
-        if instance.classification_id:
+        if getattr(instance, 'classification_id', None):
             representation['classification'] = ClassificationSerializer(
-                Classification.objects.get(id=instance.classification_id)
-            ).data
-        else: representation['classification'] = None
+                Classification.objects.get(id=instance.classification_id)).data
+        else:
+            representation['classification'] = None
 
         return representation
 
@@ -193,3 +201,14 @@ class ClassificationsByCommentsSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         allow_empty=False
     )
+
+
+class CommentFromExcelSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    text = serializers.CharField()
+    source = serializers.CharField()
+    user = serializers.CharField(required=False, allow_null=True)
+    user_owner = serializers.CharField(required=False, allow_null=True)
+    classification_id = serializers.CharField(required=False, allow_null=True)
+    classification_name = serializers.CharField(required=False, allow_null=True)
+    created_at = serializers.DateTimeField(required=False, allow_null=True)

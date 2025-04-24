@@ -2,13 +2,13 @@
 FROM node:20-alpine AS development-dependencies-env
 COPY . /app
 WORKDIR /app
-RUN npm ci
+RUN npm ci --force
 
 # Etapa 2: Dependencias de producción
 FROM node:20-alpine AS production-dependencies-env
 COPY ./package.json package-lock.json /app/
 WORKDIR /app
-RUN npm ci --omit=dev
+RUN npm ci --force --omit=dev
 
 # Etapa 3: Build
 FROM node:20-alpine AS build-env
@@ -25,7 +25,8 @@ COPY --from=build-env /app/build /app/build
 WORKDIR /app
 
 # Instalar serve para servir archivos estáticos
-RUN npm install serve --save-prod
+RUN npm install serve --force --save-prod
+RUN npm install -g npx --force
 
 # Comando para servir los archivos estáticos
-CMD ["npx", "serve", "-s", "build/client"]
+CMD ["npx", "serve", "-s", "build/client", "-l", "5173", "--no-clipboard"]

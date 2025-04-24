@@ -1,6 +1,10 @@
-from apps.comment.serializers import CommentSerializer, FileUploadSerializer, ClassificationsByCommentsSerializer
+from django.http import HttpResponse
+from apps.comment.serializers import (
+    CommentSerializer, FileUploadSerializer,
+    ClassificationsByCommentsSerializer, CommentFromExcelSerializer
+)
 from rest_framework import viewsets, filters, generics
-from rest_framework.views import status, Response
+from rest_framework.views import status, Response, APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -12,8 +16,17 @@ from django.db.models import Count
 from apps.classification.models import Classification
 from apps.source.models import Source
 from rest_framework.generics import ListAPIView
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
+from django.utils.timezone import now
+from openpyxl import Workbook
+import uuid
+import logging
+from typing import Dict, Any, List, Optional
+from rest_framework.request import Request
+from django.core.exceptions import ObjectDoesNotExist
+logger = logging.getLogger(__name__)
+
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
@@ -29,6 +42,9 @@ class CommentAPIView(viewsets.ModelViewSet):
         'text',
         'post__content',
         'classification__name',
+        'user_owner__name',
+        'source__name',
+        'created_at',
         # 'user_owner_id',
         # 'source_id',
     ]
@@ -43,45 +59,246 @@ class CommentAPIView(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    def get_queryset(self):
+        # Obtener el parámetro de horas desde la solicitud
+        hours = self.request.query_params.get('last_hours')
+        if hours:
+            try:
+                hours = int(hours)
+                # Calcular la fecha y hora hace X horas
+                time_threshold = now() - timedelta(hours=hours)
+                # Filtrar comentarios creados después de esa fecha
+                return self.queryset.filter(created_at__gte=time_threshold)
+            except ValueError:
+                pass  # Ignorar si el parámetro no es un número válido
+        return self.queryset
 
-class GetCommentsFromExcelView(GenericAPIView):
+
+REQUIRED_FIELDS: List[str] = ['Comentario', 'Fuente']
+OPTIONAL_FIELDS_MAPPING: Dict[str, str] = {
+    'id': 'ID',
+    'text': 'Comentario',
+    'source': 'Fuente',
+    'user': 'Usuario',
+    'user_owner': 'Usuario Propietario',
+    'classification': 'Clasificación',
+    'created_at': 'Fecha de creación',
+}
+
+
+class GetCommentsFromExcelView(APIView):
+    """
+    API View para cargar un archivo Excel, extraer comentarios y devolverlos
+    en formato JSON después de validarlos.
+    """
     serializer_class = FileUploadSerializer
     parser_classes = [MultiPartParser]
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        file_upload_serializer = self.get_serializer(data=request.data)
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        Maneja la solicitud POST para procesar el archivo Excel cargado.
+
+        Args:
+            request: El objeto de solicitud HTTP.
+
+        Returns:
+            Una respuesta HTTP con los comentarios validados o un error.
+        """
+        # 1. Validar el archivo cargado
+        file_upload_serializer = FileUploadSerializer(data=request.data)
         if not file_upload_serializer.is_valid():
-            return Response(file_upload_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            logger.warning(f"Validación de carga de archivo fallida: {file_upload_serializer.errors}")
+            return Response(
+                {"detail": "Error en la carga del archivo.", "errors": file_upload_serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         file = file_upload_serializer.validated_data['file']
 
         try:
-            df = pd.read_excel(file)
-            columns = df.columns
-
-            if 'text' not in columns:
+            # 2. Leer el archivo Excel
+            # Añadir 'engine='openpyxl'' si sólo se soportan archivos .xlsx
+            try:
+                # Intentar leer como flotante para detectar mejor números como IDs
+                df = pd.read_excel(file, dtype=str)
+                # Reemplazar NaN (que puede venir de celdas vacías) por None o strings vacíos donde sea apropiado
+                df = df.fillna("")
+            except (pd.errors.ParserError, ValueError, ImportError, Exception) as e:
+                # Captura errores comunes de lectura/parseo de pandas o dependencias faltantes (xlrd, openpyxl)
+                logger.error(f"Error al leer el archivo Excel: {e}", exc_info=True)
                 return Response(
-                    {"detail": Errors.COMMENT_NOT_FOUND},
+                    {
+                        "detail": f"No se pudo leer el archivo Excel. Asegúrate de que el formato es correcto y no está corrupto. Error: {type(e).__name__}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            comments = [{'text': row.get('text', "")}
-                        for _, row in df.iterrows()
-                        ]
+            logger.info(f"Archivo Excel leído correctamente. Columnas: {df.columns.tolist()}")
 
-            comment_serializer = CommentSerializer(data=comments, many=True)
+            # 3. Verificar que los campos obligatorios estén presentes
+            missing_fields = [field for field in REQUIRED_FIELDS if field not in df.columns]
+            if missing_fields:
+                logger.warning(f"Faltan columnas obligatorias en el archivo: {missing_fields}")
+                return Response(
+                    {
+                        "detail": f"Los siguientes campos obligatorios faltan en el archivo Excel: {', '.join(missing_fields)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 4. Convertir el DataFrame a una lista de diccionarios
+            comments_data: List[Dict[str, Any]] = []
+            for index, row in df.iterrows():
+                try:
+                    comment_id = row.get(OPTIONAL_FIELDS_MAPPING['id'], None)
+                    # Asegurar que el ID sea siempre un string, incluso si viene como número
+                    comment_id_str = str(comment_id).strip() if comment_id and str(comment_id).strip() else None
+
+                    if not comment_id_str:
+                        comment_id_str = str(uuid.uuid4())
+
+                    classification_name = str(row.get(OPTIONAL_FIELDS_MAPPING['classification'], "")).strip()
+                    classification_obj: Optional[Classification] = None  # Start with None
+
+                    if classification_name:  # Only lookup if name exists
+                        try:
+                            # --- Database Lookup ---
+                            classification_obj = Classification.objects.get(name__iexact=classification_name)
+                            # print(f"Fila {row_number}: Clasificación encontrada: {classification_obj}") # Optional debug print
+
+                        except ObjectDoesNotExist:
+                            error_msg = f"La clasificación '{classification_name}' no existe en la base de datos."
+                            logger.warning(error_msg)
+                            return Response({"detail": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+                        except Exception as e:
+                            logger.error(
+                                f"Error buscando clasificación '{classification_name}'",
+                                exc_info=True)
+                            return Response(
+                                {"detail": f"Error interno al buscar la clasificación"},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                    comment_data = {
+                        'id': comment_id_str,
+                        'text': str(row.get(OPTIONAL_FIELDS_MAPPING['text'], "")).strip(),
+                        # Asegurar string y quitar espacios
+                        'source': str(row.get(OPTIONAL_FIELDS_MAPPING['source'], "")).strip(),
+                        # Asegurar string y quitar espacios
+                        'user': str(row.get(OPTIONAL_FIELDS_MAPPING['user'])) if row.get(
+                            OPTIONAL_FIELDS_MAPPING['user']) else None,
+                        'user_owner': str(row.get(OPTIONAL_FIELDS_MAPPING['user_owner'])) if row.get(
+                            OPTIONAL_FIELDS_MAPPING['user_owner']) else None,
+                        'classification_id': classification_obj.external_id if classification_obj else None,
+                        'classification_name': classification_obj.name if classification_obj else None,
+                        'created_at': row.get(OPTIONAL_FIELDS_MAPPING['created_at']) or None,
+                        # Aceptar varios formatos de 'vacío'
+                    }
+                    comments_data.append(comment_data)
+
+                except (KeyError, AttributeError, TypeError) as e:
+                    # Captura errores si una columna esperada (incluso opcional) causa problemas al accederla o convertirla
+                    logger.error(f"Error procesando la fila {index + 2} del Excel: {e}. Data: {row.to_dict()}",
+                                 exc_info=True)
+                    return Response(
+                        {
+                            "detail": f"Error al procesar los datos en la fila {index + 2} del archivo Excel. Verifique los tipos de datos y el contenido. Error: {type(e).__name__}"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            if not comments_data:
+                logger.info("El archivo Excel no contiene filas de datos procesables.")
+                return Response(
+                    {"detail": "El archivo Excel está vacío o no contiene datos válidos."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # 5. Validar los datos extraídos con el serializador de comentarios
+            comment_serializer = CommentFromExcelSerializer(data=comments_data, many=True)
             if not comment_serializer.is_valid():
-                raise Exception(Errors.INTERNAL_SERVER_ERROR)
+                logger.warning(f"Validación de datos de comentarios fallida: {comment_serializer.errors}")
+                # Podrías querer mostrar sólo el primer error o un resumen
+                # error_detail = next(iter(comment_serializer.errors.values()))[0] if comment_serializer.errors else "Error desconocido"
+                return Response(
+                    {"detail": "Los datos extraídos del Excel no son válidos.", "errors": comment_serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-            return Response(comment_serializer.data,
-                            status=status.HTTP_201_CREATED
-                            )
+            # 6. Devolver los datos validados
+            logger.info(f"Procesados {len(comment_serializer.data)} comentarios exitosamente.")
+            return Response(comment_serializer.data, status=status.HTTP_201_CREATED)  # Mantenido 201 como solicitado
 
         except Exception as e:
+            # Captura cualquier otro error inesperado
+            logger.exception(
+                f"Error interno inesperado al procesar el archivo Excel: {e}")  # logger.exception incluye traceback
             return Response(
-                {"detail": Errors.INTERNAL_SERVER_ERROR},
-                status=status.HTTP_400_BAD_REQUEST,
+                {
+                    "detail": "Ocurrió un error interno en el servidor al procesar el archivo. Por favor, contacte al administrador."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class ExportCommentsExcel(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Obtener el parámetro opcional 'ids' de la solicitud
+        ids_param = request.query_params.get('ids', None)
+
+        # Filtrar los comentarios según los IDs proporcionados o obtener todos
+        if ids_param:
+            try:
+                # Convertir los IDs de cadena separada por comas a una lista de enteros
+                ids_list = list(ids_param.split(','))
+                comments = CommentSerializer.Meta.model.objects.filter(external_id__in=ids_list)
+            except ValueError:
+                print("Error: Los IDs deben ser números enteros separados por comas.")
+                # Manejar el caso en que los IDs no sean números válidos
+                return Response({"error": "Los IDs deben ser números enteros separados por comas."}, status=400)
+        else:
+            # Si no se proporcionan IDs, obtener todos los comentarios
+            comments = CommentSerializer.Meta.model.objects.all()
+
+        # Serializar los comentarios
+        serializer = CommentSerializer(comments, many=True)
+
+        # Crear el libro de Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Comentarios"
+
+        # Escribir los encabezados
+        headers = [
+            "ID", "Comentario", "Usuario",
+            "Usuario Propietario", "Clasificación",
+            "Fuente", "Fecha de creación"
+        ]
+        ws.append(headers)
+
+        # Escribir los datos
+        for comment in serializer.data:
+            print("comment: ", comment)
+            ws.append([
+                comment['id'],
+                comment['text'],
+                comment['user']['username'] if comment['user'] is not None else None,
+                comment['user_owner']['name'] if comment['user_owner'] is not None else None,
+                comment['classification']['name'] if comment['classification'] is not None else None,
+                comment['source']['name'],
+                comment['created_at'],
+            ])
+
+        # Configurar la respuesta HTTP
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"comentarios_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+
+        # Guardar el libro de Excel en la respuesta
+        wb.save(response)
+
+        return response
 
 
 class CreateCommentsView(GenericAPIView):
@@ -90,29 +307,29 @@ class CreateCommentsView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        # try:
-        comments_serializer = CommentSerializer(data=request.data, many=True)
+        try:
+            comments_serializer = CommentSerializer(data=request.data, many=True)
 
-        if comments_serializer.is_valid():
-            user = request.user
-            source = Source.objects.get(name='Messenger')
-            comments = comments_serializer.save(user=user, source_id=source.external_id)
+            if comments_serializer.is_valid():
+                user = request.user
+                source = Source.objects.get(name='Messenger')
+                comments = comments_serializer.save(user=user, source_id=source.external_id)
 
-            response_serializer = CommentSerializer(comments, many=True)
-            return Response(response_serializer.data,
-                            status=status.HTTP_201_CREATED
-                            )
-        else:
-            return Response(comments_serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST
-                            )
+                response_serializer = CommentSerializer(comments, many=True)
+                return Response(response_serializer.data,
+                                status=status.HTTP_201_CREATED
+                                )
+            else:
+                return Response(comments_serializer.errors,
+                                status=status.HTTP_400_BAD_REQUEST
+                                )
 
-        # except Exception as e:
-        #     print("CreateCommentsView Error: " + e.__str__())
-        #     return Response(
-        #         {"detail": Errors.INTERNAL_SERVER_ERROR},
-        #         status=status.HTTP_400_BAD_REQUEST,
-        #     )
+        except Exception as e:
+            print("CreateCommentsView Error: " + e.__str__())
+            return Response(
+                {"detail": Errors.INTERNAL_SERVER_ERROR},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class ClassificationsByCommentsView(GenericAPIView):
@@ -145,7 +362,6 @@ class ClassificationsByCommentsView(GenericAPIView):
             )
 
 
-
 class NewCommentsListView(generics.ListAPIView):
     """
     Vista para listar comentarios no leídos creados en las últimas 24 horas.
@@ -156,12 +372,11 @@ class NewCommentsListView(generics.ListAPIView):
     def get_queryset(self):
         # Calcula la fecha y hora de hace 24 horas
         now = timezone.now()
-        twenty_four_hours_ago = now - timedelta(hours=24)
+        twenty_four_hours_ago = now - timedelta(hours=72)
 
         # Filtra comentarios no leídos Y creados desde hace 24 horas
         queryset = CommentSerializer.Meta.model.objects.filter(
-            is_read=False,
-            created_at__gte=twenty_four_hours_ago # __gte significa "greater than or equal to"
+            created_at__gte=twenty_four_hours_ago  # __gte significa "greater than or equal to"
         )
 
         # Obtiene los parámetros opcionales de la URL
@@ -185,7 +400,7 @@ class UrgentCommentsView(ListAPIView):
     API View para listar comentarios clasificados como 'pregunta' o 'denuncia'.
     """
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated] # Requiere autenticación
+    permission_classes = [IsAuthenticated]  # Requiere autenticación
     pagination_class = ResultsSetPagination
 
     def get_queryset(self):
@@ -197,7 +412,11 @@ class UrgentCommentsView(ListAPIView):
 
         # Filtra los comentarios cuya clasificación relacionada (FK)
         # tiene un nombre que está en la lista 'urgent_classification_names'
+        now = timezone.now()
+        twenty_four_hours_ago = now - timedelta(hours=24)
+
         queryset = CommentSerializer.Meta.model.objects.filter(
+            created_at__gte=twenty_four_hours_ago,  # __gte significa "greater than or equal to"
             classification__name__in=urgent_classification_names
         )
 

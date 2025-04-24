@@ -12,7 +12,7 @@ interface Classification {
 interface Statement {
   id: string,
   text: string;          // El texto del statement
-  classification: Classification | null; // La clasificación (inicialmente vacía)
+  classification: Classification | string | null; // La clasificación (inicialmente vacía)
 }
 
 interface Props {
@@ -27,14 +27,17 @@ const SaveCommentsBtn = ({ comments }: Props) => {
     setIsLoading(true)
     createCommentListApi(comments.map(e => ({
       text: e.text,
-      classification_id: e.classification?.id || null
+      classification_id: 
+      typeof e.classification === 'string' ? e.classification :
+        e.classification?.id ? e.classification.id.toString() :
+        null
     })))
       .then(() => {
-        toast.success("Las opiniones han sido guardadas correctamente.")
+        toast.success("Las Opiniones han sido guardadas correctamente.")
       })
       .catch(e => {
         console.error(e)
-        toast.error('Ha ocurrido un error al guardar las opiniones.')
+        toast.error('Ha ocurrido un error al guardar las Opiniones.')
       })
       .finally(() => {
         setIsLoading(false)
@@ -56,7 +59,7 @@ const SaveCommentsBtn = ({ comments }: Props) => {
       ) : (
         <div className="flex items-center">
           <Send className="h-4 w-4 mr-2" />
-          Guardar opiniones
+          Guardar Opiniones
         </div>
       )}
     </Button>
