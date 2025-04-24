@@ -61,11 +61,12 @@ class Bot:
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = False
+        self.is_memory_active = True
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
         self.was_handled_overflow = False
+        self.messages_amount_limit = 10
 
     # =================================================== Web Socket connection (Start) =============================================================
     async def connect_websocket(self):
@@ -654,7 +655,7 @@ class Bot:
         self.move_to_chat()
 
         # self.show_contours(contours=possible_text_contours,
-        #     title="posible contornos de texts")
+        #     title=f"posible contornos de texts is_first_iter {is_first_iter}")
 
         if is_first_iter:
             first_text = possible_text_contours[0]
@@ -707,6 +708,8 @@ class Bot:
 
                 self.take_screenshot()
                 possible_text_contours = self.find_text_area_contours()
+                # self.show_contours(contours=possible_text_contours,
+                #                    title="Possible text contours dentro de get_texts_did_not_watched_list")
 
             else:
                 has_more = False
@@ -716,7 +719,7 @@ class Bot:
             iter_contours = enumerate(possible_text_contours[1:]) \
                 if is_first_iter else enumerate(possible_text_contours)
 
-            for i, contour in iter_contours:
+            for i, contour in enumerate(possible_text_contours):
                 # Comparar img_roi con la ultima referencia del texto visto por el current chat id
                 x, y, w, h = cv2.boundingRect(contour)
 
@@ -964,8 +967,10 @@ class Bot:
                                    scroll_steps=True
                                    ):
         # Caso cuando hay texto desbordado (tratamiento diferente)
+        # self.show_contours(contours=[chat_contour],
+        #                    title="chat area contour")
         result_image = self.repair_irregular_top_edge(
-            image=self.current_screenshot, contour=chat_contour)
+            image=self.current_screenshot, contour=chat_contour, offset2=100)
 
         contours_found = self.find_text_area_contours(image=result_image,
                                                     use_first_contour_reference=False,
@@ -1116,6 +1121,7 @@ class Bot:
         This function extracts the texts into chat contour as little contours.
         Each text is returned as a contour.
 
+        :param iterations:
         :param has_more: Flag to indicate if there are more texts to extract
         :param texts: Accumulated list of text contours
         :return: List of text contours
@@ -1128,7 +1134,7 @@ class Bot:
         if texts is None:
             texts = []
 
-        if not has_more:
+        if not has_more or len(texts) >= self.messages_amount_limit:
             return texts
 
         self.take_screenshot()
@@ -1157,7 +1163,7 @@ class Bot:
                 print("Se va a modificar la variable self.was_handled_overflow a True.................")
                 self.was_handled_overflow = True
                 scrolled = 0
-                if not has_more:
+                if not has_more or len(texts) >= self.messages_amount_limit:
                     return texts
             else:
                 break
@@ -1426,44 +1432,71 @@ class Bot:
                 #
                 # counter += 1
 
-                while True:
-                    chats = self.find_chat_references()
+                lookup_chats_counter = 0
+                order_chats_ids: List[str] = []
+                order_cursor = 0
 
-                    if chats is not None and len(chats) > 0:
-                        print("entra a iterar los chats...")
-                        for chat in chats:
-                            x, y, _, _ = cv2.boundingRect(chat)
+                chats = self.find_chat_references()
 
-                            chat_id = self.extract_chat_id(chat_ref=(x, y))
-                            self.click_chat(chat_ref=(x, y), duration=1)
+                # Obtener orden de referencia de chats a seguir
+                if lookup_chats_counter == 0:
+                    for chat in chats:
+                        x, y, _, _ = cv2.boundingRect(chat)
+                        chat_id = self.extract_chat_id(chat_ref=(x, y))
+                        order_chats_ids.append(chat_id)
 
-                            if chat_id:
-                                chat = self.chat_querys.get_chat_by_id_scraped(
-                                    id_scraped=chat_id)
 
-                                if not chat:
-                                    self.chat_querys.create_chat(id_scraped=chat_id)
+                lookup_chats_counter += 1
 
-                            # self.move_to_chat()
-                            self.take_screenshot()
-                            await self.review_chat()
-                            self.was_handled_overflow = False
-                            print("salio del chat review")
-                            self.scroll_chat_area(direction='down',
-                                                   scroll_move=self.scroll_reference)
-                            self.scroll_reference = 0
+                if chats is not None and len(chats) > 0:
+                    print("entra a iterar los chats...")
+                    for chat in chats:
+                        x, y, _, _ = cv2.boundingRect(chat)
 
-                            await asyncio.sleep(1)
-                            #
-                            # self.scroll_chats_area(direction='down', scroll_move=50)
-                            # await asyncio.sleep(1)
+                        chat_id = self.extract_chat_id(chat_ref=(x, y))
+                        chat_id_reference = order_chats_ids[order_cursor]
 
-                    else:
-                        print("salio del revisador de chats")
-                        # self.scroll_chats_area(direction='up',
-                        #                        scroll_move=self.chats_area_scroll_reference)
-                        break
+                        if chat_id != chat_id_reference:
+                            continue
 
+                        self.click_chat(chat_ref=(x, y), duration=1)
+
+                        if chat_id:
+                            chat = self.chat_querys.get_chat_by_id_scraped(
+                                id_scraped=chat_id)
+
+                            if not chat:
+                                self.chat_querys.create_chat(id_scraped=chat_id)
+
+                        # self.move_to_chat()
+                        self.take_screenshot()
+                        await self.review_chat()
+                        self.was_handled_overflow = False
+
+                        self.scroll_chat_area(direction='down',
+                                               scroll_move=self.scroll_reference)
+                        self.scroll_reference = 0
+
+                        await asyncio.sleep(1)
+                        chats = self.find_chat_references()
+                        order_cursor += 1
+
+
+                else:
+                    x, y, w, h = cv2.boundingRect(self.chats_reference)
+                    self.scroll_chats_area(direction='down', scroll_move=int(h * 0.70))
+                    # self.scroll_chats_area(direction='up',
+                    #                        scroll_move=self.chats_area_scroll_reference)
+                    order_chats_ids.clear()
+                    order_cursor = 0
+
+                    await asyncio.sleep(0.5)
+                    self.take_screenshot()
+                    await self.review_chat()
+                    self.was_handled_overflow = False
+                    self.scroll_chat_area(direction='down',
+                                          scroll_move=self.scroll_reference)
+                    self.scroll_reference = 0
 
                 # chats = self.find_chat_references()
 
