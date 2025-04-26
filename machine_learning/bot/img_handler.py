@@ -217,8 +217,12 @@ class ImgHandler:
         elif image is None:
             image = self.img
 
-        text = pytesseract.image_to_string(image, lang='spa')
+        custom_config = r'--oem 3 --psm 6 -l spa'
+        text = pytesseract.image_to_string(image, config=custom_config)
+
+        text = text.encode('utf-8').decode('utf-8').strip()
         return text
+
         # result = self.reader.readtext(
         #     self.result if not image else image, lang='spa')
         #

@@ -12,6 +12,11 @@ class Chat(Base):
 
     last_text = Column(String(500), nullable=True)
 
+    msg2 = Column(String(500), nullable=True)
+    msg3 = Column(String(500), nullable=True)
+    msg4 = Column(String(500), nullable=True)
+    msg5 = Column(String(500), nullable=True)
+
     last_text_index = Column(Integer, nullable=True)
 
     # URL de la imagen (puede ser opcional si quieres)
