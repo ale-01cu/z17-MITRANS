@@ -432,129 +432,44 @@ class Bot:
 
 
     def find_current_chat_id(self):
-        chat_contour = self.find_chat_area_contour()
-        result_image = self.repair_irregular_top_edge(
-            image=self.current_screenshot, contour=chat_contour, offset2=100)
-
-        self.show_contours(contours=[chat_contour], title='chat contour')
-
-        img_handler = ImgHandler(image=result_image)
+        img_handler = ImgHandler(image=self.current_screenshot)
         contours = img_handler.find_contours_by_large_contours_mask()
-        chats_contour = self.take_chats_container_contour()
-        possible_chat_contours = []
-        margin = 20
-        chat_id_contour = None
+        chat_id_contour = contours[0] if contours and len(contours) > 0 else None
 
+        if chat_id_contour is None: return None
 
-        # Find possible chat contour nearby | Tested
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
-            x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
 
-            if x < 50 or h < 20:
-                continue
+            x_target, y_target, w_target, h_target = cv2.boundingRect(chat_id_contour)
 
-            if abs(x - (x_chats + w_chats)) < margin:
-                possible_chat_contours.append(contour)
-
-        for contour in possible_chat_contours:
-            x, y, w, h = cv2.boundingRect(contour)
-
-            if chat_id_contour is None:
+            if w > w_target and y < y_target:
                 chat_id_contour = contour
-            else:
-                x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_id_contour)
-
-                if y < y_chat:
-                    chat_id_contour = contour
-
-        self.show_contours(image=result_image, contours=[chat_id_contour], title='chat id contour')
 
 
-        # contour_points = chat_id_contour.squeeze()
-        # y_coords = contour_points[:, 1]  # [y1, y2, y3, ...]
-        # y_reference  = np.percentile(y_coords, 90)  # Ajusta el percentil según necesidad
-        # # Filtrar puntos que no superen y_reference
-        # filtered_points = [point for point in contour_points if point[1] <= y_reference]
-        #
-        # # Convertir a formato OpenCV (array de shape N,1,2)
-        # chat_id_contour = np.array(filtered_points).reshape(-1, 1, 2).astype(np.int32)
+        x, y, w, h = cv2.boundingRect(chat_id_contour)
 
-        # x_coords = filtered_contour[:, 0, 0]
-        # left_x = np.min(x_coords)
-        # right_x = np.max(x_coords)
-        #
-        # # Añadir puntos para cerrar el contorno en y_reference
-        # bottom_left = np.array([[left_x, y_reference]], dtype=np.int32)
-        # bottom_right = np.array([[right_x, y_reference]], dtype=np.int32)
-        #
-        # # Concatenar con el contorno filtrado
-        # chat_id_contour = np.vstack([filtered_contour, bottom_right, bottom_left])
+        image = self.current_screenshot
 
-        # self.show_contours(contours=[chat_id_contour], title='chat id contour')
+        # Calculamos las coordenadas de la región de interés (ROI)
+        # Comienza donde termina el contorno (y + h) y tiene el mismo ancho (w) y altura (h)
+        roi_y_start = y + h
+        roi_y_end = roi_y_start + h  # Misma altura que el contorno
+        height, width = image.shape[:2]
 
-        final_crop = None  # Variable para guardar la imagen recortada final
+        # Calcular punto de inicio X al 30% del ancho de la imagen
+        roi_x_start = int(width * 0.2)  # 30% del ancho total
+        roi_x_end = x + int(w * 0.5)
 
-        if chat_id_contour is not None:
-            # Obtener el rectángulo delimitador original
-            x_orig, y_orig, w_orig, h_orig = cv2.boundingRect(chat_id_contour)
-            print(f"Contorno original encontrado: x={x_orig}, y={y_orig}, w={w_orig}, h={h_orig}")
+        # Aseguramos que no nos salgamos de los límites de la imagen
+        height, width = image.shape[:2]
+        roi_y_end = min(roi_y_end, height)
+        roi_x_end = min(roi_x_end, width)
 
-            # --- Paso A: Calcular 50% izquierdo ---
-            x_step1 = x_orig
-            y_step1 = y_orig
-            w_step1 = w_orig // 2
-            h_step1 = h_orig
-            print(f"  Paso A (50% izq): x={x_step1}, y={y_step1}, w={w_step1}, h={h_step1}")
+        # Extraemos la región de interés
+        roi = image[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
 
-            # --- Paso B: Omitir 10% izquierdo (del ancho ORIGINAL) ---
-            omit_width = int(w_orig * 0.05)  # Calcula el 10% del ancho original
-            x_step2 = x_step1 + omit_width  # Mueve el inicio a la derecha
-            y_step2 = y_step1  # La Y no cambia
-            w_step2 = w_step1 - omit_width  # Reduce el ancho
-            h_step2 = h_step1  # La altura no cambia
-            print(f"  Paso B (Omitir {omit_width}px izq): x={x_step2}, y={y_step2}, w={w_step2}, h={h_step2}")
-
-            # --- Paso C: Tomar 50% superior ---
-            x_step3 = x_step2  # La X no cambia
-            y_step3 = y_step2  # La Y de inicio no cambia
-            w_step3 = w_step2  # El ancho no cambia
-            h_step3 = int(h_step2 * 0.80)  # Reduce la altura a la mitad
-            print(f"  Paso C (50% sup): x={x_step3}, y={y_step3}, w={w_step3}, h={h_step3}")
-
-            image = self.current_screenshot
-
-            # --- Validación de coordenadas finales ---
-            if w_step3 > 0 and h_step3 > 0:
-                # Asegurarse de que las coordenadas no se salgan de la imagen (opcional pero seguro)
-                x_final = max(0, x_step3)
-                y_final = max(0, y_step3)
-                # Calcula los puntos finales teniendo en cuenta los límites de la imagen
-                x_end = min(image.shape[1], x_final + w_step3)
-                y_end = min(image.shape[0], y_final + h_step3)
-
-                # Recalcular ancho y alto final por si se recortó en los bordes
-                w_final = x_end - x_final
-                h_final = y_end - y_final
-
-                if w_final > 0 and h_final > 0:
-                    print(f"  Coordenadas finales para recorte: x={x_final}, y={y_final}, w={w_final}, h={h_final}")
-
-                    # --- Paso D: Recortar la imagen original ---
-                    # Se usa el slicing de NumPy: imagen[y_inicio:y_fin, x_inicio:x_fin]
-                    final_crop = image[y_final:y_end, x_final:x_end]
-
-                    print(f"  Imagen recortada con dimensiones: {final_crop.shape}")
-                else:
-                    print("  Error: El área calculada final tiene ancho o alto cero después de ajustar a límites.")
-            else:
-                print("  Error: El área calculada en el paso B o C tiene ancho o alto cero o negativo.")
-
-        else:
-            print("No se encontró el contorno inicial (possible_chat_contours podría estar vacío).")
-
-
-        img_hanlder = ImgHandler(image=final_crop)
+        img_hanlder = ImgHandler(image=roi)
         texts = img_hanlder.extract_text()
         chat_id = None
 
@@ -568,11 +483,10 @@ class Bot:
             return None
 
         self.current_chat_id = chat_id
-        # self.show_contours(image=final_crop, contours=[],
-        #                    title=f'chat id extracted {chat_id}')
+        self.show_contours(image=roi, contours=[],
+                           title=f'chat id extracted {chat_id}')
 
         return chat_id
-
 
 
     def find_text_area_contours(self, image = None, use_first_contour_reference = True, take_all_texts=False):
