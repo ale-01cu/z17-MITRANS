@@ -652,11 +652,19 @@ class ImgHandler:
 
         return False
 
+    def show_contours(self, contours, title: str = "title", image = None):
+        image_copy = self.img.copy() if image is None else image.copy()
+        cv2.drawContours(image_copy if image is None else image,
+                         contours, -1, (0, 255, 0), 3)
+        cv2.imshow(title, image_copy)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
 
     def compare_messenger_images_with_contours(self,
-                                                img_path1=None, img_data1=None,
-                                                img_path2=None, img_data2=None,
-                                                ignored_contours=[], threshold=10
+                                               img_path1=None, img_data1=None,
+                                               img_path2=None, img_data2=None,
+                                               ignored_contours=[], threshold=10
                                                ):
         """
         Compara dos imágenes ignorando regiones definidas por contornos de OpenCV.
@@ -664,130 +672,93 @@ class ImgHandler:
         Args:
             img_path1 (str): Ruta a la primera imagen.
             img_path2 (str): Ruta a la segunda imagen.
-            ignored_contours (list): Una lista de contornos de OpenCV. Cada contorno
-                                     es un array NumPy de puntos (e.g., [[x1, y1], [x2, y2],...]).
-                                     Las áreas dentro de estos contornos serán ignoradas.
-            threshold (int): Umbral de diferencia de píxeles permitido en las áreas
-                             no ignoradas. 0 significa igualdad exacta.
+            ignored_contours (list): Lista de contornos (arrays NumPy) que definen áreas a ignorar.
+            threshold (int): Umbral de diferencia permitida en píxeles (fuera de áreas ignoradas).
 
         Returns:
-            bool: True si las imágenes son consideradas iguales (ignorando las regiones),
-                  False en caso contrario.
-            numpy.ndarray: La imagen de diferencia (opcional, para visualización).
-            float: El puntaje de similitud SSIM (si scikit-image está disponible),
-                   de lo contrario 0.0.
+            bool: True si las imágenes son iguales (ignorando contornos), False en caso contrario.
+            numpy.ndarray: Imagen de diferencia (áreas no ignoradas).
+            float: Puntaje SSIM (si está disponible).
         """
+        # --- Carga de imágenes (código existente) ---
         img1 = None
         img2 = None
 
-        # --- Carga/Asignación de Imagen 1 ---
+        # Carga de imagen 1
         if img_data1 is not None:
             if isinstance(img_data1, np.ndarray):
-                # Usar datos directamente. Copiar para evitar modificar el original.
                 img1 = img_data1.copy()
-                # print("Usando datos proporcionados para Imagen 1.")
             else:
-                print("Error: img_data1 proporcionado pero no es un array NumPy válido.")
+                print("Error: img_data1 no es un array NumPy válido.")
                 return False, None, 0.0
         elif img_path1 is not None:
             img1 = cv2.imread(img_path1)
             if img1 is None:
-                print(f"Error: No se pudo cargar la imagen desde la ruta {img_path1}")
+                print(f"Error: No se pudo cargar {img_path1}")
                 return False, None, 0.0
-            print(f"Imagen 1 cargada desde {img_path1}.")
         else:
-            # Error: no se proporcionó ni ruta ni datos para la imagen 1
-            img1 = self.img.copy()
-            if isinstance(img1, np.ndarray):
-                # Usar datos directamente. Copiar para evitar modificar el original.
-                img1 = img1.copy()
-                # print("Usando datos proporcionados para Imagen 1.")
-            else:
-                print("Error: img1 proporcionado pero no es un array NumPy válido.")
+            img1 = self.img.copy() if isinstance(self.img, np.ndarray) else None
+            if img1 is None:
+                print("Error: No se proporcionó img1 válida.")
                 return False, None, 0.0
 
-        # --- Carga/Asignación de Imagen 2 ---
+        # Carga de imagen 2
         if img_data2 is not None:
             if isinstance(img_data2, np.ndarray):
                 img2 = img_data2.copy()
-#                 print("Usando datos proporcionados para Imagen 2.")
             else:
-                print("Error: img_data2 proporcionado pero no es un array NumPy válido.")
-                # Podríamos querer liberar img1 si fue cargado, pero Python GC lo hará
+                print("Error: img_data2 no es un array NumPy válido.")
                 return False, None, 0.0
         elif img_path2 is not None:
             img2 = cv2.imread(img_path2)
             if img2 is None:
-                print(f"Error: No se pudo cargar la imagen desde la ruta {img_path2}")
+                print(f"Error: No se pudo cargar {img_path2}")
                 return False, None, 0.0
-            print(f"Imagen 2 cargada desde {img_path2}.")
         else:
-            # Error: no se proporcionó ni ruta ni datos para la imagen 2
             raise ValueError("Debe proporcionar 'img_path2' o 'img_data2'.")
 
-        # Verificar si tienen las mismas dimensiones
+        # Verificación de dimensiones
         if img1.shape != img2.shape:
-            print("Img 1 shape: ", img1.shape)
-            print("Img 2 shape: ", img2.shape)
-            print("Error: Las imágenes tienen dimensiones diferentes.")
+            print(f"Error: Dimensiones diferentes - Img1: {img1.shape}, Img2: {img2.shape}")
             return False, None, 0.0
 
         height, width, _ = img1.shape
 
-        # --- Crear la Máscara ---
-        # Empezamos con una máscara blanca (todo se compara por defecto)
-        mask = np.full((height, width), 255, dtype=np.uint8)
+        # --- Creación de la máscara para ignorar contornos ---
+        mask = np.ones((height, width), dtype=np.uint8) * 255  # Máscara blanca inicial
 
-        # Dibujar los contornos a ignorar sobre la máscara, RELLENÁNDOLOS de negro (0)
-        # cv2.drawContours espera una lista de contornos.
-        # El índice -1 dibuja todos los contornos de la lista.
-        # El color 0 es negro.
-        # cv2.FILLED (-1) rellena el interior de los contornos.
-        # if ignored_contours:  # Solo dibujar si la lista no está vacía
-        #     cv2.drawContours(mask, ignored_contours, -1, color=0, thickness=cv2.FILLED)
+        if ignored_contours and ignored_contours is not None and len(ignored_contours) > 0:
+            # Crear máscara negra temporal para los contornos
+            temp_mask = np.zeros((height, width), dtype=np.uint8)
+            # Dibujar contornos rellenos en la máscara temporal
+            cv2.drawContours(temp_mask, ignored_contours, -1, color=255, thickness=cv2.FILLED)
+            # Invertir la máscara temporal (áreas a ignorar=0, áreas a comparar=255)
+            mask = cv2.bitwise_not(temp_mask)
 
-        # --- Aplicar la Máscara a ambas imágenes ---
+        # --- Aplicar máscara a las imágenes ---
         masked_img1 = cv2.bitwise_and(img1, img1, mask=mask)
         masked_img2 = cv2.bitwise_and(img2, img2, mask=mask)
 
-        # --- Comparación 1: Diferencia Absoluta ---
+
+        # --- Comparación con diferencia absoluta ---
         diff = cv2.absdiff(masked_img1, masked_img2)
         gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         non_zero_count = cv2.countNonZero(gray_diff)
         are_equal_diff = non_zero_count <= threshold
 
-        # --- Comparación 2: SSIM (Índice de Similitud Estructural) ---
+        # --- Comparación SSIM (opcional) ---
         score = 0.0
-        are_equal_ssim = False  # Valor por defecto si SSIM no se calcula
         if SKIMAGE_AVAILABLE:
-            gray_masked1 = cv2.cvtColor(masked_img1, cv2.COLOR_BGR2GRAY)
-            gray_masked2 = cv2.cvtColor(masked_img2, cv2.COLOR_BGR2GRAY)
             try:
-                # Calcular SSIM en las imágenes enmascaradas (las áreas ignoradas son negras)
-                score, _ = ssim(gray_masked1, gray_masked2, full=True,
-                                data_range=gray_masked1.max() - gray_masked1.min())
+                gray1 = cv2.cvtColor(masked_img1, cv2.COLOR_BGR2GRAY)
+                gray2 = cv2.cvtColor(masked_img2, cv2.COLOR_BGR2GRAY)
+                # self.show_contours(image=gray2, contours=ignored_contours,
+                #                    title="Contornos ignorados")
+                score, _ = ssim(gray1, gray2, full=True)
+            except Exception as e:
+                print(f"Error calculando SSIM: {e}")
 
-                ssim_threshold = 0.98  # Umbral de ejemplo para SSIM
-                are_equal_ssim = score >= ssim_threshold
-            except ValueError as e:
-                # Puede ocurrir si una imagen es completamente negra después de enmascarar
-                # o si hay muy poca varianza.
-                print(f"Advertencia al calcular SSIM: {e}")
-                # En este caso, podríamos depender solo de la diferencia absoluta.
-                score = 0.0  # O algún otro valor indicativo
-                are_equal_ssim = False  # O basarlo en are_equal_diff si score es 0
-
-        # Devolver resultado
-        # print(f"Píxeles diferentes (ignorando contornos): {non_zero_count}")
-        # if SKIMAGE_AVAILABLE:
-        #     print(f"Puntaje SSIM (en áreas comparadas): {score:.4f}")
-
-        # Puedes decidir la lógica final para devolver True/False
-        # Por ejemplo, podrías requerir que ambas métricas pasen, o solo una.
-        # Aquí usamos la diferencia absoluta como principal criterio.
-        final_result = are_equal_diff
-
-        return final_result, diff, score
+        return are_equal_diff, diff, score
 
 
 
