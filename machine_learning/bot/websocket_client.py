@@ -243,6 +243,60 @@ class WebSocketClient:
         await self.disconnect()
 
 
+    async def disconnect(self):
+        """Cierra la conexión WebSocket de manera segura y limpia los recursos"""
+        async with self._lock:
+            if not self.is_connected:
+                return
+
+            self.logger.info("Disconnecting from WebSocket server...")
+
+            # Cancelar tareas en segundo plano
+            if self._keepalive_task:
+                self._keepalive_task.cancel()
+                try:
+                    await self._keepalive_task
+                except asyncio.CancelledError:
+                    pass
+
+            if self._listen_task:
+                self._listen_task.cancel()
+                try:
+                    await self._listen_task
+                except asyncio.CancelledError:
+                    pass
+
+            if self._send_task:
+                self._send_task.cancel()
+                try:
+                    await self._send_task
+                except asyncio.CancelledError:
+                    pass
+
+            # Cerrar la conexión WebSocket si existe
+            if self.connection:
+                try:
+                    await self.connection.close()
+                    self.logger.info("WebSocket connection closed gracefully")
+                except Exception as e:
+                    self.logger.error(f"Error closing WebSocket connection: {e}")
+                finally:
+                    self.connection = None
+
+            # Limpiar estado
+            self.is_connected = False
+            self._message_callbacks.clear()
+
+            # Limpiar la cola de mensajes pendientes
+            while not self._pending_messages.empty():
+                try:
+                    self._pending_messages.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+
+            self.logger.info("Disconnected successfully")
+
+
     async def connect_websocket(self):
         """Connects to the WebSocket server"""
         return await self._connect()
@@ -254,8 +308,17 @@ class WebSocketClient:
 
 
     async def send_websocket_message(self, message_type: str, message: str, current_chat_id: str, name: str):
-        """Improved message sending with error handling"""
-        print("Mandando mensaje...")
+        """Improved message sending with automatic connection handling"""
+        print("Preparando para enviar mensaje...")
+
+        # Verificar y establecer conexión si es necesario
+        if not self.is_connected:
+            print("Conexión no establecida, intentando conectar...")
+            connection_result = await self._connect()
+            if not connection_result:
+                print("No se pudo establecer la conexión")
+                return False
+
         message_data = {
             "type": message_type,
             "sender": 'bot',
@@ -264,26 +327,36 @@ class WebSocketClient:
                 "message": message,
                 "bot_name": name,
                 "timestamp": time.time(),
-                "sequence": int(time.time() * 1000)  # Add sequencing
+                "sequence": int(time.time() * 1000)
             }
         }
 
-        try:
-            success = await self._send_message(message_data, require_ack=False)
-            print("success ", success)
-            if not success:
-                print(f"Falló el envío del mensaje, reintentando...")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                print(f"Intentando enviar mensaje (intento {attempt + 1}/{max_retries})...")
+                success = await self._send_message(message_data, require_ack=False)
+
+                if success:
+                    print("Mensaje enviado correctamente")
+                    return True
+                else:
+                    print(f"Falló el envío del mensaje, reintentando...")
+                    await asyncio.sleep(1)
+
+                    # Reconectar antes de reintentar
+                    if not self.is_connected:
+                        print("Reconectando antes de reintentar...")
+                        await self._connect()
+
+            except Exception as e:
+                print(f"Error crítico enviando mensaje: {e}")
+                await self.disconnect()
                 await asyncio.sleep(1)
-                return await self.send_websocket_message(message_type, message)
+                await self._connect()
 
-            print("Mensaje enviado correctamente con ACK")
-            return True
-
-        except Exception as e:
-            print(f"Error crítico enviando mensaje: {e}")
-            await self._disconnect()
-            await self._connect()
-            return False
+        print(f"Error: No se pudo enviar el mensaje después de {max_retries} intentos")
+        return False
 
 
     async def handle_websocket_message(self, message: dict):
