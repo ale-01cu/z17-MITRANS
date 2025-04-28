@@ -87,6 +87,19 @@ FIND_CURRENT_CHAT_ID_CONFIG = {
     },
 }
 
+EXTRACT_CHAT_ID_CONFIG = {
+    '1920x1080': {
+        'y_sub': 50,
+        'y_plus': 10,
+        'x_sub': 300
+    },
+    '1360x768': {
+        'y_sub': 25,
+        'y_plus': 10,
+        'x_sub': 240
+    },
+}
+
 
 RESOLUTION_CONFIG_IN_USE = '1360x768'
 
@@ -95,7 +108,9 @@ import asyncio
 from websocket_client import WebSocketClient
 
 class Bot:
-    def __init__(self, name: str, target_name: str, target_templates_paths: list[str], websocket_uri: str) -> None:
+    def __init__(self, name: str, target_name: str,
+                 target_templates_paths: list[str], websocket_uri: str) -> None:
+
         self.name = name
         self.target_name = target_name
 
@@ -124,12 +139,12 @@ class Bot:
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = True
+        self.is_memory_active = False
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 10
+        self.messages_amount_limit = 50
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -145,11 +160,7 @@ class Bot:
             'msg5': None
         }
 
-        self.is_show_contours_active = False
-
-    # =================================================== Web Socket connection (Start) =============================================================
-
-    # =================================================== Web Socket connection (End) =============================================================
+        self.is_show_contours_active = True
 
 
     def add_last_five_texts_watched(self, last_text: str | None,
@@ -580,10 +591,7 @@ class Bot:
             if 0.7 < circularity <= 1.0 and is_into_chats_contour and is_in_size_range:  # Umbral de circularidad
                 contours_found.append(contour)
 
-        # print(len(contours_found))
-        # cv2.drawContours(self.current_screenshot, contours_found, -1, (0, 255, 0), 3)
-        # cv2.imshow('chats mark', self.current_screenshot)
-        # cv2.waitKey(0)
+        self.show_contours(contours=contours_found, title='chats contours')
 
         # for contour in contours:
         #     # Aproximar el contorno a un polígono
@@ -629,11 +637,16 @@ class Bot:
         y = chat_ref[1]
         circle_x, circle_y = x, y
         image = self.current_screenshot
-        text_roi = image[circle_y - 50:circle_y + 10, circle_x - 300:circle_x]
 
-        # cv2.imshow('text_roi', text_roi)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        config = EXTRACT_CHAT_ID_CONFIG[RESOLUTION_CONFIG_IN_USE]
+        y_sub = config["y_sub"]
+        y_plus = config["y_plus"]
+        x_sub = config["x_sub"]
+
+        text_roi = image[circle_y - y_sub:circle_y + y_plus, circle_x - x_sub:circle_x]
+
+        self.show_contours(image=text_roi,
+                           contours=[], title="text_roi")
 
         img_hanlder = ImgHandler(image=text_roi)
         chat_id = img_hanlder.extract_text()
@@ -702,10 +715,9 @@ class Bot:
             self.chats_area_scroll_reference -= scroll_move
 
         if direction == 'up':
-            pyautogui.scroll(scroll_move)
+            pyautogui.scroll(abs(scroll_move))
         elif direction == 'down':
-            pyautogui.scroll(scroll_move)
-
+            pyautogui.scroll(-abs(scroll_move))
 
 
     def get_last_chat_id_image(self) -> ImgHandler:
@@ -878,6 +890,7 @@ class Bot:
 
         return last_text_contour_checked
 
+
     async def get_texts_did_not_watched_list(self, possible_text_contours,
                                              is_first_iter=False, texts=[], was_handled_overflow=False):
         texts_did_not_watched = []
@@ -950,11 +963,6 @@ class Bot:
                     message_type="bot_message", message=text,
                     name=self.name, current_chat_id=self.current_chat_id)
 
-                # if i == 4:
-                #     return False
-
-                # self.show_contours(contours=[first_text],
-                #                    title="Primer texto")
 
                 if self.first_contour_reference is None:
                     # self.show_contours(contours=[first_text], title='tirst contour reference')
@@ -1063,7 +1071,6 @@ class Bot:
                     else:
                         has_more = False
                         break
-
 
                     if keyboard.is_pressed('esc'):
                         print("Detenido por el usuario.")
@@ -1286,9 +1293,9 @@ class Bot:
                                                     use_first_contour_reference=False,
                                                     take_all_texts=True)
 
-        self.show_contours(image=result_image,
-                           contours=[],
-                           title="Contornos encontrados y la imagen resultante")
+        # self.show_contours(image=result_image,
+        #                    contours=[],
+        #                    title="Contornos encontrados y la imagen resultante")
 
         has_more = True
 
@@ -1825,8 +1832,6 @@ class Bot:
                     self.take_screenshot()
                     await self.review_chat()
 
-                    last_texts_watched = self.get_last_five_texts_memory_db()
-
                     self.chat_querys.update_chat_by_chat_id_scraped(id_scraped=self.current_chat_id,
                                                                     last_text_url=None, last_text_index=0,
                                                                     **self.last_five_texts_memory_db_v2)
@@ -1843,10 +1848,11 @@ class Bot:
                     chats = self.find_chat_references()
                     order_cursor += 1
 
-
             else:
                 x, y, w, h = cv2.boundingRect(self.chats_reference)
-                self.scroll_chats_area(direction='down', scroll_move=int(h * 0.70))
+                self.show_contours(contours=[self.chats_reference],
+                                   title=f"chats {int(h * 0.70)}")
+                # self.scroll_chats_area(direction='down', scroll_move=int(h * 0.70))
                 # self.scroll_chats_area(direction='up',
                 #                        scroll_move=self.chats_area_scroll_reference)
                 order_chats_ids.clear()
