@@ -1027,7 +1027,8 @@ class Bot:
                     )
 
                     if not self.is_offline: await self.websocket.send_websocket_message(
-                        message_type="bot_message", message=text)
+                        message_type="bot_message", message=text,
+                        name=self.name, current_chat_id=self.current_chat_id)
 
                     is_watched = self.is_text_already_watched(text=text, index=i+1)
 
