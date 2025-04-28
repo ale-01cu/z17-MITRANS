@@ -24,6 +24,7 @@ import keyboard
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
+pyautogui.FAILSAFE = False
 
 FIND_CHATS_REFERENCE_CONFIG = {
     '1920x1080': {
@@ -74,6 +75,15 @@ REVIEW_CHAT_CONFIG = {
     },
     '1360x768': {
         'scroll_move': 35,
+    },
+}
+
+FIND_CURRENT_CHAT_ID_CONFIG = {
+    '1920x1080': {
+        'roi_x_start_porcent': 0.285,
+    },
+    '1360x768': {
+        'roi_x_start_porcent': 0.32,
     },
 }
 
@@ -425,8 +435,11 @@ class Bot:
         roi_y_end = roi_y_start + h + 10  # Misma altura que el contorno
         height, width = image.shape[:2]
 
+        config = FIND_CURRENT_CHAT_ID_CONFIG[RESOLUTION_CONFIG_IN_USE]
+        roi_x_start_porcent = config['roi_x_start_porcent']
+
         # Calcular punto de inicio X al 30% del ancho de la imagen
-        roi_x_start = int(width * 0.285)  # 30% del ancho total
+        roi_x_start = int(width * roi_x_start_porcent)  # 30% del ancho total
         roi_x_end = x + int(w * 0.6)
 
         # Aseguramos que no nos salgamos de los límites de la imagen
