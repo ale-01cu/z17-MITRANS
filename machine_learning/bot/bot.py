@@ -14,7 +14,6 @@ import os
 from window_handler import WindowHandler
 from utils import get_subtraction_steps
 import keyboard
-import asyncio
 
 # pynput otra libreria para manejar el mouse
 # pydirectinput otra libreria para manejar el mouse
@@ -25,6 +24,61 @@ import asyncio
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
+
+FIND_CHATS_REFERENCE_CONFIG = {
+    '1920x1080': {
+        'min_width': 12,
+        'max_width': 20,
+        'min_height': 12,
+        'max_height': 20,
+    },
+    '1360x768': {
+        'min_width': 10,
+        'max_width': 20,
+        'min_height': 10,
+        'max_height': 20,
+    },
+}
+
+FIND_TEXT_AREA_CONTOURS_CONFIG = {
+    '1920x1080': {
+        'chat_limit_x_porcent': 0.6,
+        'min_height': 40,
+    },
+    '1360x768': {
+        'chat_limit_x_porcent': 0.8,
+        'min_height': 20,
+    },
+}
+
+
+GET_TEXTS_DID_NOT_WATCHED_CONFIG = {
+    '1920x1080': {
+        'x_start_offset': 15,
+        'y_start_offset': 15,
+        'scroll_move': 35,
+
+    },
+    '1360x768': {
+        'x_start_offset': 10,
+        'y_start_offset': 10,
+        'scroll_move': 25,
+
+    },
+}
+
+
+REVIEW_CHAT_CONFIG = {
+    '1920x1080': {
+        'scroll_move': 45,
+    },
+    '1360x768': {
+        'scroll_move': 35,
+    },
+}
+
+
+RESOLUTION_CONFIG_IN_USE = '1360x768'
 
 # Add these imports at the top of the file
 import asyncio
@@ -50,7 +104,6 @@ class Bot:
         # Initialize WebSocket client
         self.websocket = WebSocketClient(
             uri=websocket_uri,
-            on_message=self.handle_websocket_message
         )
         self.websocket_uri = websocket_uri
         self.window_handler = WindowHandler(title=target_name)
@@ -83,101 +136,6 @@ class Bot:
         }
 
     # =================================================== Web Socket connection (Start) =============================================================
-    async def connect_websocket(self):
-        """Connects to the WebSocket server"""
-        return await self.websocket.connect()
-
-    async def disconnect_websocket(self):
-        """Disconnects from the WebSocket server"""
-        await self.websocket.disconnect()
-
-    async def send_websocket_message(self, message_type: str, message: str):
-        """Improved message sending with error handling"""
-        print("Mandando mensaje...")
-        message_data = {
-            "type": message_type,
-            "sender": 'bot',
-            "content": {
-                "chat_id": self.current_chat_id,
-                "message": message,
-                "bot_name": self.name,
-                "timestamp": time.time(),
-                "sequence": int(time.time() * 1000)  # Add sequencing
-            }
-        }
-        
-        try:
-            success = await self.websocket.send_message(message_data, require_ack=False)
-            print("success ", success)
-            if not success:
-                print(f"Falló el envío del mensaje, reintentando...")
-                await asyncio.sleep(1)
-                return await self.send_websocket_message(message_type, message)
-                
-            print("Mensaje enviado correctamente con ACK")
-            return True
-            
-        except Exception as e:
-            print(f"Error crítico enviando mensaje: {e}")
-            await self.websocket.disconnect()
-            await self.websocket.connect()
-            return False
-
-
-    async def handle_websocket_message(self, message: dict):
-        """Handles incoming WebSocket messages"""
-        try:
-            message_type = message.get("type")
-            data = message.get("data")
-
-            if message_type == "command":
-                # Handle different commands
-                if data.get("action") == "stop":
-                    # Handle stop command
-                    pass
-                elif data.get("action") == "start":
-                    # Handle start command
-                    pass
-                # Add more command handlers as needed
-
-        except Exception as e:
-            print(f"Error handling WebSocket message: {e}")
-
-
-    async def establish_connection(self):
-        """Improved connection handling"""
-        print("Running async...")
-        
-        # Connection loop with exponential backoff
-        retry_delays = [1, 2, 5, 10, 30]
-        for delay in retry_delays:
-            if await self.websocket.connect():
-                break
-            print(f"Reintentando conexión en {delay} segundos...")
-            await asyncio.sleep(delay)
-        else:
-            print("Failed to establish WebSocket connection after multiple attempts")
-            return
-
-        # Start monitoring task
-        asyncio.create_task(self._connection_monitor())
-
-    async def _connection_monitor(self):
-        """New connection health monitor"""
-        while True:
-            if not self.websocket.is_connected:
-                print("Conexión perdida, intentando reconectar...")
-                await self.establish_connection()
-                
-            await asyncio.sleep(5)
-            # Send heartbeat
-            try:
-                await self.websocket.send_message({
-                    "type": "heartbeat",
-                    "content": "ping"
-                }, require_ack=False)
-            except:
-                pass
 
     # =================================================== Web Socket connection (End) =============================================================
 
@@ -470,8 +428,6 @@ class Bot:
         # Extraemos la región de interés
         roi = image[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
 
-        self.show_contours(image=roi, contours=[],
-                           title=f'chat id')
 
         img_hanlder = ImgHandler(image=roi)
         texts = img_hanlder.extract_text()
@@ -488,6 +444,8 @@ class Bot:
 
         print("chat id ", chat_id)
 
+        self.show_contours(image=roi, contours=[],
+                           title=f'chat id')
         self.current_chat_id = chat_id
         # self.show_contours(image=roi, contours=[],
         #                    title=f'chat id extracted {chat_id}')
@@ -507,15 +465,19 @@ class Bot:
         # self.show_contours(contours=chat_contour,
         #                    title="chat_contour-find_text_area_contours")
 
+        config = FIND_TEXT_AREA_CONTOURS_CONFIG[RESOLUTION_CONFIG_IN_USE]
+        chat_limit_x_porcent = config['chat_limit_x_porcent']
+        min_height = config['min_height']
+
         x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
-        chat_limit_x = x_chat + int(w_chat * 0.6)   # Punto medio horizontal del chat
+        chat_limit_x = x_chat + int(w_chat * chat_limit_x_porcent)   # Punto medio horizontal del chat subir esto
 
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
 
             # Filtro de tamaño (ajusta según necesidad)
             min_w = 40 if take_all_texts else 100
-            min_h = 0 if take_all_texts else 40
+            min_h = 0 if take_all_texts else min_height # bajar esto
 
             # Verifica si tiene el tamaño adecuado
             if (min_w < w < w_chat * 0.70) and (min_h < h < h_chat - 10):
@@ -557,18 +519,7 @@ class Bot:
         chats_contour = self.take_chats_container_contour()
         x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
 
-
-        # x_limit = int(x_chats + 0.80 * w_chats)
-        # cv2.line(self.current_screenshot, (x_limit, 0),
-        #          (x_limit, self.current_screenshot.shape[0]),
-        #          (0, 0, 255), 2)  # Línea roja
-        # cv2.imshow('chats contour line', self.current_screenshot)
-        # cv2.waitKey(0)
-
-
-        # cv2.drawContours(self.current_screenshot, chats_contour, -1, (0, 255, 0), 3)
-        # cv2.imshow('chats contour', self.current_screenshot)
-        # cv2.waitKey(0)
+        # self.show_contours(contours=contours, title='Contours')
 
         contours_found = []
 
@@ -585,6 +536,7 @@ class Bot:
             # Calcular la circularidad
             circularity = (4 * np.pi * area) / (perimeter ** 2)
 
+
             is_into_chats_contour = (
                 x > (x_chats + 0.70 * w_chats) and  # Comienza después del 70% del ancho (últimos 30%)
                 x < (x_chats + w_chats) and  # Termina al final del ancho
@@ -592,14 +544,19 @@ class Bot:
                 y < (y_chats + h_chats)  # Termina al final del alto
             )
 
+            config = FIND_CHATS_REFERENCE_CONFIG[RESOLUTION_CONFIG_IN_USE]
+            min_width = config['min_width']
+            max_width = config['max_width']
+            min_height = config['min_height']
+            max_height = config['max_height']
+
             is_in_size_range = (
-                (12 < w < 20) and (12 < h < 20)
+                (min_width < w < max_width) and (min_height < h < max_height)
             )
 
             # Filtrar contornos basados en la circularidad (ajusta el umbral según sea necesario)
             if 0.7 < circularity <= 1.0 and is_into_chats_contour and is_in_size_range:  # Umbral de circularidad
                 contours_found.append(contour)
-
 
         # print(len(contours_found))
         # cv2.drawContours(self.current_screenshot, contours_found, -1, (0, 255, 0), 3)
@@ -741,7 +698,7 @@ class Bot:
         return img_handler
 
 
-    def get_last_chat_id_text_and_index(self) -> str | None:
+    def get_last_chat_id_text_and_index(self) -> Tuple[str, int] | None:
         """
         Extrae el texto del último chat id detectado.
 
@@ -755,7 +712,7 @@ class Bot:
 
 
     def get_last_five_texts_by_current_chat_id(self
-                                               ) -> Tuple[str | None, str | None, str | None, str | None, str | None]:
+                                               ) -> Tuple[str | None, str | None, str | None, str | None, str | None] | None:
         """
         Extrae el texto del último chat id detectado.
 
@@ -940,8 +897,11 @@ class Bot:
 
                 # self.show_contours(contours=[first_text],
                 #                    title=f'antes del move gradually')
+                config = GET_TEXTS_DID_NOT_WATCHED_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                x_start_offset = config['x_start_offset']
+                y_start_offset = config['y_start_offset']
 
-                first_text = await self.move_to_contour_gradually(x+15, y+15)
+                first_text = await self.move_to_contour_gradually(x+x_start_offset, y+y_start_offset)
                 x, y, w, h = cv2.boundingRect(first_text)
 
 
@@ -953,9 +913,11 @@ class Bot:
                 # self.show_contours(contours=[first_text],
                 #                    title=f'después del move gradually')
 
+
+
                 text = self.get_text_by_text_location(
-                    x_start=x + 15,
-                    y_start=y + 15,
+                    x_start=x + x_start_offset,
+                    y_start=y + y_start_offset,
                     x_end=x + w,
                     y_end=(y + h) - 15,
                     scroll_pos_start=self.scroll_reference,
@@ -963,7 +925,7 @@ class Bot:
                     desactivate_scroll=True
                 )
 
-                if not self.is_offline: await self.send_websocket_message(
+                if not self.is_offline: await self.websocket.send_websocket_message(
                     message_type="bot_message", message=text)
 
                 # if i == 4:
@@ -998,8 +960,10 @@ class Bot:
                     has_more = False
 
             if not was_handled_overflow:
+                config = GET_TEXTS_DID_NOT_WATCHED_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                scroll_move = config['scroll_move']
                 self.scroll_chat_area(direction="up",
-                                      scroll_move=35)
+                                      scroll_move=scroll_move)
 
             await asyncio.sleep(1)
 
@@ -1039,9 +1003,13 @@ class Bot:
                 else:
                     skip_next_contour = False
 
+                    config = GET_TEXTS_DID_NOT_WATCHED_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                    x_start_offset = config['x_start_offset']
+                    y_start_offset = config['y_start_offset']
+
                     text = self.get_text_by_text_location(
-                        x_start=x + 15,
-                        y_start=y + 15,
+                        x_start=x + x_start_offset,
+                        y_start=y + y_start_offset,
                         x_end=x + w,
                         y_end=(y + h) - 15,
                         scroll_pos_start=self.scroll_reference,
@@ -1049,7 +1017,7 @@ class Bot:
                         desactivate_scroll=True
                     )
 
-                    if not self.is_offline: await self.send_websocket_message(
+                    if not self.is_offline: await self.websocket.send_websocket_message(
                         message_type="bot_message", message=text)
 
                     is_watched = self.is_text_already_watched(text=text, index=i+1)
@@ -1295,9 +1263,9 @@ class Bot:
                                                     use_first_contour_reference=False,
                                                     take_all_texts=True)
 
-        # self.show_contours(image=result_image,
-        #                    contours=[],
-        #                    title="Contornos encontrados y la imagen resultante")
+        self.show_contours(image=result_image,
+                           contours=[],
+                           title="Contornos encontrados y la imagen resultante")
 
         has_more = True
 
@@ -1398,7 +1366,7 @@ class Bot:
                     #     id_scraped=self.current_chat_id, last_text=text
                     # )
 
-                if not self.is_offline: await self.send_websocket_message(
+                if not self.is_offline: await self.websocket.send_websocket_message(
                     message_type="bot_message", message=text)
 
                 texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
@@ -1528,14 +1496,20 @@ class Bot:
                 x_2, y_2, w_2, h_2 = cv2.boundingRect(all_texts_contours[0])
 
                 if w_2 != w_1 and iterations == 0:
+                    config = REVIEW_CHAT_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                    scroll_move = config['scroll_move']
+
                     self.scroll_chat_area(direction="up",
-                                          scroll_move=45)
+                                          scroll_move=scroll_move)
                     await asyncio.sleep(1)
 
         await asyncio.sleep(1)
         self.take_screenshot()
         possible_text_contours = self.find_text_area_contours(
             use_first_contour_reference=True if self.was_handled_overflow else False)
+
+        self.show_contours(contours=possible_text_contours,
+                           title="possible text contour")
         # self.show_contours(contours=possible_text_contours,
         #                    title="possible text contour")
         # self.show_contours(contours=all_texts_contours,
@@ -1597,7 +1571,7 @@ class Bot:
 
     def get_text_by_text_location(self, x_start, y_start, x_end,
                                   y_end, scroll_pos_start, scroll_pos_end,
-                                  desactivate_scroll=False, duration=0) -> str | None:
+                                  desactivate_scroll=False, duration=1) -> str | None:
 
         # if not desactivate_scroll: self.scroll_chat_area(
         #     direction="up" if scroll_pos_start > self.scroll_reference else "down",
@@ -1742,7 +1716,7 @@ class Bot:
 
 
     async def run(self):
-        if not self.is_offline: await self.establish_connection()
+        if not self.is_offline: await self.websocket.establish_connection()
         counter = 0
 
         chats_scrroll_done = False
@@ -1791,6 +1765,9 @@ class Bot:
 
             chats = self.find_chat_references()
 
+            # self.show_contours(contours=chats,
+            #                    title="chats")
+
             # Obtener orden de referencia de chats a seguir
             if lookup_chats_counter == 0:
                 for chat in chats:
@@ -1826,14 +1803,6 @@ class Bot:
                     await self.review_chat()
 
                     last_texts_watched = self.get_last_five_texts_memory_db()
-
-                    # params = {
-                    #     'last_text': last_texts_watched[0] if len(last_texts_watched) > 0 else None,
-                    #     'msg2': last_texts_watched[1] if len(last_texts_watched) > 1 else None,
-                    #     'msg3': last_texts_watched[2] if len(last_texts_watched) > 2 else None,
-                    #     'msg4': last_texts_watched[3] if len(last_texts_watched) > 3 else None,
-                    #     'msg5': last_texts_watched[4] if len(last_texts_watched) > 4 else None
-                    # }
 
                     self.chat_querys.update_chat_by_chat_id_scraped(id_scraped=self.current_chat_id,
                                                                     last_text_url=None, last_text_index=0,
@@ -1888,14 +1857,6 @@ class Bot:
                 # self.take_screenshot()
                 await self.review_chat()
                 last_texts_watched = self.get_last_five_texts_memory_db()
-                #
-                # params = {
-                #     'last_text': last_texts_watched[0] if len(last_texts_watched) > 0 else None,
-                #     'msg2': last_texts_watched[1] if len(last_texts_watched) > 1 else None,
-                #     'msg3': last_texts_watched[2] if len(last_texts_watched) > 2 else None,
-                #     'msg4': last_texts_watched[3] if len(last_texts_watched) > 3 else None,
-                #     'msg5': last_texts_watched[4] if len(last_texts_watched) > 4 else None
-                # }
 
                 self.chat_querys.update_chat_by_chat_id_scraped(id_scraped=self.current_chat_id,
                                                                 last_text_url=None, last_text_index=0,
@@ -1931,3 +1892,13 @@ class Bot:
             #
             # finally:
             #     continue
+
+
+    async def turn_on(self):
+        asyncio.create_task(self.websocket.establish_connection())
+        await self.run()
+        # await asyncio.gather(
+        #     self.websocket.establish_connection(),
+        #     self.run()
+        # )
+
