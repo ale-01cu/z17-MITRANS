@@ -109,7 +109,7 @@ class Bot:
         self.window_handler = WindowHandler(title=target_name)
         self.first_contour_reference: Tuple[int, int, int, int] | None = None
         self.is_in_message_requests_view = False
-        self.is_offline = True
+        self.is_offline = False
 
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
@@ -260,7 +260,14 @@ class Bot:
         chats_contour = self.take_chats_container_contour()
         chat_area_contour = self.find_chat_area_contour()
 
-        ignored_contours = [chats_contour, chat_area_contour]
+        ignored_contours = []
+
+        if chats_contour is not None:
+            ignored_contours.append(chats_contour)
+
+        if chat_area_contour is not None:
+            ignored_contours.append(chat_area_contour)
+
 
         img_handler = ImgHandler(image=self.current_screenshot)
         _, _, score = img_handler.compare_messenger_images_with_contours(img_data2=template,
@@ -489,12 +496,12 @@ class Bot:
 
                 # is_contour_valid = True
 
-                is_within_chat_wwidth_percent = x + w <= chat_limit_x
+                is_within_chat_width_percent = x + w <= chat_limit_x
 
                 # Verifica si está DENTRO del chat_contour
                 if (((x > x_chat) and (x + w < x_chat + w_chat))
                     and ((y > y_chat) and (y + h < y_chat + h_chat))
-                    and is_contour_valid and is_within_chat_wwidth_percent):
+                    and is_contour_valid and is_within_chat_width_percent):
 
                     possible_text_contours.append(contour)
 
@@ -912,8 +919,6 @@ class Bot:
 
                 # self.show_contours(contours=[first_text],
                 #                    title=f'después del move gradually')
-
-
 
                 text = self.get_text_by_text_location(
                     x_start=x + x_start_offset,
