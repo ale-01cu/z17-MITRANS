@@ -135,6 +135,8 @@ class Bot:
             'msg5': None
         }
 
+        self.is_show_contours_active = False
+
     # =================================================== Web Socket connection (Start) =============================================================
 
     # =================================================== Web Socket connection (End) =============================================================
@@ -425,7 +427,7 @@ class Bot:
 
         # Calcular punto de inicio X al 30% del ancho de la imagen
         roi_x_start = int(width * 0.285)  # 30% del ancho total
-        roi_x_end = x + int(w * 0.5)
+        roi_x_end = x + int(w * 0.6)
 
         # Aseguramos que no nos salgamos de los límites de la imagen
         height, width = image.shape[:2]
@@ -823,6 +825,7 @@ class Bot:
 
 
     def show_contours(self, contours, title: str = "title", image = None):
+        if not self.is_show_contours_active: return
         image_copy = self.current_screenshot.copy() if image is None else image.copy()
         cv2.drawContours(image_copy if image is None else image,
                          contours, -1, (0, 255, 0), 3)
@@ -931,7 +934,8 @@ class Bot:
                 )
 
                 if not self.is_offline: await self.websocket.send_websocket_message(
-                    message_type="bot_message", message=text)
+                    message_type="bot_message", message=text,
+                    name=self.name, current_chat_id=self.current_chat_id)
 
                 # if i == 4:
                 #     return False
