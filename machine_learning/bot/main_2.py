@@ -8,7 +8,7 @@ Base.metadata.create_all(bind=engine)
 
 dirname = os.path.dirname(__file__)
 
-messenger_template_path = os.path.join(dirname, 'templates/messenger_template.png')
+messenger_template_path = os.path.join(dirname, 'templates/messenger_template(1360x768x100).png')
 # messenger_template_2_path = os.path.join(dirname, 'templates/messenger_template_2.png')
 
 def main():

@@ -77,7 +77,8 @@ class ChatQuerys:
 
     def update_chat_by_chat_id_scraped(self, id_scraped: str,
                     last_text_url: Optional[str] = None, last_text: Optional[str] = None,
-                    last_text_index: int = 0) -> Optional[Chat]:
+                    msg2: Optional[str] = None, msg3: Optional[str] = None, msg4: Optional[str] = None,
+                    msg5: Optional[str] = None, last_text_index: int = 0) -> Optional[Chat]:
 
         """
         Actualiza un chat existente
@@ -92,6 +93,14 @@ class ChatQuerys:
                 db_chat.last_text_url = last_text_url
             if last_text is not None:
                 db_chat.last_text = last_text
+            if msg2 is not None:
+                db_chat.msg2 = msg2
+            if msg3 is not None:
+                db_chat.msg3 = msg3
+            if msg4 is not None:
+                db_chat.msg4 = msg4
+            if msg5 is not None:
+                db_chat.msg5 = msg5
 
             db_chat.last_text_index = last_text_index
             self.db.commit()
