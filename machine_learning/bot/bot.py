@@ -114,12 +114,12 @@ class Bot:
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = False
+        self.is_memory_active = True
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 50
+        self.messages_amount_limit = 10
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -1581,7 +1581,7 @@ class Bot:
 
     def get_text_by_text_location(self, x_start, y_start, x_end,
                                   y_end, scroll_pos_start, scroll_pos_end,
-                                  desactivate_scroll=False, duration=1) -> str | None:
+                                  desactivate_scroll=False, duration=0) -> str | None:
 
         # if not desactivate_scroll: self.scroll_chat_area(
         #     direction="up" if scroll_pos_start > self.scroll_reference else "down",
