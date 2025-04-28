@@ -416,6 +416,9 @@ class ImgHandler:
                   False si está completamente recto en esa sección.
         """
         # Validar el porcentaje de análisis
+        if contour is None:
+            raise ValueError("No se proporcionó el contorno.")
+
         analyze_percent = max(0, min(100, analyze_percent))
 
         # Extraer los puntos del contorno
@@ -462,6 +465,86 @@ class ImgHandler:
         is_incomplete = any(diff > threshold for diff in y_diffs)
 
         return is_incomplete
+
+
+    def is_bottom_edge_irregular(self, contour, threshold=1, edge_margin_left=5,
+                                 edge_margin_right=5, analyze_percent=100):
+        """
+        Determina si el borde inferior de un contorno tiene alguna irregularidad ("subida")
+        en un porcentaje específico del mismo.
+
+        Args:
+            contour (numpy.ndarray): El contorno en formato de un array de puntos.
+            threshold (int): Umbral para considerar una diferencia significativa en 'y'.
+                             Una diferencia negativa (menor que -threshold) indica una "subida".
+            edge_margin_left (int): Margen en píxeles para excluir el borde izquierdo.
+            edge_margin_right (int): Margen en píxeles para excluir el borde derecho.
+            analyze_percent (int): Porcentaje del borde inferior a analizar (0-100).
+                                  Ejemplo: 25 analiza solo el primer 25% del borde (desde la izquierda).
+
+        Returns:
+            bool: True si el borde inferior tiene una irregularidad ("sube") en el área analizada,
+                  False si está completamente recto o solo "baja" en esa sección.
+        """
+        # Validar el porcentaje de análisis
+        analyze_percent = max(0, min(100, analyze_percent))
+
+        # Extraer los puntos del contorno
+        points = contour[:, 0]  # Los puntos están almacenados como un array de shape (N, 1, 2)
+
+        # Crear un diccionario para almacenar el valor máximo de 'y' para cada 'x'
+        bottom_edge_points = {}
+        for x, y in points:
+            # Buscamos el punto más bajo (mayor 'y') para cada columna 'x'
+            if x not in bottom_edge_points or y > bottom_edge_points[x]:
+                bottom_edge_points[x] = y
+
+        # Convertir el diccionario en una lista ordenada por 'x'
+        sorted_bottom_edge = sorted(bottom_edge_points.items(), key=lambda item: item[0])
+
+        # Si no hay puntos en el borde inferior extraído, no hay irregularidad
+        if not sorted_bottom_edge:
+            return False
+
+        # Extraer las coordenadas x e y del borde inferior
+        x_coords = [x for x, y in sorted_bottom_edge]
+        y_coords = [y for x, y in sorted_bottom_edge]
+
+        # Excluir los bordes laterales según los márgenes especificados
+        if len(x_coords) <= (edge_margin_left + edge_margin_right):
+            return False  # No hay suficientes puntos para analizar después de excluir los bordes
+
+        start_index = edge_margin_left
+        end_index = len(x_coords) - edge_margin_right
+
+        # Calcular el punto final basado en el porcentaje a analizar
+        # El análisis se hace desde la izquierda (índice menor) hacia la derecha
+        if analyze_percent < 100:
+            total_central_points = end_index - start_index
+            analyze_points = int(total_central_points * analyze_percent / 100)
+            # Asegurarse de que analyze_points sea al menos 1 si total_central_points > 0
+            analyze_points = max(1, analyze_points) if total_central_points > 0 else 0
+            end_index = start_index + analyze_points
+            # Asegurar que end_index no exceda el límite original
+            end_index = min(end_index, len(x_coords) - edge_margin_right)
+
+        # Filtrar las coordenadas dentro del rango especificado
+        central_x_coords = x_coords[start_index:end_index]
+        central_y_coords = y_coords[start_index:end_index]
+
+        # Si no hay suficientes puntos después del filtrado para calcular diferencias
+        if len(central_x_coords) < 2:
+            return False
+
+        # Calcular las diferencias consecutivas en 'y' para detectar irregularidades
+        y_diffs = np.diff(central_y_coords)
+
+        # Detectar si alguna diferencia es significativamente negativa (indica que el borde "sube")
+        # En coordenadas de imagen, un valor 'y' menor significa estar más arriba.
+        # Por lo tanto, una diferencia negativa (y_actual - y_anterior < 0) significa que el borde subió.
+        is_irregular_upward = any(diff < -threshold for diff in y_diffs)
+
+        return is_irregular_upward
 
 
     def create_mask_to_large_contours(self, image=None):
