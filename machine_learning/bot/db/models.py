@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String
+
+from sqlalchemy import Column, Integer, String, Boolean
 from .db import Base
 
 class Chat(Base):
@@ -28,3 +29,15 @@ class Chat(Base):
         return (f"<Chat(id={self.id}, "
                 f"id_scraped='{self.id_scraped}', "
                 f"last_text_url='{self.last_text_url}')>")
+
+
+class Bot(Base):
+    __tablename__ = "bots"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(120), unique=True, nullable=False)
+    is_in_message_requests_view = Column(Boolean)
+
+    def __repr__(self):
+        return (f"<Bot(id={self.id}, "
+                f"name='{self.name})>")

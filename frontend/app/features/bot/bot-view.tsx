@@ -29,7 +29,7 @@ export default function BotView() {
             message.chat_id &&
               <div key={i} className="mb-4">
                 <span className="font-semibold">{message.chat_id}: </span>
-                <span>{message.message}</span>
+                <span className='max-w-96'>{message.message}</span>
               </div>
           ))}
         </div>

@@ -569,6 +569,68 @@ class ImgHandler:
         return contours
 
 
+    def find_texts_area_contours(self, image=None):
+        """
+        Encuentra los contornos de áreas que probablemente contienen texto en una imagen.
+
+        Esta función procesa una imagen para detectar regiones que podrían contener texto,
+        utilizando un enfoque basado en umbralización adaptativa y detección de contornos.
+
+        Parámetros:
+        -----------
+        image : numpy.ndarray, opcional
+            Imagen de entrada en formato BGR. Si no se proporciona, se usará self.img.
+            Por defecto es None.
+
+        Retorna:
+        --------
+        list
+            Una lista de contornos encontrados, donde cada contorno es un array de puntos
+            que representan los límites de las áreas detectadas.
+
+        Procesos realizados:
+        --------------------
+        1. Conversión a escala de grises: La imagen de entrada se convierte a escala de grises
+           ya que el procesamiento de texto generalmente trabaja mejor en un solo canal.
+
+        2. Suavizado (blur): Se aplica un filtro Gaussiano para reducir ruido y pequeñas variaciones
+           que podrían afectar la detección de texto.
+
+        3. Umbralización adaptativa: Se usa umbralización adaptativa Gaussiana para resaltar
+           áreas oscuras (como texto) sobre fondo claro, invirtiendo los colores (THRESH_BINARY_INV).
+
+        4. Detección de contornos: Se encuentran los contornos externos en la imagen umbralizada,
+           que probablemente corresponden a áreas de texto.
+        """
+
+        # 1. Convertir imagen a escala de grises
+        gray = cv2.cvtColor(image if image is not None else self.img,
+                            cv2.COLOR_BGR2GRAY)
+
+        # 2. Aplicar desenfoque Gaussiano para reducir ruido
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # 3. Aplicar umbralización adaptativa
+        thresh = cv2.adaptiveThreshold(
+            blurred,
+            255,  # Valor máximo a asignar
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,  # Método de umbralización adaptativa
+            cv2.THRESH_BINARY_INV,  # Tipo de umbral (invertido para texto oscuro)
+            11,  # Tamaño del bloque/vecindad para calcular el umbral
+            2  # Constante que se resta de la media calculada
+        )
+
+        # 4. Encontrar y retornar contornos externos
+        contours, _ = cv2.findContours(
+            thresh,
+            cv2.RETR_EXTERNAL,  # Solo recupera contornos externos
+            cv2.CHAIN_APPROX_SIMPLE  # Método de compresión de contornos
+        )
+
+        return contours
+
+
+
     # Detecta si hay algun borde horizontal con una discontinuidad
     def has_irregular_horizontal_edge(
             self,

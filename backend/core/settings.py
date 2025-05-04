@@ -233,8 +233,31 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://localhost:5173",
     "http://localhost:1234",
+    "http://localhost:80",
+    "http://localhost",
+    "http://127.0.0.1:8080",
     "http://localhost:6379",# esto es para redis probando los channels
     "ws://localhost:8000",#Esto es websocket
+]
+
+# CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "origin",
+    "x-csrftoken",
+    "x-requested-with",
+    # Añade otras cabeceras personalizadas que envíes
 ]
 
 
