@@ -154,7 +154,7 @@ class Bot:
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = True
+        self.is_memory_active = False
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
