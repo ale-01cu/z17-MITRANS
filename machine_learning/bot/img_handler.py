@@ -437,6 +437,10 @@ class ImgHandler:
         x_coords = [x for x, y in sorted_top_edge]
         y_coords = [y for x, y in sorted_top_edge]
 
+        # print('y_coords', y_coords)
+        # self.show_contours(contours=contour,
+        #                    title='the fuking contour top irregular')
+
         # Excluir los bordes laterales según los márgenes especificados
         if len(x_coords) <= (edge_margin_left + edge_margin_right):
             return False  # No hay suficientes puntos para analizar después de excluir los bordes
@@ -619,6 +623,9 @@ class ImgHandler:
             11,  # Tamaño del bloque/vecindad para calcular el umbral
             2  # Constante que se resta de la media calculada
         )
+
+        # self.show_contours(image=thresh, contours=[],
+        #                    title="thresh")
 
         # 4. Encontrar y retornar contornos externos
         contours, _ = cv2.findContours(
