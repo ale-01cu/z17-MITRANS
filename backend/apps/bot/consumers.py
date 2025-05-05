@@ -14,7 +14,7 @@ import uuid
 class ChatConsumer(AsyncWebsocketConsumer):
     # Diccionario de clase para seguimiento de bots por sala
     bot_channels = {}
-
+    bot_status = False
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f"chat_{self.room_name}"
@@ -23,7 +23,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Registrar el canal del bot si es necesario
         if self.user_type == 'bot':
             self.__class__.bot_channels[self.room_group_name] = self.channel_name
+            self.bot_status = True
             print(f"Bot registrado en sala: {self.room_name}")
+            print(self.bot_status)
 
         # Unirse al grupo
         await self.channel_layer.group_add(
@@ -37,7 +39,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Limpiar registro del bot si se desconecta
         if self.user_type == 'bot' and self.__class__.bot_channels.get(self.room_group_name) == self.channel_name:
             # del self.__class__.bot_channels[self.room_group_name]
+            self.bot_status = False
             print(f"Bot desconectado de: {self.room_name}")
+            print(self.bot_status)
 
         # Salir del grupo
         await self.channel_layer.group_discard(
@@ -88,19 +92,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         if bot_channel:
             # Importar el módulo del bot
-
             import machine_learning.bot.bot
 
             if action == 'disconnect':
                 # Pausar el bot
                 machine_learning.bot.bot.is_paused = True  # Establecer is_paused en True para pausar
                 print('Bot pausado')
+                print(self.bot_status)
                 await self.notify_group('system', 'Bot pausado')
 
             elif action == 'connect':
                 # Reanudar el bot
                 machine_learning.bot.bot.is_paused = False  # Establecer is_paused en False para reanudar
                 print('Bot reanudado')  # mejorar el mensaje
+                print(self.bot_status)
                 await self.notify_group('system', 'Bot reanudado')
             else:
                 print(f"Acción desconocida: {action}")  # siempre es bueno tener un else
@@ -108,6 +113,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             print("No se encontró el canal del bot para esta sala.")  # debug
             await self.notify_group('system', 'No se encontró el canal del bot para esta sala.')
+            print(self.bot_status)
 
 
     async def process_bot_message(self, content_data):
