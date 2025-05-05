@@ -5,6 +5,12 @@ from apps.classification.ml.model_loader import predict_comment_label
 from datetime import datetime
 import uuid
 
+# import machine_learning
+
+
+# from machine_learning.bot import bot
+
+
 class ChatConsumer(AsyncWebsocketConsumer):
     # Diccionario de clase para seguimiento de bots por sala
     bot_channels = {}
@@ -30,7 +36,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         # Limpiar registro del bot si se desconecta
         if self.user_type == 'bot' and self.__class__.bot_channels.get(self.room_group_name) == self.channel_name:
-            del self.__class__.bot_channels[self.room_group_name]
+            # del self.__class__.bot_channels[self.room_group_name]
             print(f"Bot desconectado de: {self.room_name}")
 
         # Salir del grupo
@@ -77,23 +83,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }))
 
     async def handle_bot_control(self, action):
-        """Controla el bot desde el frontend"""
+        """Controla el bot desde el frontend, pausando o reanudando su actividad."""
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
 
-        if action == 'disconnect' and bot_channel:
-            # Enviar comando de cierre al bot
-            await self.channel_layer.send(
-                bot_channel,
-                {
-                    "type": "websocket.close",
-                    "code": 1000
-                }
-            )
-            await self.notify_group('system', 'Bot desconectado')
+        if bot_channel:
+            # Importar el módulo del bot
 
-        elif action == 'connect':
-            # Aquí iría la lógica para iniciar el bot automáticamente
-            await self.notify_group('system', 'Comando para conectar bot recibido')
+            import machine_learning.bot.bot
+
+            if action == 'disconnect':
+                # Pausar el bot
+                machine_learning.bot.bot.is_paused = True  # Establecer is_paused en True para pausar
+                print('Bot pausado')
+                await self.notify_group('system', 'Bot pausado')
+
+            elif action == 'connect':
+                # Reanudar el bot
+                machine_learning.bot.bot.is_paused = False  # Establecer is_paused en False para reanudar
+                print('Bot reanudado')  # mejorar el mensaje
+                await self.notify_group('system', 'Bot reanudado')
+            else:
+                print(f"Acción desconocida: {action}")  # siempre es bueno tener un else
+                await self.notify_group('system', f'Acción desconocida: {action}')
+        else:
+            print("No se encontró el canal del bot para esta sala.")  # debug
+            await self.notify_group('system', 'No se encontró el canal del bot para esta sala.')
 
 
     async def process_bot_message(self, content_data):
