@@ -45,11 +45,13 @@ FIND_CHATS_REFERENCE_CONFIG = {
 FIND_TEXT_AREA_CONTOURS_CONFIG = {
     '1920x1080': {
         'chat_limit_x_porcent': 0.6,
+        'chat_start_x_porcent': 0.3,
         'chat_limit_x_porcent_in_message_requests_view': 0.40,
         'min_height': 40,
     },
     '1360x768': {
         'chat_limit_x_porcent': 0.8,
+        'chat_start_x_porcent': 0.4,
         'chat_limit_x_porcent_in_message_requests_view': 0.30,
         'min_height': 20,
     },
@@ -104,7 +106,7 @@ EXTRACT_CHAT_ID_CONFIG = {
 }
 
 
-RESOLUTION_CONFIG_IN_USE = '1920x1080'
+RESOLUTION_CONFIG_IN_USE = '1360x768'
 
 # Add these imports at the top of the file
 import asyncio
@@ -147,17 +149,17 @@ class Bot:
         # self.is_in_message_requests_view = current_bot.name if current_bot else (
         #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
 
-        self.is_online = False
+        self.is_online = True
 
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = False
+        self.is_memory_active = True
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 50
+        self.messages_amount_limit = 10
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -524,14 +526,13 @@ class Bot:
         img_handler = ImgHandler(image=self.current_screenshot if image is None else image)
         contours = None
 
-
         if is_other_way:
             contours = img_handler.find_texts_area_contours()
-            self.show_contours(contours=contours, title="find_texts_area_contours")
+            # self.show_contours(contours=contours, title="find_texts_area_contours")
 
         else:
             contours = img_handler.find_contours_by_large_contours_mask()
-            self.show_contours(contours=contours, title="find_contours_by_large_contours_mask")
+            # self.show_contours(contours=contours, title="find_contours_by_large_contours_mask")
 
         possible_text_contours = []
         chat_contour = self.find_chat_area_contour()
@@ -549,10 +550,10 @@ class Bot:
         chat_limit_x_porcent = config['chat_limit_x_porcent_in_message_requests_view'] \
             if self.is_in_principal_view() else config['chat_limit_x_porcent']
         min_height = config['min_height']
+        chat_start_x_porcent = config['chat_start_x_porcent']
 
         x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
         chat_limit_x = x_chat + int((x_chat + w_chat) * chat_limit_x_porcent)   # Punto medio horizontal del chat subir esto
-        chat_start_x_porcent = 0.30
 
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
@@ -573,7 +574,7 @@ class Bot:
 
                 is_within_chat_width_percent = x + w <= chat_limit_x
 
-                is_within_chat_width_percent = True
+                # is_within_chat_width_percent = True
 
                 # Verifica si está DENTRO del chat_contour
                 if (((x_chat < x < (x_chat + w_chat) * chat_start_x_porcent) and (x + w < x_chat + w_chat))
@@ -699,8 +700,8 @@ class Bot:
 
         text_roi = image[circle_y - y_sub:circle_y + y_plus, circle_x - x_sub:circle_x]
 
-        self.show_contours(image=text_roi,
-                           contours=[], title="text_roi")
+        # self.show_contours(image=text_roi,
+        #                    contours=[], title="text_roi")
 
         img_hanlder = ImgHandler(image=text_roi)
         chat_id = img_hanlder.extract_text()
@@ -1291,7 +1292,7 @@ class Bot:
 
         if not self.chat_area_reference:
             print("Error: chat_area_reference no está definido...")
-            return False
+            return None
 
         x_chat, y_chat, w_chat, h_chat = self.chat_area_reference
         chat_top_edge = y_chat  # Coordenada Y superior del área del chat
@@ -1303,7 +1304,7 @@ class Bot:
 
         if not contours_found:
             print("No se encontraron contornos después de reparar la imagen.")
-            return False  # O manejar de otra forma
+            return None  # O manejar de otra forma
 
         for contour in contours_found:
             x, y, w, h = cv2.boundingRect(contour)
@@ -1353,7 +1354,7 @@ class Bot:
             # self.show_contours(contours=[largest_contour_found], title="Contorno de Overflow Seleccionado (v2)")
         else:
             print(f"--- No se seleccionó ningún contorno para overflow (v2) ---")
-            return False  # O manejar adecuadamente
+            return None  # O manejar adecuadamente
 
 
         return best_contour
@@ -1383,6 +1384,8 @@ class Bot:
         # self.show_contours(contours=contours_found,
         #                    title="Contorno de Overflow Seleccionado (v2)")
         largest_contour_found = self.find_closest_contour(contours_found)  # Usamos la variable existente
+
+        print("Largest contour found: ", largest_contour_found)
 
 
         if is_initial_overflow and self.first_contour_reference is None and largest_contour_found is not None:
@@ -1563,6 +1566,7 @@ class Bot:
 
         # Chequear si hay overflow
         while True:
+            # await asyncio.sleep(1)
             self.take_screenshot()
             # self.show_contours(contours=[], title="testing overflow")
             is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
