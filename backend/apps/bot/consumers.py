@@ -26,6 +26,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.bot_status = True
             print(f"Bot registrado en sala: {self.room_name}")
             print(self.bot_status)
+            self.send_to_bot(self.bot_status)
 
         # Unirse al grupo
         await self.channel_layer.group_add(
@@ -42,6 +43,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.bot_status = False
             print(f"Bot desconectado de: {self.room_name}")
             print(self.bot_status)
+            self.send_to_bot(self.bot_status)
 
         # Salir del grupo
         await self.channel_layer.group_discard(
@@ -181,6 +183,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Envía mensajes al bot"""
         if self.user_type == 'bot':
             await self.send(text_data=json.dumps({
+                'bot': self.bot_status,
                 'type': 'message',
                 'content': event['content'],
                 'sender': event['sender'],
