@@ -1,14 +1,8 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { websocketService } from '../lib/websocket';
 
 export const useWebSocket = () => {
-    useEffect(() => {
-        websocketService.connect();
-
-        return () => {
-            websocketService.disconnect();
-        };
-    }, []);
+    // Remove useEffect for connect/disconnect
 
     const subscribe = useCallback((event: string, callback: (data: any) => void) => {
         websocketService.subscribe(event, callback);
@@ -31,4 +25,4 @@ export const useWebSocket = () => {
         emit,
         isConnected
     };
-}; 
+};
