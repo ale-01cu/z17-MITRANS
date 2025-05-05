@@ -16,6 +16,7 @@ import { removeCookie } from "~/utils/cookies"
 import useIsSuperuser from "~/hooks/useIsSuperuser"
 import useIsManager from "~/hooks/useIsManager"
 import { useAuth } from "~/hooks/useAuth"
+import { Link } from "react-router"
 
 const baseItems = [
   {
@@ -98,10 +99,10 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className={`${pathname === item.url ? "border-l border-black" : ""}`}> {/* Simplifiqué clase */}
+                    <Link to={item.url} className={`${pathname === item.url ? "border-l border-black" : ""}`}> {/* Simplifiqué clase */}
                       <item.icon className="h-4 w-4" /> {/* Añadir clases de tamaño si es necesario */}
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

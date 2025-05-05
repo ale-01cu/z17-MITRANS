@@ -95,44 +95,43 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Aquí iría la lógica para iniciar el bot automáticamente
             await self.notify_group('system', 'Comando para conectar bot recibido')
 
+
     async def process_bot_message(self, content_data):
         from apps.comment.models import Comment
         from apps.classification.models import Classification
         from apps.source.models import Source
 
+        message = content_data.get('message')
+        chat_id = content_data.get('chat_id')
+        label = ''
 
-        # "Procesa mensajes entrantes del bot"
-        message_content = content_data.get('message')
-        message = message_content.get('message')
-        chat_id = message_content.get('chat_id')
-        sender = content_data.get('sender')
+        # Paso 1: Predecir la etiqueta (siempre se ejecuta)
+        if message:
+            label = predict_comment_label(message)  # <-- Predicción fuera del try-except
 
-        print('message: ', message)
+        # Paso 2: Intentar guardar en BD (manejando errores)
+        try:
+            if message and chat_id:
+                classification = await sync_to_async(Classification.objects.get)(name=label)
+                source = await sync_to_async(Source.objects.get)(name='Messenger')  # Asegúrate de que existe
 
-        if not chat_id or not message:
-            label = ''
-        else:
-            label = predict_comment_label(message_content)
-            classification = await sync_to_async(Classification.objects.get)(name=label)
-            source = await sync_to_async(Source.objects.get)(name='Messenger')
-
-            await sync_to_async(
-                lambda: Comment.objects.create(
+                await sync_to_async(Comment.objects.create)(
                     text=message,
-                    user=None,
                     classification=classification,
-                    source=source,
+                    source=source
                 )
-            )()
+        except Exception as e:
+            print(f"Error en BD: {str(e)}")  # Log del error, pero no se detiene el flujo
 
+        # Paso 3: Enviar a la web (SIEMPRE se ejecuta)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'send_to_web',
                 'content': {
-                'message': message,
-                'label': label,
-                # 'chat_id': chat_id
+                    'message': message,
+                    'label': label,
+                    'chat_id': chat_id
                 },
                 'sender': 'bot',
             }

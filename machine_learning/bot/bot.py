@@ -8,6 +8,7 @@ from img_handler import ImgHandler
 from img_to_text import img_to_text
 import time
 from db.chat_querys import ChatQuerys
+from db.bots_querys import BotQuerys
 import pyperclip
 from typing import List, Tuple, Dict
 import os
@@ -44,10 +45,12 @@ FIND_CHATS_REFERENCE_CONFIG = {
 FIND_TEXT_AREA_CONTOURS_CONFIG = {
     '1920x1080': {
         'chat_limit_x_porcent': 0.6,
+        'chat_limit_x_porcent_in_message_requests_view': 0.40,
         'min_height': 40,
     },
     '1360x768': {
         'chat_limit_x_porcent': 0.8,
+        'chat_limit_x_porcent_in_message_requests_view': 0.30,
         'min_height': 20,
     },
 }
@@ -87,15 +90,30 @@ FIND_CURRENT_CHAT_ID_CONFIG = {
     },
 }
 
+EXTRACT_CHAT_ID_CONFIG = {
+    '1920x1080': {
+        'y_sub': 50,
+        'y_plus': 10,
+        'x_sub': 300
+    },
+    '1360x768': {
+        'y_sub': 25,
+        'y_plus': 10,
+        'x_sub': 240
+    },
+}
 
-RESOLUTION_CONFIG_IN_USE = '1360x768'
+
+RESOLUTION_CONFIG_IN_USE = '1920x1080'
 
 # Add these imports at the top of the file
 import asyncio
 from websocket_client import WebSocketClient
 
 class Bot:
-    def __init__(self, name: str, target_name: str, target_templates_paths: list[str], websocket_uri: str) -> None:
+    def __init__(self, name: str, target_name: str,
+                 target_templates_paths: list[str], websocket_uri: str) -> None:
+
         self.name = name
         self.target_name = target_name
 
@@ -110,6 +128,13 @@ class Bot:
         self.chats_area_scroll_reference = 0 # Cuanto se ha desplazado el scroll en el area de chats (de arriba hacia abajo).
         # self.target_template = cv2.imread(self.target_template_path)
         self.chat_querys = ChatQuerys()
+        self.bot_querys = BotQuerys()
+
+        current_bot = self.bot_querys.get_bot_by_name(self.name)
+
+        if not current_bot:
+            self.bot_querys.create_bot(name=self.name,
+                                       is_in_message_requests_view=False)
 
         # Initialize WebSocket client
         self.websocket = WebSocketClient(
@@ -118,13 +143,16 @@ class Bot:
         self.websocket_uri = websocket_uri
         self.window_handler = WindowHandler(title=target_name)
         self.first_contour_reference: Tuple[int, int, int, int] | None = None
-        self.is_in_message_requests_view = False
-        self.is_offline = False
+
+        # self.is_in_message_requests_view = current_bot.name if current_bot else (
+        #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
+
+        self.is_online = False
 
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = True
+        self.is_memory_active = False
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
@@ -147,9 +175,7 @@ class Bot:
 
         self.is_show_contours_active = False
 
-    # =================================================== Web Socket connection (Start) =============================================================
-
-    # =================================================== Web Socket connection (End) =============================================================
+        self.amount_of_time_chats_area_down_scrolled = 0
 
 
     def add_last_five_texts_watched(self, last_text: str | None,
@@ -201,7 +227,15 @@ class Bot:
     def add_last_five_texts_watched_v3(self, last_text: str | None,
                                     msg_2: str | None = None, msg_3: str | None = None,
                                     msg_4: str | None = None, msg_5: str | None = None,
+                                   add_to_first_empty: bool = False
                                     ) -> None | bool:
+
+        if add_to_first_empty and last_text is not None:
+            for key in self.last_five_texts_memory_db_v2:
+                if self.last_five_texts_memory_db_v2[key] is None:
+                    self.last_five_texts_memory_db_v2[key] = last_text
+                    break  # Solo añade en el primer hueco encontrado
+            return True
 
         if last_text:
             self.last_five_texts_memory_db_v2['last_text'] = last_text
@@ -217,6 +251,7 @@ class Bot:
 
         if msg_5:
             self.last_five_texts_memory_db_v2['msg5'] = msg_5
+
 
 
     def clear_texts_not_watched(self) -> None:
@@ -392,7 +427,6 @@ class Bot:
         if len(button_contour_found) == 0:
             return None
 
-        # self.show_contours(contours=button_contour_found, title='button contour found')
 
         button_contour = button_contour_found[0]
 
@@ -422,8 +456,6 @@ class Bot:
 
             if w > w_target and y < y_target:
                 chat_id_contour = contour
-
-        self.show_contours(contours=[chat_id_contour], title='chat id contour')
 
         x, y, w, h = cv2.boundingRect(chat_id_contour)
 
@@ -466,8 +498,8 @@ class Bot:
 
         print("chat id ", chat_id)
 
-        self.show_contours(image=roi, contours=[],
-                           title=f'chat id')
+        # self.show_contours(image=roi, contours=[],
+        #                    title=f'chat id')
         self.current_chat_id = chat_id
         # self.show_contours(image=roi, contours=[],
         #                    title=f'chat id extracted {chat_id}')
@@ -475,24 +507,40 @@ class Bot:
         return chat_id
 
 
-    def find_text_area_contours(self, image = None, use_first_contour_reference = True, take_all_texts=False):
+    def find_text_area_contours(self, image = None,
+                                use_first_contour_reference = True,
+                                take_all_texts=False):
+        # img_handler = None
+        #
+        # if self.is_in_message_requests_view:
+        #     chat_area_cropped = self.get_chat_area_cropped()
+        #     img_handler = ImgHandler(image=chat_area_cropped)
+        #
+        # else:
+        #     img_handler = ImgHandler(image=self.current_screenshot if image is None else image)
+
         img_handler = ImgHandler(image=self.current_screenshot if image is None else image)
-        contours = img_handler.find_contours_by_large_contours_mask()
+        contours = img_handler.find_texts_area_contours()
         possible_text_contours = []
         chat_contour = self.find_chat_area_contour()
 
+        # self.show_contours(image=chat_area_cropped, contours=contours,
+        #                    title="posible texto contour-find_text_area_contours")
+
         # self.show_contours(contours=contours,
-        #                    title="contours-find_text_area_contours")
-        #
+        #                    title=f"contours-find_text_area_contours")
+
         # self.show_contours(contours=chat_contour,
         #                    title="chat_contour-find_text_area_contours")
 
         config = FIND_TEXT_AREA_CONTOURS_CONFIG[RESOLUTION_CONFIG_IN_USE]
-        chat_limit_x_porcent = config['chat_limit_x_porcent']
+        chat_limit_x_porcent = config['chat_limit_x_porcent_in_message_requests_view'] \
+            if self.is_in_principal_view() else config['chat_limit_x_porcent']
         min_height = config['min_height']
 
         x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
-        chat_limit_x = x_chat + int(w_chat * chat_limit_x_porcent)   # Punto medio horizontal del chat subir esto
+        chat_limit_x = x_chat + int((x_chat + w_chat) * chat_limit_x_porcent)   # Punto medio horizontal del chat subir esto
+        chat_start_x_porcent = 0.30
 
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
@@ -500,10 +548,10 @@ class Bot:
             # Filtro de tamaño (ajusta según necesidad)
             min_w = 40 if take_all_texts else 100
             min_h = 0 if take_all_texts else min_height # bajar esto
+            # max_chat_width_porcent = 0.60 if self.is_in_message_requests_view else 0.70
 
             # Verifica si tiene el tamaño adecuado
             if (min_w < w < w_chat * 0.70) and (min_h < h < h_chat - 10):
-
                 # Verifica si no pasa el limite en el eje y inferior
                 is_contour_valid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
                     if self.first_contour_reference is not None and use_first_contour_reference \
@@ -513,8 +561,10 @@ class Bot:
 
                 is_within_chat_width_percent = x + w <= chat_limit_x
 
+                # is_within_chat_width_percent = True
+
                 # Verifica si está DENTRO del chat_contour
-                if (((x > x_chat) and (x + w < x_chat + w_chat))
+                if (((x_chat < x < (x_chat + w_chat) * chat_start_x_porcent) and (x + w < x_chat + w_chat))
                     and ((y > y_chat) and (y + h < y_chat + h_chat))
                     and is_contour_valid and is_within_chat_width_percent):
 
@@ -524,9 +574,6 @@ class Bot:
         # cv2.imshow('chats contour', self.current_screenshot)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        #
-        # self.show_contours(contours=possible_text_contours,
-        #                    title="posible texto contour-find_text_area_contours")
 
         return possible_text_contours
 
@@ -580,10 +627,7 @@ class Bot:
             if 0.7 < circularity <= 1.0 and is_into_chats_contour and is_in_size_range:  # Umbral de circularidad
                 contours_found.append(contour)
 
-        # print(len(contours_found))
-        # cv2.drawContours(self.current_screenshot, contours_found, -1, (0, 255, 0), 3)
-        # cv2.imshow('chats mark', self.current_screenshot)
-        # cv2.waitKey(0)
+        # self.show_contours(contours=contours_found, title='chats contours')
 
         # for contour in contours:
         #     # Aproximar el contorno a un polígono
@@ -629,11 +673,16 @@ class Bot:
         y = chat_ref[1]
         circle_x, circle_y = x, y
         image = self.current_screenshot
-        text_roi = image[circle_y - 50:circle_y + 10, circle_x - 300:circle_x]
 
-        # cv2.imshow('text_roi', text_roi)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        config = EXTRACT_CHAT_ID_CONFIG[RESOLUTION_CONFIG_IN_USE]
+        y_sub = config["y_sub"]
+        y_plus = config["y_plus"]
+        x_sub = config["x_sub"]
+
+        text_roi = image[circle_y - y_sub:circle_y + y_plus, circle_x - x_sub:circle_x]
+
+        # self.show_contours(image=text_roi,
+        #                    contours=[], title="text_roi")
 
         img_hanlder = ImgHandler(image=text_roi)
         chat_id = img_hanlder.extract_text()
@@ -702,10 +751,9 @@ class Bot:
             self.chats_area_scroll_reference -= scroll_move
 
         if direction == 'up':
-            pyautogui.scroll(scroll_move)
+            pyautogui.scroll(abs(scroll_move))
         elif direction == 'down':
-            pyautogui.scroll(scroll_move)
-
+            pyautogui.scroll(-abs(scroll_move))
 
 
     def get_last_chat_id_image(self) -> ImgHandler:
@@ -847,7 +895,9 @@ class Bot:
         cv2.destroyAllWindows()
 
 
-    async def move_to_contour_gradually(self, target_x, target_y, check_steps=5, step_delay=0.3):
+    async def move_to_contour_gradually(self, target_x,
+                                        target_y, check_steps=5,
+                                        step_delay=0.3, is_first_iter=False):
         """Mueve el cursor gradualmente hacia el contorno objetivo, verificando los contornos en cada paso"""
         current_x, current_y = pyautogui.position()
         total_steps = check_steps
@@ -863,10 +913,13 @@ class Bot:
 
             # Volver a capturar pantalla y contornos
             self.take_screenshot()
-            possible_text_contours = self.find_text_area_contours()
+            possible_text_contours = self.find_text_area_contours(use_first_contour_reference=not is_first_iter)
+            self.show_contours(contours=possible_text_contours,
+                               title='todos los contornos')
 
             # Si hay contornos, actualizar target con el primero
-            if possible_text_contours:
+            if possible_text_contours and len(possible_text_contours) > 0:
+                self.show_contours(contours=possible_text_contours[0], title='el utltimo contorno')
                 x, y, w, h = cv2.boundingRect(possible_text_contours[0])
                 target_x = x + 15
                 target_y = y + 15
@@ -877,6 +930,7 @@ class Bot:
             await asyncio.sleep(step_delay)
 
         return last_text_contour_checked
+
 
     async def get_texts_did_not_watched_list(self, possible_text_contours,
                                              is_first_iter=False, texts=[], was_handled_overflow=False):
@@ -896,9 +950,9 @@ class Bot:
 
         self.move_to_chat()
 
-        # self.show_contours(contours=possible_text_contours,
-        #     title=f"posible contornos de texts is_first_iter {is_first_iter}")
-        #
+        self.show_contours(contours=possible_text_contours,
+            title=f"posible contornos de texts is_first_iter {is_first_iter}")
+
 
         if is_first_iter:
             first_text = possible_text_contours[0]
@@ -924,7 +978,9 @@ class Bot:
                 x_start_offset = config['x_start_offset']
                 y_start_offset = config['y_start_offset']
 
-                first_text = await self.move_to_contour_gradually(x+x_start_offset, y+y_start_offset)
+                first_text = await self.move_to_contour_gradually(x+x_start_offset,
+                                                                  y+y_start_offset,
+                                                                  is_first_iter=is_first_iter)
                 x, y, w, h = cv2.boundingRect(first_text)
 
 
@@ -946,15 +1002,10 @@ class Bot:
                     desactivate_scroll=True
                 )
 
-                if not self.is_offline: await self.websocket.send_websocket_message(
+                if self.is_online: await self.websocket.send_websocket_message(
                     message_type="bot_message", message=text,
                     name=self.name, current_chat_id=self.current_chat_id)
 
-                # if i == 4:
-                #     return False
-
-                # self.show_contours(contours=[first_text],
-                #                    title="Primer texto")
 
                 if self.first_contour_reference is None:
                     # self.show_contours(contours=[first_text], title='tirst contour reference')
@@ -1039,7 +1090,7 @@ class Bot:
                         desactivate_scroll=True
                     )
 
-                    if not self.is_offline: await self.websocket.send_websocket_message(
+                    if self.is_online: await self.websocket.send_websocket_message(
                         message_type="bot_message", message=text,
                         name=self.name, current_chat_id=self.current_chat_id)
 
@@ -1064,12 +1115,11 @@ class Bot:
                         has_more = False
                         break
 
-
                     if keyboard.is_pressed('esc'):
                         print("Detenido por el usuario.")
                         exit()
 
-        if self.is_memory_active:
+        if self.is_memory_active and is_first_iter:
             self.add_last_five_texts_watched_v3(last_text=last_text, msg_2=msg2, msg_3=msg3,
                                                 msg_4=msg4, msg_5=msg5)
 
@@ -1286,9 +1336,9 @@ class Bot:
                                                     use_first_contour_reference=False,
                                                     take_all_texts=True)
 
-        self.show_contours(image=result_image,
-                           contours=[],
-                           title="Contornos encontrados y la imagen resultante")
+        # self.show_contours(image=result_image,
+        #                    contours=[],
+        #                    title="Contornos encontrados y la imagen resultante")
 
         has_more = True
 
@@ -1389,7 +1439,11 @@ class Bot:
                     #     id_scraped=self.current_chat_id, last_text=text
                     # )
 
-                if not self.is_offline: await self.websocket.send_websocket_message(
+                elif not is_initial_overflow and self.is_memory_active:
+                    self.add_last_five_texts_watched_v3(last_text=text, add_to_first_empty=True)
+
+
+                if self.is_online: await self.websocket.send_websocket_message(
                     message_type="bot_message", message=text)
 
                 texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
@@ -1466,6 +1520,7 @@ class Bot:
 
         chat_contour = self.find_chat_area_contour()
 
+        # self.show_contours(contours=[chat_contour], title="chat_contour")
 
         scrolled = 0
 
@@ -1529,10 +1584,10 @@ class Bot:
         await asyncio.sleep(1)
         self.take_screenshot()
         possible_text_contours = self.find_text_area_contours(
-            use_first_contour_reference=True if self.was_handled_overflow else False)
+            use_first_contour_reference=True if self.was_handled_overflow or iterations > 0 else False)
 
-        self.show_contours(contours=possible_text_contours,
-                           title="possible text contour")
+        # self.show_contours(contours=possible_text_contours,
+        #                    title="possible text contour")
         # self.show_contours(contours=possible_text_contours,
         #                    title="possible text contour")
         # self.show_contours(contours=all_texts_contours,
@@ -1697,8 +1752,8 @@ class Bot:
         pyautogui.click(x_cord, y_cord, duration=1)
         time.sleep(1)
 
-        self.is_in_message_requests_view = True
-
+        # self.is_in_message_requests_view = True
+        self.bot_querys.update_bot(name=self.name, is_in_message_requests_view=True)
 
 
     def go_to_principal_view(self):
@@ -1707,7 +1762,52 @@ class Bot:
         pyautogui.click(x+20, y, duration=1)
         time.sleep(1)
 
-        self.is_in_message_requests_view = False
+        # self.is_in_message_requests_view = False
+        self.bot_querys.update_bot(name=self.name, is_in_message_requests_view=False)
+
+
+    def is_in_principal_view(self):
+        self.take_screenshot()
+        chats_contour = self.take_chats_container_contour()
+        if chats_contour is None:
+            return False
+
+        img_handler = ImgHandler(image=self.current_screenshot)
+        contours = img_handler.find_contours_by_large_contours_mask()
+
+        x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+
+        # Definir límites para filtrar la esquina superior derecha
+        y_top_limit = y_chats + int(h_chats * 0.2)  # Primer 20% en Y (parte superior)
+        x_right_half = x_chats + int(w_chats * 0.5)  # Mitad derecha en X
+
+        valid_contours = []
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+
+            # Verificar si el contorno está dentro de la zona superior derecha del área de chats
+            is_in_top_y = y < y_top_limit
+            is_in_right_x = x > x_right_half
+
+            # Verificar si está dentro del área general de los chats (opcional pero recomendable)
+            is_inside_chats_area = (
+                    x_chats <= x <= x_chats + w_chats and
+                    y_chats <= y <= y_chats + h_chats
+            )
+
+            # Filtrar por tamaño
+            size_ok = 20 < w < 60 and h > 20
+
+            if is_inside_chats_area and is_in_top_y and is_in_right_x and size_ok:
+                valid_contours.append(contour)
+
+        # self.show_contours(contours=valid_contours,
+        #                    title=f'is in principal view {len(valid_contours) > 1}')
+
+        # Devolver True si hay más de un contorno válido
+        return len(valid_contours) > 1
+
 
 
     def find_back_arrow_contour(self):
@@ -1738,14 +1838,24 @@ class Bot:
         return closest_contour
 
 
+    def get_chat_area_cropped(self):
+        chat_area = self.find_chat_area_contour()
+        x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chat_area)
+        cropped = self.current_screenshot[y_chats:y_chats+h_chats, x_chats:x_chats+w_chats]
+        return cropped
+
+
     async def run(self):
-        if not self.is_offline: await self.websocket.establish_connection()
+        if self.is_online: await self.websocket.establish_connection()
         counter = 0
 
         chats_scrroll_done = False
 
         print("Running...")
         last_print = ""
+
+        # if not self.is_in_principal_view():
+        #     self.go_to_principal_view()
 
         while True:
             print("buscando chats o lo que surja")
@@ -1774,141 +1884,155 @@ class Bot:
                 # last_print = "watching"
                 pass
 
-            print("contador ", counter)
+            if counter == 2 and self.is_in_principal_view():
+                counter = 0
+                self.show_contours(contours=[], title='nos fuimos pal request view')
+                self.go_to_message_requests_view()
 
-            # if counter == 5 and not self.is_in_message_requests_view:
-            #     counter = 0
-            #     self.go_to_message_requests_view()
-            #
-            # counter += 1
+            elif not self.is_in_principal_view() and counter == 2:
+                counter = 0
+                self.show_contours(contours=[], title='nos fuimos pal principal view')
+                self.go_to_principal_view()
 
-            lookup_chats_counter = 0
-            order_chats_ids: List[str] = []
-            order_cursor = 0
+            counter += 1
 
-            chats = self.find_chat_references()
+            self.scroll_chats_area(direction='up',
+                                   scroll_move=10_000)
+            self.chats_area_scroll_reference = 0
 
-            # self.show_contours(contours=chats,
-            #                    title="chats")
+            review_each_view_counter = 1
 
-            # Obtener orden de referencia de chats a seguir
-            if lookup_chats_counter == 0:
-                for chat in chats:
-                    x, y, _, _ = cv2.boundingRect(chat)
-                    chat_id = self.extract_chat_id(chat_ref=(x, y))
-                    order_chats_ids.append(chat_id)
+            while review_each_view_counter <= 5:
+                if review_each_view_counter == 2 and not self.is_in_principal_view():
+                    break
+
+                lookup_chats_counter = 0
+                order_chats_ids: List[str] = []
+                order_cursor = 0
+
+                chats = self.find_chat_references()
+
+                # Obtener orden de referencia de chats a seguir
+                if lookup_chats_counter == 0:
+                    for chat in chats:
+                        x, y, _, _ = cv2.boundingRect(chat)
+                        chat_id = self.extract_chat_id(chat_ref=(x, y))
+                        order_chats_ids.append(chat_id)
 
 
-            lookup_chats_counter += 1
+                lookup_chats_counter += 1
 
-            if chats is not None and len(chats) > 0:
-                print("entra a iterar los chats...")
-                for chat in chats:
-                    x, y, _, _ = cv2.boundingRect(chat)
+                if chats is not None and len(chats) > 0:
+                    self.amount_of_time_chats_area_down_scrolled = 0
 
-                    chat_id = self.extract_chat_id(chat_ref=(x, y))
-                    chat_id_reference = order_chats_ids[order_cursor]
+                    print("entra a iterar los chats...")
+                    for chat in chats[::-1]:
+                        x, y, _, _ = cv2.boundingRect(chat)
 
-                    if chat_id != chat_id_reference:
+                        chat_id = self.extract_chat_id(chat_ref=(x, y))
+                        chat_id_reference = order_chats_ids[order_cursor]
+
+                        if chat_id != chat_id_reference:
+                            continue
+
+                        self.click_chat(chat_ref=(x, y), duration=1)
+
+                        if chat_id:
+                            chat = self.chat_querys.get_chat_by_id_scraped(
+                                id_scraped=chat_id)
+
+                            if not chat:
+                                self.chat_querys.create_chat(id_scraped=chat_id)
+
+                       # self.move_to_chat()
+                        self.take_screenshot()
+                        await self.review_chat()
+
+                        self.chat_querys.update_chat_by_chat_id_scraped(id_scraped=self.current_chat_id,
+                                                                        last_text_url=None, last_text_index=0,
+                                                                        **self.last_five_texts_memory_db_v2)
+
+                        self.clear_texts_not_watched_v2()
+
+                        self.was_handled_overflow = False
+
+                        self.scroll_chat_area(direction='down',
+                                               scroll_move=self.scroll_reference)
+                        self.scroll_reference = 0
+
+                        await asyncio.sleep(1)
+                        chats = self.find_chat_references()
+                        order_cursor += 1
+
+                    x, y, w, h = cv2.boundingRect(self.chats_reference)
+                    self.scroll_chats_area(direction='down', scroll_move=int(h * 0.70))
+
+                else:
+                    # Si ya he bajado 3 veces y no he visto nada entonces subo completo
+                    # en caso contrario bajar
+                    print('chats_area_scroll_reference ', self.chats_area_scroll_reference)
+                    self.scroll_chats_area(direction='up',
+                                           scroll_move=self.chats_area_scroll_reference)
+
+                    self.chats_area_scroll_reference = 0
+
+
+                    order_chats_ids.clear()
+                    order_cursor = 0
+
+                    await asyncio.sleep(0.5)
+
+
+
+                    if review_each_view_counter % 2 != 0:
+                        review_each_view_counter += 1
                         continue
 
-                    self.click_chat(chat_ref=(x, y), duration=1)
-
-                    if chat_id:
-                        chat = self.chat_querys.get_chat_by_id_scraped(
-                            id_scraped=chat_id)
-
-                        if not chat:
-                            self.chat_querys.create_chat(id_scraped=chat_id)
-
-                    # self.move_to_chat()
+                    print("pasamos a review chats")
                     self.take_screenshot()
+
+                    if self.current_chat_id is None:
+                        chat_id = self.find_current_chat_id()
+                        if chat_id:
+                            chat = self.chat_querys.get_chat_by_id_scraped(
+                                id_scraped=chat_id)
+
+                            if not chat:
+                                self.chat_querys.create_chat(id_scraped=chat_id)
+
+                        else: continue
+
+                    button_contour = self.find_button_to_bottom_contour()
+
+                    if button_contour is not None:
+                        x, y, w, h = cv2.boundingRect(button_contour)
+                        pyautogui.click(x=x+w/2, y=y+h/2)
+
+                    else:
+                        self.scroll_chat_area(direction='down', scroll_move=1_000_000)
+
+                    # await asyncio.sleep(1)
+                    # self.take_screenshot()
+                    print("antes del review chat")
                     await self.review_chat()
 
-                    last_texts_watched = self.get_last_five_texts_memory_db()
+                    print("last_five_texts_memory_db_v2 ", self.last_five_texts_memory_db_v2)
 
                     self.chat_querys.update_chat_by_chat_id_scraped(id_scraped=self.current_chat_id,
                                                                     last_text_url=None, last_text_index=0,
                                                                     **self.last_five_texts_memory_db_v2)
 
                     self.clear_texts_not_watched_v2()
-
                     self.was_handled_overflow = False
-
                     self.scroll_chat_area(direction='down',
-                                           scroll_move=self.scroll_reference)
+                                          scroll_move=self.scroll_reference)
                     self.scroll_reference = 0
 
-                    await asyncio.sleep(1)
-                    chats = self.find_chat_references()
-                    order_cursor += 1
+                review_each_view_counter += 1
 
 
-            else:
-                x, y, w, h = cv2.boundingRect(self.chats_reference)
-                self.scroll_chats_area(direction='down', scroll_move=int(h * 0.70))
-                # self.scroll_chats_area(direction='up',
-                #                        scroll_move=self.chats_area_scroll_reference)
-                order_chats_ids.clear()
-                order_cursor = 0
-
-                await asyncio.sleep(0.5)
-                self.take_screenshot()
-
-                if self.current_chat_id is None:
-                    chat_id = self.find_current_chat_id()
-                    if chat_id:
-                        chat = self.chat_querys.get_chat_by_id_scraped(
-                            id_scraped=chat_id)
-
-                        if not chat:
-                            self.chat_querys.create_chat(id_scraped=chat_id)
-
-                    else: continue
-
-                button_contour = self.find_button_to_bottom_contour()
-                # self.show_contours(contours=[button_contour], title='button contour')
-
-                if button_contour is not None:
-                    x, y, w, h = cv2.boundingRect(button_contour)
-                    pyautogui.click(x=x+w/2, y=y+h/2)
-
-                else:
-                    self.scroll_chat_area(direction='down', scroll_move=1_000_000)
-
-                # await asyncio.sleep(1)
-                # self.take_screenshot()
-                await self.review_chat()
-                last_texts_watched = self.get_last_five_texts_memory_db()
-
-                self.chat_querys.update_chat_by_chat_id_scraped(id_scraped=self.current_chat_id,
-                                                                last_text_url=None, last_text_index=0,
-                                                                **self.last_five_texts_memory_db_v2)
-
-                self.clear_texts_not_watched_v2()
-                self.was_handled_overflow = False
-                self.scroll_chat_area(direction='down',
-                                      scroll_move=self.scroll_reference)
-                self.scroll_reference = 0
-
-            # chats = self.find_chat_references()
-
-            # Si se hizo scroll y no hay chats
-            # if chats is not None and len(chats) == 0 and self.first_contour_reference is not None:
-            #     self.take_screenshot()
-            #     x, y, w, h = self.first_contour_reference
-            #     text = self.get_text_by_text_location(x_start=x, y_start=y, x_end=x+w, y_end=y+h,
-            #                                    scroll_pos_start=0, scroll_pos_end=0)
-            #
-            #     last_text, _ = self.get_last_chat_id_text_and_index()
-            #
-            #     if text != last_text:
-            #         await self.review_chat()
-            #         self.scroll_reference = 0
-            #     break
-
-            if self.is_in_message_requests_view:
-                self.go_to_principal_view()
+            # if self.is_in_message_requests_view:
+            #     self.go_to_principal_view()
 
             # except Exception as e:
             #     print(f'Error raised: {e}')

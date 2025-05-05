@@ -1,32 +1,37 @@
-# Etapa 1: Dependencias de desarrollo
-FROM node:20-alpine AS development-dependencies-env
-COPY . /app
+# Etapa 1: Build (Construcción de la SPA)
+# Usa una imagen de Node para instalar dependencias y construir el proyecto
+FROM node:20-alpine AS builder
+
+# Establece el directorio de trabajo
 WORKDIR /app
+
+# Copia package.json y package-lock.json (o yarn.lock)
+COPY package*.json ./
+
+# Instala todas las dependencias (incluyendo devDependencies necesarias para build)
+# Usa 'npm ci' para instalaciones limpias basadas en package-lock.json
 RUN npm ci --force
 
-# Etapa 2: Dependencias de producción
-FROM node:20-alpine AS production-dependencies-env
-COPY ./package.json package-lock.json /app/
-WORKDIR /app
-RUN npm ci --force --omit=dev
+# Copia el resto del código fuente de la aplicación
+COPY . .
 
-# Etapa 3: Build
-FROM node:20-alpine AS build-env
-COPY . /app/
-COPY --from=development-dependencies-env /app/node_modules /app/node_modules
-WORKDIR /app
+# Ejecuta el script de build definido en tu package.json
 RUN npm run build
 
-# Etapa 4: Producción
-FROM node:20-alpine
-COPY ./package.json package-lock.json /app/
-COPY --from=production-dependencies-env /app/node_modules /app/node_modules
-COPY --from=build-env /app/build /app/build
-WORKDIR /app
+# Etapa 2: Production (Servidor Nginx)
+# Usa una imagen ligera de Nginx
+FROM nginx:1.25-alpine
 
-# Instalar serve para servir archivos estáticos
-RUN npm install serve --force --save-prod
-RUN npm install -g npx --force
+# Copia los archivos estáticos construidos desde la etapa 'builder'
+# al directorio por defecto donde Nginx sirve los archivos
+COPY --from=builder /app/build/client /usr/share/nginx/html
 
-# Comando para servir los archivos estáticos
-CMD ["npx", "serve", "-s", "build/client", "-l", "5173", "--no-clipboard"]
+# Copia tu archivo de configuración personalizado de Nginx
+# Reemplazará la configuración por defecto de Nginx.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expone el puerto 80 (puerto estándar HTTP)
+EXPOSE 80
+
+# Comando por defecto para iniciar Nginx en primer plano
+CMD ["nginx", "-g", "daemon off;"]
