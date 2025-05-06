@@ -1,6 +1,4 @@
 import math
-from time import sleep
-
 import numpy as np
 import pyautogui
 import cv2
@@ -11,110 +9,22 @@ from db.chat_querys import ChatQuerys
 from db.bots_querys import BotQuerys
 import pyperclip
 from typing import List, Tuple, Dict
-import os
 from window_handler import WindowHandler
 from utils import get_subtraction_steps
 import keyboard
-
-# pynput otra libreria para manejar el mouse
-# pydirectinput otra libreria para manejar el mouse
-
-# dirname = os.path.dirname(__file__)
-# image_path = os.path.join(dirname, 'Captura de pantalla 2025-03-30 114247.png')
-# image_test = cv2.imread(image_path)
+import asyncio
+from websocket_client import WebSocketClient
+from config import BOT_CONFIG
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
 pyautogui.FAILSAFE = False
 
-FIND_CHATS_REFERENCE_CONFIG = {
-    '1920x1080': {
-        'min_width': 12,
-        'max_width': 20,
-        'min_height': 12,
-        'max_height': 20,
-    },
-    '1360x768': {
-        'min_width': 10,
-        'max_width': 20,
-        'min_height': 10,
-        'max_height': 20,
-    },
-}
-
-FIND_TEXT_AREA_CONTOURS_CONFIG = {
-    '1920x1080': {
-        'chat_limit_x_porcent': 0.6,
-        'chat_start_x_porcent': 0.3,
-        'chat_limit_x_porcent_in_message_requests_view': 0.40,
-        'min_height': 40,
-    },
-    '1360x768': {
-        'chat_limit_x_porcent': 0.8,
-        'chat_start_x_porcent': 0.4,
-        'chat_limit_x_porcent_in_message_requests_view': 0.30,
-        'min_height': 20,
-    },
-}
-
-
-GET_TEXTS_DID_NOT_WATCHED_CONFIG = {
-    '1920x1080': {
-        'x_start_offset': 10,
-        'y_start_offset': 15,
-        'scroll_move': 35,
-
-    },
-    '1360x768': {
-        'x_start_offset': 10,
-        'y_start_offset': 10,
-        'scroll_move': 25,
-
-    },
-}
-
-
-REVIEW_CHAT_CONFIG = {
-    '1920x1080': {
-        'scroll_move': 45,
-    },
-    '1360x768': {
-        'scroll_move': 35,
-    },
-}
-
-FIND_CURRENT_CHAT_ID_CONFIG = {
-    '1920x1080': {
-        'roi_x_start_porcent': 0.285,
-    },
-    '1360x768': {
-        'roi_x_start_porcent': 0.32,
-    },
-}
-
-EXTRACT_CHAT_ID_CONFIG = {
-    '1920x1080': {
-        'y_sub': 25,
-        'y_plus': 10,
-        'x_sub': 300
-    },
-    '1360x768': {
-        'y_sub': 12,
-        'y_plus': 10,
-        'x_sub': 240
-    },
-}
-
-
-RESOLUTION_CONFIG_IN_USE = '1920x1080'
-
-# Add these imports at the top of the file
-import asyncio
-from websocket_client import WebSocketClient
 
 class Bot:
     def __init__(self, name: str, target_name: str,
-                 target_templates_paths: list[str], websocket_uri: str) -> None:
+                 target_templates_paths: list[str], websocket_uri: str,
+                 display_resolution: str) -> None:
 
         self.name = name
         self.target_name = target_name
@@ -180,6 +90,8 @@ class Bot:
         self.amount_of_time_chats_area_down_scrolled = 0
 
         self.is_paused = False
+
+        self.display_resolution = display_resolution
 
 
     def add_last_five_texts_watched(self, last_text: str | None,
@@ -471,7 +383,7 @@ class Bot:
         roi_y_end = roi_y_start + h + 10  # Misma altura que el contorno
         height, width = image.shape[:2]
 
-        config = FIND_CURRENT_CHAT_ID_CONFIG[RESOLUTION_CONFIG_IN_USE]
+        config = BOT_CONFIG[self.display_resolution]['FIND_CURRENT_CHAT_ID']
         roi_x_start_porcent = config['roi_x_start_porcent']
 
         # Calcular punto de inicio X al 30% del ancho de la imagen
@@ -546,7 +458,7 @@ class Bot:
         # self.show_contours(contours=chat_contour,
         #                    title="chat_contour-find_text_area_contours")
 
-        config = FIND_TEXT_AREA_CONTOURS_CONFIG[RESOLUTION_CONFIG_IN_USE]
+        config = BOT_CONFIG[self.display_resolution]['FIND_TEXT_AREA_CONTOURS']
         chat_limit_x_porcent = config['chat_limit_x_porcent_in_message_requests_view'] \
             if self.is_in_principal_view() else config['chat_limit_x_porcent']
         min_height = config['min_height']
@@ -633,7 +545,7 @@ class Bot:
                 y < (y_chats + h_chats)  # Termina al final del alto
             )
 
-            config = FIND_CHATS_REFERENCE_CONFIG[RESOLUTION_CONFIG_IN_USE]
+            config = BOT_CONFIG[self.display_resolution]['FIND_CHATS_REFERENCE']
             min_width = config['min_width']
             max_width = config['max_width']
             min_height = config['min_height']
@@ -694,7 +606,7 @@ class Bot:
         circle_x, circle_y = x, y
         image = self.current_screenshot
 
-        config = EXTRACT_CHAT_ID_CONFIG[RESOLUTION_CONFIG_IN_USE]
+        config = BOT_CONFIG[self.display_resolution]['EXTRACT_CHAT_ID']
         y_sub = config["y_sub"]
         y_plus = config["y_plus"]
         x_sub = config["x_sub"]
@@ -1010,7 +922,7 @@ class Bot:
             else:
                 skip_next_contour = False
 
-                config = GET_TEXTS_DID_NOT_WATCHED_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                config = BOT_CONFIG[self.display_resolution]['GET_TEXTS_DID_NOT_WATCHED']
                 x_start_offset = config['x_start_offset']
                 y_start_offset = config['y_start_offset']
 
@@ -1060,7 +972,7 @@ class Bot:
                     has_more = False
 
             if not was_handled_overflow:
-                config = GET_TEXTS_DID_NOT_WATCHED_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                config = BOT_CONFIG[self.display_resolution]['GET_TEXTS_DID_NOT_WATCHED']
                 scroll_move = config['scroll_move']
                 self.scroll_chat_area(direction="up",
                                       scroll_move=scroll_move)
@@ -1113,7 +1025,7 @@ class Bot:
                 else:
                     skip_next_contour = False
 
-                    config = GET_TEXTS_DID_NOT_WATCHED_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                    config = BOT_CONFIG[self.display_resolution]['GET_TEXTS_DID_NOT_WATCHED']
                     x_start_offset = config['x_start_offset']
                     y_start_offset = config['y_start_offset']
 
@@ -1644,7 +1556,7 @@ class Bot:
                 x_2, y_2, w_2, h_2 = cv2.boundingRect(all_texts_contours[0])
 
                 if w_2 != w_1 and iterations == 0:
-                    config = REVIEW_CHAT_CONFIG[RESOLUTION_CONFIG_IN_USE]
+                    config = BOT_CONFIG[self.display_resolution]['REVIEW_CHAT']
                     scroll_move = config['scroll_move']
 
                     self.scroll_chat_area(direction="up",
@@ -1987,6 +1899,15 @@ class Bot:
                 exit()
             # pyautogui.keyDown('F11')
             self.take_screenshot()
+
+            if not self.window_handler.is_window_maximized():
+                self.window_handler.maximize_window()
+                await asyncio.sleep(1)
+
+                # if self.window_handler.is_window_maximized():
+                pyautogui.keyDown('F11')
+                await asyncio.sleep(8)
+
             is_target = self.is_watching_target_v2()
 
             print("is target ", is_target)
