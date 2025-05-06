@@ -12,7 +12,7 @@ dirname = os.path.dirname(__file__)
 
 messenger_template_path = os.path.join(dirname, 'templates/messenger_template(1920x1080).png')
 messenger_request_msg_template_path = os.path.join(dirname, 'templates/messenger_request_message_template(1920x1080).png')
-# messenger_template_path = os.path.join(dirname, 'templates/messenger_template(1360x768x100).png')
+# messenger_template_path = os.path.join(dirname, 'templates/messenger_template(1360x768).png')
 # messenger_request_msg_template_path = os.path.join(dirname, 'templates/messenger_request_message_template(1360x768x100).png')
 
 def main():
