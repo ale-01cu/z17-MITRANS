@@ -10,21 +10,18 @@ class WindowHandler:
         self.pid = None
 
     def get_all_windows_titles(self) -> list[str]:
-        titles = gw.getAllWindows()
-        return titles
-
+        return [window.title for window in gw.getAllWindows()]
 
     def get_window(self) -> Win32Window | None:
-        titles = self.get_all_windows_titles()
-
-        for title in titles:
-            if self.title.lower() in title.lower():
-                windwos_found = gw.getWindowsWithTitle(title)
-                self.window = windwos_found[0] if len(windwos_found) > 0 else None
+        windows = gw.getAllWindows()
+        for window in windows:
+            if self.title.lower() in window.title.lower():
+                self.window = window
                 return self.window
-
         return None
 
-
     def maximize_window(self) -> None:
-        self.window.maximize()
+        if self.window:
+            self.window.maximize()
+        else:
+            raise ValueError("No window found. Call get_window() first.")

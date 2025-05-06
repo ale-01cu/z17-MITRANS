@@ -106,7 +106,7 @@ EXTRACT_CHAT_ID_CONFIG = {
 }
 
 
-RESOLUTION_CONFIG_IN_USE = '1360x768'
+RESOLUTION_CONFIG_IN_USE = '1920x1080'
 
 # Add these imports at the top of the file
 import asyncio
