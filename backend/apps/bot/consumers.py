@@ -5,67 +5,78 @@ from apps.classification.ml.model_loader import predict_comment_label
 from datetime import datetime
 import uuid
 
-# import machine_learning
-# from machine_learning.bot import bot
-
-
 class ChatConsumer(AsyncWebsocketConsumer):
     # Diccionario de clase para seguimiento de bots por sala
     web_channels = {}
     bot_channels = {}
-    bot_status = False
+    is_bot_active = False  # Renombrar la variable de clase del estado del bot
+
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f"chat_{self.room_name}"
         self.user_type = self.scope['url_route']['kwargs']['user_type']
 
-        # Registrar el canal del bot si es necesario
-        if self.user_type == 'bot':
-            self.__class__.bot_channels[self.room_group_name] = self.channel_name
-            self.bot_status = True
-            print(f"{self.user_type} registrado en sala: {self.room_name}")
-            print(self.bot_status)
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'bot.status',
-                    'status': 'connected',  # Indica que el bot está conectado
-                    'message': 'El bot se ha conectado a la sala.',  # mensaje
-                }
-            )
-            await self.send_to_web(self.bot_status)
-            await self.send_to_web({'content': {'bot_status': self.bot_status}, 'sender': 'system'})
-
-        # if self.user_type == 'web':
-        #     # Al conectar un cliente web, enviamos el estado actual del bot
-        #     print(f"{self.user_type} registrado en sala: {self.room_name}")
-        #     await self.send_to_web({'content': {'bot_status': self.__class__.bot_status},'sender': 'system'})
-
-        # Unirse al grupo
+        # Unirse al grupo (esto puede ir antes de accept si lo prefieres)
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
+
         await self.accept()
         print(f"Conexión establecida: {self.user_type} en {self.room_name}")
 
+        # Registrar el canal del bot y enviar estado SI LA CONEXIÓN WEB FUE ACEPTADA
+        if self.user_type == 'bot':
+            self.__class__.bot_channels[self.room_group_name] = self.channel_name
+            self.is_bot_active = True
+            print(f"{self.user_type} registrado en sala: {self.room_name}")
+            print(self.is_bot_active)
+            await self.send_to_web(
+                {
+                    'bot': self.is_bot_active,
+                    'type': 'bot_status',
+                    'content': {'bot_status': self.is_bot_active},
+                    'sender': 'system'
+                }
+            )
 
+        elif self.user_type == 'web':
+            print(f"{self.user_type} registrado en sala: {self.room_name}")
+
+            # Enviar el estado del bot al conectar el cliente web
+            await self.send_to_web(
+                {
+                    'bot': self.is_bot_active,
+                    'type':'bot_status',
+                    'content':{'bot_status': self.is_bot_active},
+                    'sender': 'system'
+                }
+            )
+            if not self.is_bot_active:
+                await self.send_to_web(
+                    {
+                        'bot': self.is_bot_active,
+                        'type': 'bot_status',
+                        'content': {'bot_status': self.is_bot_active},
+                        'sender': 'system'}
+                )
 
 
     async def disconnect(self, close_code):
         # Limpiar registro del bot si se desconecta
         if self.user_type == 'bot' and self.__class__.bot_channels.get(self.room_group_name) == self.channel_name:
-            # del self.__class__.bot_channels[self.room_group_name]
-            self.bot_status = False
+            self.is_bot_active = False  # Usar el nuevo nombre
             print(f"Bot desconectado de: {self.room_name}")
-            print(self.bot_status)
-            await self.send_to_web(self.bot_status)
+            print(self.is_bot_active)
+            await self.send_to_web(self.is_bot_active)
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
+                    'bot': self.is_bot_active,
                     'type': 'bot.status',
-                    'status': 'disconnected',  # Indica que el bot está desconectado
-                    'message': 'El bot se ha desconectado a la sala.',  # mensaje
+                    'content': {'bot_status': 'disconnected'},
+                    # 'status': 'disconnected',  # Indica que el bot está desconectado
+                    'message': 'El bot se ha desconectado de la sala.',  # mensaje
                 }
             )
 
@@ -135,9 +146,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if action == 'disconnect':
                 # Pausar el bot
                 machine_learning.bot.bot.is_paused = True  # Establecer is_paused en True para pausar
-                self.__class__.bot_status = False
+                self.__class__.is_bot_active = False  # Usar el nuevo nombre
                 print('Bot pausado')
-                print(self.bot_status)
+                print(self.is_bot_active)
                 await self.notify_group('system', 'Bot pausado')
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -151,9 +162,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             elif action == 'connect':
                 # Reanudar el bot
                 machine_learning.bot.bot.is_paused = False  # Establecer is_paused en False para reanudar
-                self.__class__.bot_status = True
+                self.__class__.is_bot_active = True  # Usar el nuevo nombre
                 print('Bot reanudado')  # mejorar el mensaje
-                print(self.bot_status)
+                print(self.is_bot_active)
                 await self.notify_group('system', 'Bot reanudado')
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -169,7 +180,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             print("No se encontró el canal del bot para esta sala.")  # debug
             await self.notify_group('system', 'No se encontró el canal del bot para esta sala.')
-            print(self.bot_status)
+            print(self.is_bot_active)
 
 
     async def process_bot_message(self, content_data):
@@ -203,7 +214,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                'type': 'send_to_web',
+                'type': 'message',
                 'content': {
                     'message': message,
                     'label': label,
@@ -218,15 +229,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                'type': 'send_to_bot',
+                'type': 'message',
                 'content': content,
                 'sender': 'web'
             }
         )
+
     # esto para en un futuro ver el estado de el bot siempre que haga falta
     # async def send_status(self, content):
-    #     if self.bot_status:
-    #         await self.send(self.bot_status)
+    #     if self.is_bot_active:
+    #         await self.send(self.is_bot_active)
     #         print('Enviando estado a la web')
 
 
@@ -234,8 +246,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Envía mensajes a los clientes web"""
         if self.user_type == 'web':
             await self.send(text_data=json.dumps({
-                'bot': self.bot_status,
-                'type': 'message',
+                'bot': bool(self.is_bot_active),  # Usar el nuevo nombre
+                'type': event['type'],
                 'content': event['content'],
                 'sender': event['sender'],
             }))
@@ -261,4 +273,3 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender': 'system'
             }
         )
-
