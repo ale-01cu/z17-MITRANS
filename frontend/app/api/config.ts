@@ -6,15 +6,26 @@ export const CONFIG = {
   baseURL: SERVER_BASE_URL,
   headers: {
     "Accept": "application/json",
-    "Content-Type": "application/json",
-    "Authorization": ""
+    "Content-Type": "application/json"
+    // Don't set Authorization here
   },
 }
 
-const createInstance = () => {
-  const token = getCookie("access")
-  if(token) CONFIG.headers.Authorization = `Bearer ${token}`
-  return axios.create(CONFIG)
-}
+const Axios = axios.create(CONFIG)
 
-export const Axios = createInstance()
+// Add a request interceptor to always get the latest token
+Axios.interceptors.request.use(
+  (config) => {
+    const token = getCookie("access")
+    if (token) {
+      config.headers = config.headers || {}
+      config.headers.Authorization = `Bearer ${token}`
+    } else if (config.headers) {
+      delete config.headers.Authorization
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+export { Axios }

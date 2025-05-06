@@ -1,54 +1,53 @@
-"use client"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/card"
 import { Badge } from "~/components/ui/badge"
-import { Play, Pause, Power, RefreshCw } from "lucide-react"
+import { Play, Pause, Power } from "lucide-react"
 import BotView from "./bot-view"
 import useIsSuperuser from "~/hooks/useIsSuperuser"
+import { useWebSocket } from "~/hooks/useWebSocket"
 
 export default function Main() {
   // Sample chat messages
-  const [messages, setMessages] = useState([
-    { id: 1, user: "María", text: "Hola a todos, ¿alguien sabe cuándo es la próxima reunión?" },
-    { id: 2, user: "Carlos", text: "Creo que es el viernes a las 3pm" },
-    { id: 3, user: "Ana", text: "Sí, es el viernes. Acabo de recibir el correo de confirmación." },
-    { id: 4, user: "Juan", text: "¿Alguien tiene la agenda de temas a tratar?" },
-    { id: 5, user: "María", text: "La enviaré por correo en unos minutos." },
-  ])
-
   // Bot status
-  const [botStatus, setBotStatus] = useState<"running" | "suspended" | "off" | "working">("running")
+  const { emit, subscribe } = useWebSocket()
+  const [botStatus, setBotStatus] = useState<"running" | "off" | "working">("running")
   const isSuperUser = useIsSuperuser()
 
+  useEffect(() => {
+    const unsuscribe = subscribe('message', (data) => {
+      console.log({data});
+      
+      const botStatus = data?.status
+      setBotStatus(botStatus === 'connected' ? 'running' : 'off')
+    });
+
+    return () => unsuscribe()
+  }, [subscribe])
+
   // Handle bot actions
-  const handleStart = () => setBotStatus("running")
-  const handleSuspend = () => setBotStatus("suspended")
-  const handleStop = () => setBotStatus("off")
-  const handleWork = () => {
-    setBotStatus("working")
-    // Simulate new extracted message after 2 seconds
-    setTimeout(() => {
-      setMessages([
-        ...messages,
-        {
-          id: messages.length + 1,
-          user: "Pedro",
-          text: "Acabo de revisar el documento y tengo algunas sugerencias para el proyecto.",
-        },
-      ])
-      setBotStatus("running")
-    }, 2000)
+  const handleStart = () => {
+    setBotStatus("running")
+    emit('bot.control', {
+      action: 'connect'
+    })
   }
+  // const handleSuspend = () => setBotStatus("suspended")
+  const handleStop = () => {
+    setBotStatus("off")
+    emit('bot.control', {
+      action: 'disconnect'
+    })
+  }
+
 
   // Status badge color
   const getStatusColor = () => {
     switch (botStatus) {
       case "running":
         return "bg-green-500"
-      case "suspended":
-        return "bg-yellow-500"
+      // case "suspended":
+      //   return "bg-yellow-500"
       case "off":
         return "bg-red-500"
       case "working":
@@ -63,8 +62,8 @@ export default function Main() {
     switch (botStatus) {
       case "running":
         return "Corriendo"
-      case "suspended":
-        return "Suspendido"
+      // case "suspended":
+      //   return "Suspendido"
       case "off":
         return "Apagado"
       case "working":
@@ -100,7 +99,7 @@ export default function Main() {
             Iniciar
           </Button>
 
-          <Button
+          {/* <Button
             className="w-full flex items-center justify-center"
             onClick={handleSuspend}
             disabled={botStatus === "suspended" || botStatus === "off"}
@@ -108,7 +107,7 @@ export default function Main() {
           >
             <Pause className="mr-2 h-4 w-4" />
             Suspender
-          </Button>
+          </Button> */}
 
           <Button
             className="w-full flex items-center justify-center"
@@ -133,4 +132,3 @@ export default function Main() {
     </div>
   )
 }
-

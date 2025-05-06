@@ -3,6 +3,8 @@ import postSigninApi from "~/api/post-signin-api"
 import { setCookie } from "~/utils/cookies"
 import { SigninSchema } from "./schemas"
 import { getValidationErrors } from "~/utils/errors"
+import getUsersMe from "~/api/auth/get-users-me-api"
+import { CACHE_KEY, CACHE_TIMESTAMP_KEY } from "~/config"
 
 type ValidationError = {
   type: "validation";
@@ -32,6 +34,13 @@ export default async function clientAction({ request }: Route.ClientActionArgs) 
     const { access, refresh } = await postSigninApi(data)
     setCookie("access", access, 30)
     setCookie("refresh", refresh, 30)
+
+    const userData = await getUsersMe()
+    const now = Date.now();
+
+    localStorage.setItem(CACHE_KEY, JSON.stringify(userData));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
+
     return {ok: true}
 
   } catch (error: any) {

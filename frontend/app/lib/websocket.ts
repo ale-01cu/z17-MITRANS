@@ -63,6 +63,8 @@ class WebSocketService {
             try {
                 console.log('Mensaje recibido del servidor:', event.data);
                 const data = JSON.parse(event.data);
+                console.log({data});
+                
                 const eventName = data.type || 'message';
                 const handlers = this.eventHandlers.get(eventName);
                 if (handlers) {

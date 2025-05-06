@@ -505,8 +505,8 @@ class Bot:
         # self.show_contours(image=roi, contours=[],
         #                    title=f'chat id')
         self.current_chat_id = chat_id
-        # self.show_contours(image=roi, contours=[],
-        #                    title=f'chat id extracted {chat_id}')
+        self.show_contours(image=roi, contours=[],
+                           title=f'chat id extracted {chat_id}')
 
         return chat_id
 
@@ -605,6 +605,7 @@ class Bot:
         edged = img_handler.get_edged()
         contours = img_handler.find_contours(image=edged)
         chats_contour = self.take_chats_container_contour()
+        # self.show_contours(contours=[chats_contour], title='chats contour')
         x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
 
         # self.show_contours(contours=contours, title='Contours')
@@ -1522,6 +1523,34 @@ class Bot:
         return has_more
 
 
+    def is_chat_area_the_same(self, prev_chat_area_img = None, threshold = 0.8):
+        """
+        Verifica si el chat area de la página actual es el mismo que el del chat area anterior.
+
+        :param prev_chat_area_img:
+        :return:
+        """
+        self.take_screenshot()
+        current_chat_area_img = self.get_chat_area_cropped()
+
+        # img_handler = ImgHandler(image=prev_chat_area_img)
+        # error = img_handler.similarity_by_mse(image=current_chat_area_img)
+
+        result = cv2.matchTemplate(prev_chat_area_img,
+                                   current_chat_area_img,
+                                   cv2.TM_CCOEFF_NORMED
+                                   )
+
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+        # self.show_contours(image=prev_chat_area_img, contours=[], title='prev chat area img')
+        # self.show_contours(image=current_chat_area_img, contours=[], title=f'curr chat area img error= {max_val}')
+
+        if max_val >= threshold:
+            return True
+
+        return False
+
 
     async def review_chat(
                         self, has_more: bool = True,
@@ -1662,6 +1691,8 @@ class Bot:
 
         if has_more_text:
             if len(texts) > 0:
+                current_chat_area_img = self.get_chat_area_cropped()
+
                 steps = get_subtraction_steps(
                     initial_value=texts[-1][0][1],
                     target_value=self.first_contour_reference[1]+self.first_contour_reference[-1]
@@ -1677,6 +1708,13 @@ class Bot:
                     self.scroll_chat_area(direction='up',
                                           scroll_move=step)
                     await asyncio.sleep(1)
+
+                is_chat_area_the_same = self.is_chat_area_the_same(prev_chat_area_img=current_chat_area_img)
+
+                # self.show_contours(image=current_chat_area_img,
+                #                    contours=[], title=f'chat area is_chat_area_the_same -> {is_chat_area_the_same}')
+                if is_chat_area_the_same:
+                    return texts
 
 
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
@@ -1851,6 +1889,48 @@ class Bot:
         return len(valid_contours) > 1
 
 
+    def is_in_request_view(self):
+        self.take_screenshot()
+        chats_contour = self.take_chats_container_contour()
+        if chats_contour is None:
+            return False
+
+        img_handler = ImgHandler(image=self.current_screenshot)
+        contours = img_handler.find_contours_by_large_contours_mask()
+
+        x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
+
+        # Definir límites para filtrar la esquina superior derecha
+        y_top_limit = y_chats + int(h_chats * 0.2)  # Primer 20% en Y (parte superior)
+        x_right_half = x_chats + int(w_chats * 0.5)  # Mitad derecha en X
+
+        valid_contours = []
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+
+            # Verificar si el contorno está dentro de la zona superior derecha del área de chats
+            is_in_top_y = y < y_top_limit
+            is_in_right_x = x > x_right_half
+
+            # Verificar si está dentro del área general de los chats (opcional pero recomendable)
+            is_inside_chats_area = (
+                    x_chats <= x <= x_chats + w_chats and
+                    y_chats <= y <= y_chats + h_chats
+            )
+
+            # Filtrar por tamaño
+            size_ok = 20 < w < 60 and h > 20
+
+            if is_inside_chats_area and is_in_top_y and is_in_right_x and size_ok:
+                valid_contours.append(contour)
+
+        # self.show_contours(contours=valid_contours,
+        #                    title=f'is in principal view {len(valid_contours) > 1}')
+
+        # Devolver True si hay más de un contorno válido
+        return len(valid_contours) == 1
+
 
     def find_back_arrow_contour(self):
         chats_contour = self.take_chats_container_contour()
@@ -1926,15 +2006,22 @@ class Bot:
                 # last_print = "watching"
                 pass
 
-            if counter == 2 and self.is_in_principal_view():
-                counter = 0
-                # self.show_contours(contours=[], title='nos fuimos pal request view')
-                self.go_to_message_requests_view()
+            if counter > 2 or counter < 2:
+                if self.is_in_principal_view():
+                    pass
+                elif self.is_in_request_view():
+                    self.go_to_principal_view()
+                else:
+                    continue
 
-            elif not self.is_in_principal_view() and counter == 2:
-                counter = 0
-#                 self.show_contours(contours=[], title='nos fuimos pal principal view')
-                self.go_to_principal_view()
+            else:
+                if self.is_in_principal_view():
+                    counter = 0
+                    self.go_to_message_requests_view()
+
+                elif self.is_in_request_view():
+                    counter = 0
+                    self.go_to_principal_view()
 
             counter += 1
 
@@ -1959,6 +2046,7 @@ class Bot:
                     for chat in chats:
                         x, y, _, _ = cv2.boundingRect(chat)
                         chat_id = self.extract_chat_id(chat_ref=(x, y))
+                        self.show_contours(contours=[], title=f'chat id -> {chat_id}')
                         order_chats_ids.append(chat_id)
 
 

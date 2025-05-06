@@ -26,3 +26,8 @@ export const API_IMG_TO_TEXT = "/api/img-proc/img-to-text"
 export const API_STATS = "/api/stats/"
 export const API_COMMENTS_URGENT = "/api/comment/urgent/"
 export const API_COMMENTS_UNREAD = "/api/comment/unread/"
+
+
+export const CACHE_KEY = 'authUser';
+export const CACHE_TIMESTAMP_KEY = 'authUserTimestamp';
+export const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
