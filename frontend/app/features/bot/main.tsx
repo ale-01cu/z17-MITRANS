@@ -6,19 +6,22 @@ import { Play, Pause, Power } from "lucide-react"
 import BotView from "./bot-view"
 import useIsSuperuser from "~/hooks/useIsSuperuser"
 import { useWebSocket } from "~/hooks/useWebSocket"
+import { useWebSocketContext } from "~/root"
 
 export default function Main() {
   // Sample chat messages
   // Bot status
-  const { emit, subscribe } = useWebSocket()
+  const { emit, subscribe } = useWebSocketContext()
   const [botStatus, setBotStatus] = useState<"running" | "off" | "working">("running")
   const isSuperUser = useIsSuperuser()
 
   useEffect(() => {
-    const unsuscribe = subscribe('message', (data) => {
+    const unsuscribe = subscribe('bot.status', (data) => {
       console.log({data});
       
       const botStatus = data?.status
+      console.log({botStatus});
+      
       setBotStatus(botStatus === 'connected' ? 'running' : 'off')
     });
 
