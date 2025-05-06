@@ -6,8 +6,6 @@ from datetime import datetime
 import uuid
 
 # import machine_learning
-
-
 # from machine_learning.bot import bot
 
 
@@ -26,7 +24,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.bot_status = True
             print(f"Bot registrado en sala: {self.room_name}")
             print(self.bot_status)
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'bot.status',
+                    'status': 'connected',  # Indica que el bot está conectado
+                    'message': 'El bot se ha conectado a la sala.',  # mensaje
+                }
+            )
             await self.send_to_web(self.bot_status)
+
+
 
         # await self.send_status(self.bot_status)
         # Unirse al grupo
@@ -35,15 +43,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         await self.accept()
-
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'bot.status',
-                'status': 'connected',  # Indica que el bot está conectado
-                'message': 'El bot se ha conectado a la sala.',  # mensaje
-            }
-        )
         print(f"Conexión establecida: {self.user_type} en {self.room_name}")
 
 
@@ -56,6 +55,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print(f"Bot desconectado de: {self.room_name}")
             print(self.bot_status)
             await self.send_to_web(self.bot_status)
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'bot.status',
+                    'status': 'disconnected',  # Indica que el bot está desconectado
+                    'message': 'El bot se ha desconectado a la sala.',  # mensaje
+                }
+            )
+
 
         # Salir del grupo
         await self.channel_layer.group_discard(
@@ -122,16 +130,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if action == 'disconnect':
                 # Pausar el bot
                 machine_learning.bot.bot.is_paused = True  # Establecer is_paused en True para pausar
+                self.__class__.bot_status = False
                 print('Bot pausado')
                 print(self.bot_status)
                 await self.notify_group('system', 'Bot pausado')
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'bot.status',
+                        'status': 'disconnected',  # Indica que el bot se ha desconectado
+                        'message': 'El bot ha sido pausado por un usuario.',
+                    }
+                )
 
             elif action == 'connect':
                 # Reanudar el bot
                 machine_learning.bot.bot.is_paused = False  # Establecer is_paused en False para reanudar
+                self.__class__.bot_status = True
                 print('Bot reanudado')  # mejorar el mensaje
                 print(self.bot_status)
                 await self.notify_group('system', 'Bot reanudado')
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'bot.status',
+                        'status': 'connected',  # Indica que el bot se ha conectado
+                        'message': 'El bot ha sido reanudado por un usuario.',
+                    }
+                )
             else:
                 print(f"Acción desconocida: {action}")  # siempre es bueno tener un else
                 await self.notify_group('system', f'Acción desconocida: {action}')
