@@ -11,6 +11,7 @@ import uuid
 
 class ChatConsumer(AsyncWebsocketConsumer):
     # Diccionario de clase para seguimiento de bots por sala
+    web_channels = {}
     bot_channels = {}
     bot_status = False
     async def connect(self):
@@ -22,7 +23,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if self.user_type == 'bot':
             self.__class__.bot_channels[self.room_group_name] = self.channel_name
             self.bot_status = True
-            print(f"Bot registrado en sala: {self.room_name}")
+            print(f"{self.user_type} registrado en sala: {self.room_name}")
             print(self.bot_status)
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -33,10 +34,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
             await self.send_to_web(self.bot_status)
+            await self.send_to_web({'content': {'bot_status': self.bot_status}, 'sender': 'system'})
 
+        # if self.user_type == 'web':
+        #     # Al conectar un cliente web, enviamos el estado actual del bot
+        #     print(f"{self.user_type} registrado en sala: {self.room_name}")
+        #     await self.send_to_web({'content': {'bot_status': self.__class__.bot_status},'sender': 'system'})
 
-
-        # await self.send_status(self.bot_status)
         # Unirse al grupo
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -44,6 +48,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         await self.accept()
         print(f"Conexión establecida: {self.user_type} en {self.room_name}")
+
 
 
 
