@@ -26,7 +26,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.bot_status = True
             print(f"Bot registrado en sala: {self.room_name}")
             print(self.bot_status)
-            self.send_to_bot(self.bot_status)
+            await self.send_to_web(self.bot_status)
 
         # Unirse al grupo
         await self.channel_layer.group_add(
@@ -43,7 +43,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.bot_status = False
             print(f"Bot desconectado de: {self.room_name}")
             print(self.bot_status)
-            self.send_to_bot(self.bot_status)
+            await self.send_to_web(self.bot_status)
 
         # Salir del grupo
         await self.channel_layer.group_discard(

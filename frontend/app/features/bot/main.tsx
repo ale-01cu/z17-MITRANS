@@ -16,6 +16,8 @@ export default function Main() {
 
   useEffect(() => {
     const unsuscribe = subscribe('message', (data) => {
+      console.log({data});
+      
       const botStatus = data?.bot
       setBotStatus(botStatus ? 'running' : 'off')
     });

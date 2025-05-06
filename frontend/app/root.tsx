@@ -9,7 +9,7 @@ import {
 import { Toaster } from "~/components/ui/sonner";
 import { createContext, useContext } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
-import { UserProvider } from "./hooks/useAuth";
+import UserProvider from "./context/UserProvider";
 import { WebSocketProvider } from "./context/WebSocketProvider";
 
 import type { Route } from "./+types/root";
