@@ -59,17 +59,17 @@ class Bot:
         # self.is_in_message_requests_view = current_bot.name if current_bot else (
         #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
 
-        self.is_online = True
+        self.is_online = False
 
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = True
+        self.is_memory_active = False
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 10
+        self.messages_amount_limit = 50
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -85,7 +85,7 @@ class Bot:
             'msg5': None
         }
 
-        self.is_show_contours_active = True
+        self.is_show_contours_active = False
 
         self.amount_of_time_chats_area_down_scrolled = 0
 
@@ -417,8 +417,8 @@ class Bot:
         # self.show_contours(image=roi, contours=[],
         #                    title=f'chat id')
         self.current_chat_id = chat_id
-        self.show_contours(image=roi, contours=[],
-                           title=f'chat id extracted {chat_id}')
+        # self.show_contours(image=roi, contours=[],
+        #                    title=f'chat id extracted {chat_id}')
 
         return chat_id
 
@@ -904,8 +904,8 @@ class Bot:
 
         self.move_to_chat()
 
-        self.show_contours(contours=possible_text_contours,
-            title=f"posible contornos de texts is_first_iter {is_first_iter}")
+        # self.show_contours(contours=possible_text_contours,
+        #     title=f"posible contornos de texts is_first_iter {is_first_iter}")
 
 
         if is_first_iter:
@@ -932,6 +932,8 @@ class Bot:
                                                                   y+y_start_offset,
                                                                   is_first_iter=is_first_iter)
                 x, y, w, h = cv2.boundingRect(first_text)
+
+                self.show_contours(contours=[first_text], title='el primer contorno')
 
                 text = self.get_text_by_text_location(
                     x_start=x + x_start_offset,
@@ -989,14 +991,14 @@ class Bot:
                 # self.show_contours(contours=possible_text_contours, title='faaaaaaaak')
 
 
-        self.show_contours(contours=possible_text_contours, title='faaaaaaaak2')
+        # self.show_contours(contours=possible_text_contours, title='faaaaaaaak2')
 
         if has_more:
             iter_contours = enumerate(possible_text_contours[1:]) \
                 if skip_next_contour else enumerate(possible_text_contours)
 
-            # self.show_contours(contours=possible_text_contours[1:] \
-            #     if skip_next_contour else possible_text_contours, title='faaaaaaaak3')
+            self.show_contours(contours=possible_text_contours[1:] \
+                if skip_next_contour else possible_text_contours, title='dentro del bucle')
 
             for i, contour in iter_contours:
                 x, y, w, h = cv2.boundingRect(contour)
@@ -1018,8 +1020,8 @@ class Bot:
                 # is_link = self.is_link(contour,
                 #                        text_contours[i+1] if len(text_contours) > i+1 else None)
 
-                self.show_contours(contours=[contour],
-                                   title=f'is_top_edge_irregular {is_top_edge_irregular}')
+                # self.show_contours(contours=[contour],
+                #                    title=f'is_top_edge_irregular {is_top_edge_irregular}')
 
                 if not is_top_edge_irregular:
                     skip_next_contour = True
@@ -1509,7 +1511,6 @@ class Bot:
 
         # Chequear si hay overflow
         while True:
-            # await asyncio.sleep(1)
             self.take_screenshot()
             # self.show_contours(contours=[], title="testing overflow")
             is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
@@ -1524,7 +1525,7 @@ class Bot:
                 has_more = await self.handle_overflow_text(chat_contour=chat_contour,
                                                 amount_scrolled=scrolled,
                                                 texts=texts, is_initial_overflow=True)
-                print("Se va a modificar la variable self.was_handled_overflow a True.................")
+
                 self.was_handled_overflow = True
                 scrolled = 0
                 if not has_more or (not has_last_text and len(texts) >= self.messages_amount_limit):
@@ -1936,13 +1937,20 @@ class Bot:
                 if (not self.window_handler.is_window_maximized() or
                         self.window_handler.is_window_maximized() and not is_target):
                     self.window_handler.maximize_window()
-                    await asyncio.sleep(1)
 
-                    # if self.window_handler.is_window_maximized():
-                    screen_width, screen_height = pyautogui.size()
-                    pyautogui.moveTo(screen_width/2, screen_height/2)
-                    pyautogui.keyDown('F11')
-                    await asyncio.sleep(8)
+                    await asyncio.sleep(0.5)
+
+                    self.take_screenshot()
+                    is_target = self.is_watching_target_v2()
+
+                    if self.window_handler.is_window_maximized() and not is_target:
+                        await asyncio.sleep(1)
+
+                        # if self.window_handler.is_window_maximized():
+                        screen_width, screen_height = pyautogui.size()
+                        pyautogui.moveTo(screen_width/2, screen_height/2)
+                        pyautogui.keyDown('F11')
+                        await asyncio.sleep(8)
 
                 print("is target ", is_target)
 

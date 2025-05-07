@@ -24,8 +24,8 @@ class WindowHandler:
         return None
 
 
-    def maximize_window(self) -> None:
-        if not self.is_active: return
+    def maximize_window(self) -> bool:
+        if not self.is_active: return False
         self.get_window()
         if self.window:
             # Si no está maximizada, la maximizamos
@@ -34,6 +34,7 @@ class WindowHandler:
 
             # Enfocamos/ponemos en primer plano la ventana
             self.window.activate()
+            return True
 
         else:
             raise ValueError("No window found.")

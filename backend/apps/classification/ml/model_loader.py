@@ -4,11 +4,16 @@ import joblib
 from django.conf import settings
 import os
 import pandas as pd
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'apps/classification/ml/model/')  # Ruta absoluta al archivo
 
 try:
-    print("Cargando modelos...")
+    # print("Cargando modelos...")
+    logger.info("Cargando modelos...")
     sentence_model = SentenceTransformer(MODEL_PATH + 'paraphrase-MiniLM-L6-v2-tunned')
     xgb_model = xgb.Booster()
     xgb_model.load_model(MODEL_PATH + "xgboost_model.json")
