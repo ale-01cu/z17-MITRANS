@@ -38,6 +38,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'sender': 'system'
                 }
             )
+
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -48,7 +49,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'message': 'El bot se encuentra en la sala.',  # mensaje
                 }
             )
-            print(self.is_bot_active)
+            # print(self.is_bot_active)
         elif self.user_type == 'web':
             print(f"{self.user_type} registrado en sala: {self.room_name}")
             self.is_bot_active = False
@@ -62,7 +63,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'sender': 'system'
                 }
             )
-        elif self.user_type == 'web' and self.is_bot_active:
+        elif self.user_type == 'web' and self.user_type == 'bot' in self.room_group_name:
             print(f"{self.user_type} registrado en sala: {self.room_name}")
             self.is_bot_active = True
             # Enviar el estado del bot al conectar el cliente web
@@ -86,7 +87,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'message': 'El bot no se encuentra en la sala.',  # mensaje
                 }
             )
-            print(self.is_bot_active)
+            # print(self.is_bot_active)
             if not self.is_bot_active:
                 await self.send_to_web(
                     {
@@ -95,7 +96,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'content': {'bot_status': self.is_bot_active},
                         'sender': 'system'}
                 )
-            print(self.is_bot_active)
+            # print(self.is_bot_active)
 
 
     async def disconnect(self, close_code):
@@ -164,7 +165,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def bot_status(self, event):
-        print(self.is_bot_active)
+        # print(self.is_bot_active)
+        print('aqui muestra el estado del bot')
+
         status = event['status']
         message = event['message']
         bot = self.is_bot_active
@@ -292,7 +295,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Envía mensajes a los clientes web"""
         if self.user_type == 'web':
             await self.send(text_data=json.dumps({
-                'bot': bool(self.is_bot_active),  # Usar el nuevo nombre
+                # 'bot': event['bot'],
+                'status': event['status'],
                 'type': event['type'],
                 'content': event['content'],
                 'sender': event['sender'],
