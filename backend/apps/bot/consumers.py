@@ -35,6 +35,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'bot': self.is_bot_active,
                     'type': 'bot_status',
                     'content': {'bot_status': self.is_bot_active},
+                    'status': 'connected',  # Indica que el bot está conectado
                     'sender': 'system'
                 }
             )
@@ -58,6 +59,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'bot': self.is_bot_active,
                     'type':'bot_status',
                     'content':{'bot_status': self.is_bot_active},
+                    'status': 'connected',  # Indica que el bot está conectado
                     'sender': 'system'
                 }
 

@@ -13,25 +13,26 @@ import { BotContext } from "~/context/BotProvider"
 export default function Main() {
   // Sample chat messages
   // Bot status
-  const { emit, subscribe } = useWebSocketContext()
+  const { emit } = useWebSocketContext()
   // const [botStatus, setBotStatus] = useState<"running" | "off" | "working">("running")
   const isSuperUser = useIsSuperuser()
   const { botStatus, setBotStatus } = useContext(BotContext)
 
-  useEffect(() => {
-    console.log('use effecto maestro');
+  // useEffect(() => {
+  //   console.log('use effecto maestro');
     
-    const unsuscribe = subscribe('bot_status', (data) => {
-      console.log({data});
+  //   const unsuscribe = subscribe('bot_status', (data) => {
+  //     console.log({data});
       
-      const botStatus = data?.bot
-      console.log({botStatus});
-      
-      setBotStatus(botStatus ? 'running' : 'off')
-    });
+  //     const botStatus = data?.status
+  //     setBotStatus(botStatus === 'connected' ? 'running' : 'off')
+  //   });
 
-    return () => unsuscribe()
-  }, [subscribe])
+  //   return () => unsuscribe()
+  // }, [subscribe])
+
+  // console.log({botStatus});
+  
 
   // Handle bot actions
   const handleStart = () => {
