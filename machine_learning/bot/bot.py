@@ -54,13 +54,13 @@ class Bot:
             uri=websocket_uri,
         )
         self.websocket_uri = websocket_uri
-        self.window_handler = WindowHandler(title=target_name, is_active=False)
+        self.window_handler = WindowHandler(title=target_name, is_active=True)
         self.first_contour_reference: Tuple[int, int, int, int] | None = None
 
         # self.is_in_message_requests_view = current_bot.name if current_bot else (
         #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
 
-        self.is_online = True
+        self.is_online = False
 
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
@@ -70,7 +70,7 @@ class Bot:
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 10
+        self.messages_amount_limit = 50
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -214,7 +214,7 @@ class Bot:
         return False
 
 
-    def is_watching_target_v2(self, threshold: float = 0.7):
+    def is_watching_target_v2(self, threshold: float = 0.8):
         if self.current_screenshot is None:
             return False
 
@@ -1940,14 +1940,16 @@ class Bot:
 
                 if (not self.window_handler.is_window_maximized() or
                         self.window_handler.is_window_maximized() and not is_target):
-                    self.window_handler.maximize_window()
+                    maximized = self.window_handler.maximize_window()
 
                     await asyncio.sleep(2)
 
                     self.take_screenshot()
                     is_target = self.is_watching_target_v2()
 
-                    if self.window_handler.is_window_in_foreground() and not is_target:
+                    self.show_contours(contours=[], title=f"is_target {is_target} maximized {maximized}")
+
+                    if maximized and not is_target:
                         await asyncio.sleep(1)
 
                         # if self.window_handler.is_window_maximized():
