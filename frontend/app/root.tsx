@@ -11,6 +11,7 @@ import { createContext, useContext } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import UserProvider from "./context/UserProvider";
 import { WebSocketProvider } from "./context/WebSocketProvider";
+import BotProvider from "./context/BotProvider";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -63,7 +64,9 @@ export default function App() {
   return (
     <UserProvider> {/* <-- Envolver aquí */}
       <WebSocketProvider>
-        <Outlet />
+        <BotProvider>
+          <Outlet />
+        </BotProvider>
       </WebSocketProvider>
     </UserProvider>
   )

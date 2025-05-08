@@ -7,15 +7,20 @@ import BotView from "./bot-view"
 import useIsSuperuser from "~/hooks/useIsSuperuser"
 import { useWebSocket } from "~/hooks/useWebSocket"
 import { useWebSocketContext } from "~/root"
+import { useContext } from "react"
+import { BotContext } from "~/context/BotProvider"
 
 export default function Main() {
   // Sample chat messages
   // Bot status
   const { emit, subscribe } = useWebSocketContext()
-  const [botStatus, setBotStatus] = useState<"running" | "off" | "working">("running")
+  // const [botStatus, setBotStatus] = useState<"running" | "off" | "working">("running")
   const isSuperUser = useIsSuperuser()
+  const { botStatus, setBotStatus } = useContext(BotContext)
 
   useEffect(() => {
+    console.log('use effecto maestro');
+    
     const unsuscribe = subscribe('bot_status', (data) => {
       console.log({data});
       

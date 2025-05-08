@@ -54,13 +54,13 @@ class Bot:
             uri=websocket_uri,
         )
         self.websocket_uri = websocket_uri
-        self.window_handler = WindowHandler(title=target_name, is_active=True)
+        self.window_handler = WindowHandler(title=target_name, is_active=False)
         self.first_contour_reference: Tuple[int, int, int, int] | None = None
 
         # self.is_in_message_requests_view = current_bot.name if current_bot else (
         #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
 
-        self.is_online = False
+        self.is_online = True
 
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
@@ -70,7 +70,7 @@ class Bot:
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 50
+        self.messages_amount_limit = 10
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -86,7 +86,7 @@ class Bot:
             'msg5': None
         }
 
-        self.is_show_contours_active = True
+        self.is_show_contours_active = False
 
         self.amount_of_time_chats_area_down_scrolled = 0
 
