@@ -15,7 +15,7 @@ BOT_CONFIG = {
         "FIND_TEXT_AREA_CONTOURS": {
             'chat_limit_x_porcent': 0.6,
             'chat_start_x_porcent': 0.3,
-            'chat_limit_x_porcent_in_message_requests_view': 0.40,
+            'chat_limit_x_porcent_in_message_requests_view': 0.5,
             'min_height': 40,
         },
         "GET_TEXTS_DID_NOT_WATCHED": {
@@ -32,7 +32,7 @@ BOT_CONFIG = {
         "EXTRACT_CHAT_ID": {
             'y_sub': 25,
             'y_plus': 10,
-            'x_sub': 300
+            'x_sub': 313
         },
     },
     "1360x768": {

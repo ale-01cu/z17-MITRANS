@@ -16,13 +16,13 @@ export default function Main() {
   const isSuperUser = useIsSuperuser()
 
   useEffect(() => {
-    const unsuscribe = subscribe('bot.status', (data) => {
+    const unsuscribe = subscribe('bot_status', (data) => {
       console.log({data});
       
-      const botStatus = data?.status
+      const botStatus = data?.bot
       console.log({botStatus});
       
-      setBotStatus(botStatus === 'connected' ? 'running' : 'off')
+      setBotStatus(botStatus ? 'running' : 'off')
     });
 
     return () => unsuscribe()

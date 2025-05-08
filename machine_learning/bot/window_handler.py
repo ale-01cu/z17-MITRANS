@@ -2,15 +2,18 @@ import pygetwindow as gw
 from pygetwindow import Win32Window
 
 class WindowHandler:
-    def __init__(self, title: str = ''):
+    def __init__(self, title: str = '', is_active: bool = False):
         self.window = None
         self.title = title
         self.class_name = None
         self.process_name = None
         self.pid = None
+        self.is_active = is_active
+
 
     def get_all_windows_titles(self) -> list[str]:
         return [window.title for window in gw.getAllWindows()]
+
 
     def get_window(self) -> Win32Window | None:
         windows = gw.getAllWindows()
@@ -20,7 +23,9 @@ class WindowHandler:
                 return self.window
         return None
 
-    def maximize_window(self) -> None:
+
+    def maximize_window(self) -> bool:
+        if not self.is_active: return False
         self.get_window()
         if self.window:
             # Si no está maximizada, la maximizamos
@@ -29,6 +34,7 @@ class WindowHandler:
 
             # Enfocamos/ponemos en primer plano la ventana
             self.window.activate()
+            return True
 
         else:
             raise ValueError("No window found.")
@@ -48,6 +54,7 @@ class WindowHandler:
 
         :return: True si se encontró y maximizó la ventana, False en caso contrario.
         """
+        if not self.is_active: return False
         windows = gw.getAllWindows()
         for window in windows:
             if self.title.lower() in window.title.lower():
@@ -55,6 +62,7 @@ class WindowHandler:
                 self.window.maximize()
                 return True  # Ventana encontrada y maximizada
         return False  # No se encontró ninguna ventana
+
 
     def is_window_maximized(self) -> bool:
         """

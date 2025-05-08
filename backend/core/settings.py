@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 import environ
+import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -277,3 +278,10 @@ CHANNEL_LAYERS = {
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Para collectstatic
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Tus archivos estáticos
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='INFO:     %(message)s',
+    handlers=[logging.StreamHandler()]
+)
