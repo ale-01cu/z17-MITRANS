@@ -65,12 +65,12 @@ class Bot:
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = True
+        self.is_memory_active = False
         self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 10
+        self.messages_amount_limit = 50
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -86,7 +86,7 @@ class Bot:
             'msg5': None
         }
 
-        self.is_show_contours_active = False
+        self.is_show_contours_active = True
 
         self.amount_of_time_chats_area_down_scrolled = 0
 
@@ -834,7 +834,7 @@ class Bot:
 
     async def move_to_contour_gradually(self, target_x,
                                         target_y, check_steps=5,
-                                        step_delay=0.3, is_first_iter=False):
+                                        step_delay=0, is_first_iter=False):
         """Mueve el cursor gradualmente hacia el contorno objetivo, verificando los contornos en cada paso"""
         current_x, current_y = pyautogui.position()
         total_steps = check_steps
@@ -931,7 +931,8 @@ class Bot:
                 x_start_offset = config['x_start_offset']
                 y_start_offset = config['y_start_offset']
 
-                if not is_first_iter and not was_handled_overflow:
+                # self.show_contours(contours=[first_text], title='el primer contorno')
+                if is_first_iter and not was_handled_overflow:
                     first_text = await self.move_to_contour_gradually(x+x_start_offset,
                                                                       y+y_start_offset,
                                                                       is_first_iter=is_first_iter)
@@ -955,7 +956,7 @@ class Bot:
 
 
                 if self.first_contour_reference is None:
-                    self.show_contours(contours=[first_text], title='tirst contour reference')
+                    # self.show_contours(contours=[first_text], title='tirst contour reference')
                     self.first_contour_reference = (x, y, w, h)
 
                 is_watched = self.is_text_already_watched(text=text, index=len(texts))
@@ -1312,11 +1313,11 @@ class Bot:
         if is_initial_overflow and self.first_contour_reference is None and largest_contour_found is not None:
             x, y, w, h = cv2.boundingRect(largest_contour_found)
             self.first_contour_reference = (x, y , w, h)
-            self.show_contours(contours=[largest_contour_found],
-                               title="first_contour_reference")
-
-        self.show_contours(contours=[largest_contour_found],
-                           title="Primer contorno de referencia papu")
+        #     self.show_contours(contours=[largest_contour_found],
+        #                        title="first_contour_reference")
+        #
+        # self.show_contours(contours=[largest_contour_found],
+        #                    title="Primer contorno de referencia papu")
 
         # self.show_contours(contours=contours_found, title="Los contornos de La imagen reparada")
         # self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
@@ -1371,8 +1372,19 @@ class Bot:
 
                 contour_overflow = conours_found[-1]
 
-                self.show_contours(contours=[contour_overflow],
-                                   title="contour with overflowwwwwwww")
+
+                # img_handler = ImgHandler(image=self.current_screenshot)
+                # is_top_edge_irregular = img_handler.is_top_edge_irregular(contour=contour_overflow,
+                #                                                           threshold=1,
+                #                                                           edge_margin_left=0,
+                #                                                           edge_margin_right=0,
+                #                                                           analyze_percent=100)
+                #
+                # if not is_top_edge_irregular:
+                #     return
+
+                # self.show_contours(contours=[contour_overflow],
+                #                    title="contour with overflowwwwwwww")
 
                 x, y, w, h = cv2.boundingRect(contour_overflow)
                 x_contour_overflow_start = x
@@ -1947,7 +1959,7 @@ class Bot:
                     self.take_screenshot()
                     is_target = self.is_watching_target_v2()
 
-                    self.show_contours(contours=[], title=f"is_target {is_target} maximized {maximized}")
+                    # self.show_contours(contours=[], title=f"is_target {is_target} maximized {maximized}")
 
                     if maximized and not is_target:
                         await asyncio.sleep(1)
