@@ -15,6 +15,7 @@ import keyboard
 import asyncio
 from websocket_client import WebSocketClient
 from config import BOT_CONFIG
+from inputs_handler import MouseBlocker
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
@@ -85,13 +86,15 @@ class Bot:
             'msg5': None
         }
 
-        self.is_show_contours_active = False
+        self.is_show_contours_active = True
 
         self.amount_of_time_chats_area_down_scrolled = 0
 
         self.is_paused = False
 
         self.display_resolution = display_resolution
+
+        # self.mouse_blocker = MouseBlocker(blocked=True)
 
 
     def add_last_five_texts_watched(self, last_text: str | None,
@@ -211,7 +214,7 @@ class Bot:
         return False
 
 
-    def is_watching_target_v2(self, threshold: float = 0.8):
+    def is_watching_target_v2(self, threshold: float = 0.7):
         if self.current_screenshot is None:
             return False
 
@@ -928,12 +931,13 @@ class Bot:
                 x_start_offset = config['x_start_offset']
                 y_start_offset = config['y_start_offset']
 
-                first_text = await self.move_to_contour_gradually(x+x_start_offset,
-                                                                  y+y_start_offset,
-                                                                  is_first_iter=is_first_iter)
+                if not is_first_iter and not was_handled_overflow:
+                    first_text = await self.move_to_contour_gradually(x+x_start_offset,
+                                                                      y+y_start_offset,
+                                                                      is_first_iter=is_first_iter)
                 x, y, w, h = cv2.boundingRect(first_text)
 
-                self.show_contours(contours=[first_text], title='el primer contorno')
+                # self.show_contours(contours=[first_text], title='el primer contorno')
 
                 text = self.get_text_by_text_location(
                     x_start=x + x_start_offset,
@@ -951,7 +955,7 @@ class Bot:
 
 
                 if self.first_contour_reference is None:
-                    # self.show_contours(contours=[first_text], title='tirst contour reference')
+                    self.show_contours(contours=[first_text], title='tirst contour reference')
                     self.first_contour_reference = (x, y, w, h)
 
                 is_watched = self.is_text_already_watched(text=text, index=len(texts))
@@ -997,8 +1001,8 @@ class Bot:
             iter_contours = enumerate(possible_text_contours[1:]) \
                 if skip_next_contour else enumerate(possible_text_contours)
 
-            self.show_contours(contours=possible_text_contours[1:] \
-                if skip_next_contour else possible_text_contours, title='dentro del bucle')
+            # self.show_contours(contours=possible_text_contours[1:] \
+            #     if skip_next_contour else possible_text_contours, title='dentro del bucle')
 
             for i, contour in iter_contours:
                 x, y, w, h = cv2.boundingRect(contour)
@@ -1308,11 +1312,11 @@ class Bot:
         if is_initial_overflow and self.first_contour_reference is None and largest_contour_found is not None:
             x, y, w, h = cv2.boundingRect(largest_contour_found)
             self.first_contour_reference = (x, y , w, h)
-            # self.show_contours(contours=[largest_contour_found],
-            #                    title="Primer contorno de referencia papu")
+            self.show_contours(contours=[largest_contour_found],
+                               title="first_contour_reference")
 
-        # self.show_contours(contours=[largest_contour_found],
-        #                    title="Primer contorno de referencia papu")
+        self.show_contours(contours=[largest_contour_found],
+                           title="Primer contorno de referencia papu")
 
         # self.show_contours(contours=contours_found, title="Los contornos de La imagen reparada")
         # self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
@@ -1367,8 +1371,8 @@ class Bot:
 
                 contour_overflow = conours_found[-1]
 
-                # self.show_contours(contours=[contour_overflow],
-                #                    title="contour with overflowwwwwwww")
+                self.show_contours(contours=[contour_overflow],
+                                   title="contour with overflowwwwwwww")
 
                 x, y, w, h = cv2.boundingRect(contour_overflow)
                 x_contour_overflow_start = x
@@ -1938,12 +1942,12 @@ class Bot:
                         self.window_handler.is_window_maximized() and not is_target):
                     self.window_handler.maximize_window()
 
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(2)
 
                     self.take_screenshot()
                     is_target = self.is_watching_target_v2()
 
-                    if self.window_handler.is_window_maximized() and not is_target:
+                    if self.window_handler.is_window_in_foreground() and not is_target:
                         await asyncio.sleep(1)
 
                         # if self.window_handler.is_window_maximized():
@@ -1952,7 +1956,6 @@ class Bot:
                         pyautogui.keyDown('F11')
                         await asyncio.sleep(8)
 
-                print("is target ", is_target)
 
                 if not is_target:
                     # Si no estamos viendo el objetivo, imprimir "No Watching target..."

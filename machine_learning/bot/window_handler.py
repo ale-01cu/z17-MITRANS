@@ -73,3 +73,20 @@ class WindowHandler:
         if self.window:
             return self.window.isMaximized
         return False
+
+
+    def is_window_in_foreground(self) -> bool:
+        """
+        Devuelve True si la ventana asociada está en primer plano (focused).
+        """
+        if not self.window:
+            self.get_window()
+            if not self.window:
+                return False
+
+        try:
+            foreground_window = gw.getActiveWindow()
+            return foreground_window is not None and foreground_window._hWnd == self.window._hWnd
+        except Exception as e:
+            print(f"Error al verificar ventana en primer plano: {e}")
+            return False
