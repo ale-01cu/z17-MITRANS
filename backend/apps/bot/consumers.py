@@ -42,7 +42,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 {
                     'bot': self.is_bot_active,
-                    'type': 'bot.status',
+                    'type': 'bot_status',
                     'content': {'bot_status': 'connected'},
                     'status': 'connected',  # Indica que el bot está desconectado
                     'message': 'El bot se encuentra en la sala.',  # mensaje
@@ -66,7 +66,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 {
                     'bot': self.is_bot_active,
-                    'type': 'bot.status',
+                    'type': 'bot_status',
                     'content': {'bot_status': 'disconnected'},
                     'status': 'disconnected',  # Indica que el bot está desconectado
                     'message': 'El bot no se encuentra en la sala.',  # mensaje
@@ -95,7 +95,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 {
                     'bot': self.is_bot_active,
-                    'type': 'bot.status',
+                    'type': 'bot_status',
                     'content': {'bot_status': 'disconnected'},
                     'status': 'disconnected',  # Indica que el bot está desconectado
                     'message': 'El bot se ha desconectado de la sala.',  # mensaje
@@ -141,10 +141,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             print(f"Error procesando mensaje: {str(e)}")
-            await self.send(text_data=json.dumps({
+            await self.send(text_data=json.dumps(
+                {
                 'type': 'error',
                 'message': 'Error procesando mensaje'
-            }))
+                }
+            )
+        )
 
     async def bot_status(self, event):
         status = event['status']
@@ -155,7 +158,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'bot.status',
             'status': status,
             'message': message
-        }))
+        }
+    )
+)
 
     async def handle_bot_control(self, action):
         """Controla el bot desde el frontend, pausando o reanudando su actividad."""
@@ -272,7 +277,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': event['type'],
                 'content': event['content'],
                 'sender': event['sender'],
-            }))
+            }
+        )
+    )
 
     async def send_to_bot(self, event):
         """Envía mensajes al bot"""
@@ -283,7 +290,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'content': event['content'],
                 'sender': event['sender'],
                 'message_id': str(uuid.uuid4())  # Añadir ID único para el ACK
-            }))
+            }
+        )
+    )
 
     async def notify_group(self, msg_type, message):
         """Notifica al grupo"""
