@@ -150,17 +150,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def bot_status(self, event):
+        print(self.is_bot_active)
         status = event['status']
         message = event['message']
-
+        bot = self.is_bot_active
         # Envia el estado del bot al WebSocket
         await self.send(text_data=json.dumps({
-            'type': 'bot.status',
+            'bot':bot,
+            'type': 'bot_status',
             'status': status,
             'message': message
         }
+
     )
+
 )
+
 
     async def handle_bot_control(self, action):
         """Controla el bot desde el frontend, pausando o reanudando su actividad."""
@@ -180,7 +185,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
-                        'type': 'bot.status',
+                        'type': 'bot_status',
                         'status': 'disconnected',  # Indica que el bot se ha desconectado
                         'message': 'El bot ha sido pausado por un usuario.',
                     }
@@ -196,7 +201,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
-                        'type': 'bot.status',
+                        'type': 'bot_status',
                         'status': 'connected',  # Indica que el bot se ha conectado
                         'message': 'El bot ha sido reanudado por un usuario.',
                     }
