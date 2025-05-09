@@ -426,9 +426,11 @@ class Bot:
         return chat_id
 
 
+
     def find_text_area_contours(self, image = None,
                                 use_first_contour_reference = True,
-                                take_all_texts=False, is_other_way=False):
+                                take_all_texts=False, is_other_way=False,
+                                is_quadrilateral=True):
         # img_handler = None
         #
         # if self.is_in_message_requests_view:
@@ -448,6 +450,8 @@ class Bot:
         else:
             contours = img_handler.find_contours_by_large_contours_mask()
             # self.show_contours(contours=contours, title="find_contours_by_large_contours_mask")
+
+        # self.show_contours(contours=contours, title="find_text_area_contours")
 
         possible_text_contours = []
         chat_contour = self.find_chat_area_contour()
@@ -472,6 +476,8 @@ class Bot:
 
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
+            perimeter = cv2.arcLength(contour, True)
+
 
             # Filtro de tamaño (ajusta según necesidad)
             min_w = 40 if take_all_texts else 100
@@ -491,10 +497,18 @@ class Bot:
 
                 # is_within_chat_width_percent = True
 
+                # Verificar si comienza donde mismo comienza el primer contorno de referencia
+                x_reference = self.first_contour_reference[0] if self.first_contour_reference is not None else 0
+                is_x_valid = (x == x_reference or x_reference - 5 < x < x_reference + 5) \
+                    if x_reference != 0 else True
+
                 # Verifica si está DENTRO del chat_contour
                 if (((x_chat < x < (x_chat + w_chat) * chat_start_x_porcent) and (x + w < x_chat + w_chat))
                     and ((y > y_chat) and (y + h < y_chat + h_chat))
-                    and is_contour_valid and is_within_chat_width_percent):
+                    and is_contour_valid
+                    and is_within_chat_width_percent
+                    and is_x_valid
+                    ):
 
                     possible_text_contours.append(contour)
 
@@ -850,9 +864,11 @@ class Bot:
 
             # Volver a capturar pantalla y contornos
             self.take_screenshot()
-            possible_text_contours = self.find_text_area_contours(use_first_contour_reference=not is_first_iter)
+            possible_text_contours = self.find_text_area_contours(use_first_contour_reference=not is_first_iter,
+                                                                  is_quadrilateral=False)
+
             # self.show_contours(contours=possible_text_contours,
-            #                    title='todos los contornos')
+            #                    title='todos los contornos move_to_contour_gradually')
 
             # Si hay contornos, actualizar target con el primero
             if possible_text_contours and len(possible_text_contours) > 0:
@@ -917,12 +933,24 @@ class Bot:
 
             is_top_edge_irregular = img_handler.is_top_edge_irregular(contour=first_text,
                                                                         threshold=1,
-                                                                        edge_margin_left=0,
-                                                                        edge_margin_right=0,
+                                                                        edge_margin_left=5,
+                                                                        edge_margin_right=5,
                                                                         analyze_percent=100)
 
-            if not is_top_edge_irregular:
-                skip_next_contour = True
+            is_bottom_edge_irregular = img_handler.is_bottom_edge_irregular(contour=first_text,
+                                                                            threshold=1,
+                                                                            edge_margin_left=5,
+                                                                            edge_margin_right=5,
+                                                                            analyze_percent=100)
+
+
+            # self.show_contours(contours=[first_text], title=f"first text contour "
+            #                                                 f"is_top_edge_irregular {is_top_edge_irregular}"
+            #                                                 f"is_bottom_edge_irregular {is_bottom_edge_irregular}")
+
+            if False:
+                # self.show_contours(contours=[], title=f"testing  ")
+                if is_top_edge_irregular: skip_next_contour = True
 
             else:
                 skip_next_contour = False
@@ -933,15 +961,17 @@ class Bot:
 
                 # self.show_contours(contours=[first_text], title='el primer contorno')
                 if is_first_iter and not was_handled_overflow:
-                    first_text = await self.move_to_contour_gradually(x+x_start_offset,
+                    first_text_gradually = await self.move_to_contour_gradually(x+x_start_offset,
                                                                       y+y_start_offset,
                                                                       is_first_iter=is_first_iter)
-                x, y, w, h = cv2.boundingRect(first_text)
+                    if first_text_gradually is not None:
+                        first_text = first_text_gradually
 
+                x, y, w, h = cv2.boundingRect(first_text)
                 # self.show_contours(contours=[first_text], title='el primer contorno')
 
                 text = self.get_text_by_text_location(
-                    x_start=x + x_start_offset,
+                    x_start=x - 5,
                     y_start=y + y_start_offset,
                     x_end=x + w,
                     y_end=(y + h) - 15,
@@ -1007,9 +1037,18 @@ class Bot:
 
             for i, contour in iter_contours:
                 x, y, w, h = cv2.boundingRect(contour)
-                #
+                # area = cv2.contourArea(contour)
+                # perimeter = cv2.arcLength(contour, closed=True)
+                # epsilon = 0.01 * cv2.arcLength(contour, True)
+                # approx = cv2.approxPolyDP(contour, epsilon, True)
+                # num_vertices = len(approx)
+                # hull = cv2.convexHull(contour)
+                # defects = cv2.convexityDefects(contour, hull)
                 # self.show_contours(contours=[contour],
-                #                    title=f'skip_next_contour {skip_next_contour}')
+                #                    title=f'area {area}, '
+                #                          f'perimeter {perimeter}, '
+                #                          f'num_vertices {num_vertices}, '
+                #                          f'defects ')
 
                 if skip_next_contour:
                     skip_next_contour = False
@@ -1021,15 +1060,27 @@ class Bot:
                                                                             edge_margin_right=0,
                                                                             analyze_percent=100)
 
+                is_bottom_edge_irregular = img_handler.is_bottom_edge_irregular(contour=contour,
+                                                                                threshold=1,
+                                                                                edge_margin_left=0,
+                                                                                edge_margin_right=0,
+                                                                                analyze_percent=100)
+
+                # contour_points = largest_contour_found.squeeze()
+                # y_coords = contour_points[:, 1]  # [y1, y2, y3, ...]
+                # y_inferior_real = np.percentile(y_coords, 90)  # Ajusta el percentil según necesidad
+
                 # text_contours = possible_text_contours[1:]
                 # is_link = self.is_link(contour,
                 #                        text_contours[i+1] if len(text_contours) > i+1 else None)
 
                 # self.show_contours(contours=[contour],
-                #                    title=f'is_top_edge_irregular {is_top_edge_irregular}')
+                #                    title=f'is_top_edge_irregular {is_top_edge_irregular} '
+                #                          f'is_bottom_edge_irregular {is_bottom_edge_irregular}'
+                #                          f'x={x}, y={y}, w={w}, h={h}')
 
-                if not is_top_edge_irregular:
-                    skip_next_contour = True
+                if False:
+                    if is_top_edge_irregular: skip_next_contour = True
 
                 else:
                     skip_next_contour = False
@@ -1039,7 +1090,7 @@ class Bot:
                     y_start_offset = config['y_start_offset']
 
                     text = self.get_text_by_text_location(
-                        x_start=x + x_start_offset,
+                        x_start=x - 5,
                         y_start=y + y_start_offset,
                         x_end=x + w,
                         y_end=(y + h) - 15,
@@ -1319,8 +1370,8 @@ class Bot:
         # self.show_contours(contours=[largest_contour_found],
         #                    title="Primer contorno de referencia papu")
 
-        # self.show_contours(contours=contours_found, title="Los contornos de La imagen reparada")
-        # self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
+        self.show_contours(contours=contours_found, title="Los contornos de La imagen reparada")
+        self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
 
         x_contour_overflow_end = None
         y_contour_overflow_end = None
@@ -1345,16 +1396,13 @@ class Bot:
 
             chat_contour = self.find_chat_area_contour()
 
-            # self.show_contours(contours=[chat_contour],
-            #                    title="chat area contour")
-
             if chat_contour is None:
                 continue
             is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
 
             if not is_overflow:
-                # self.show_contours(contours=[chat_contour],
-                #                    title="chat area contour")
+                self.show_contours(contours=[chat_contour],
+                                   title=f"chat area contour is overflow {is_overflow}")
 
                 await asyncio.sleep(0.3)
                 self.take_screenshot()
@@ -1365,12 +1413,12 @@ class Bot:
                 # self.show_contours(contours=conours_found,
                 #                    title="find_text_area_contours")
 
-                if not conours_found:
+                if not conours_found or contours_found is None or len(contours_found) <= 0:
                     # self.show_contours(contours=conours_found,
                     #                    title="find_text_area_contours, pero antes del break")
                     break
 
-                contour_overflow = conours_found[-1]
+                contour_overflow = conours_found[0]
 
 
                 # img_handler = ImgHandler(image=self.current_screenshot)
@@ -1381,10 +1429,10 @@ class Bot:
                 #                                                           analyze_percent=100)
                 #
                 # if not is_top_edge_irregular:
-                #     return
+                #     return True
 
-                # self.show_contours(contours=[contour_overflow],
-                #                    title="contour with overflowwwwwwww")
+                self.show_contours(contours=[contour_overflow],
+                                   title="contour with overflowwwwwwww")
 
                 x, y, w, h = cv2.boundingRect(contour_overflow)
                 x_contour_overflow_start = x
@@ -1586,9 +1634,10 @@ class Bot:
         self.take_screenshot()
         possible_text_contours = self.find_text_area_contours(
             use_first_contour_reference=True if self.was_handled_overflow or iterations > 0 else False)
-
+        #
         # self.show_contours(contours=possible_text_contours,
         #                    title="possible text contour")
+
         # self.show_contours(contours=possible_text_contours,
         #                    title="possible text contour")
         # self.show_contours(contours=all_texts_contours,
@@ -1622,20 +1671,21 @@ class Bot:
 
         if has_more_text:
             if len(texts) > 0:
-                current_chat_area_img = self.get_chat_area_cropped()
+                # current_chat_area_img = self.get_chat_area_cropped()
+                #
+                # self.scroll_chat_area(direction='up',
+                #                       scroll_move=50)
+                # await asyncio.sleep(1)
+                #
+                # is_chat_area_the_same = self.is_chat_area_the_same(
+                #     prev_chat_area_img=current_chat_area_img)
+                #
+                # if is_chat_area_the_same:
+                #     return texts
 
-                self.scroll_chat_area(direction='up',
-                                      scroll_move=50)
-                await asyncio.sleep(1)
-
-                is_chat_area_the_same = self.is_chat_area_the_same(prev_chat_area_img=current_chat_area_img)
-
-                if is_chat_area_the_same:
-                    return texts
-
-                self.scroll_chat_area(direction='down',
-                                      scroll_move=50)
-                await asyncio.sleep(1)
+                # self.scroll_chat_area(direction='down',
+                #                       scroll_move=50)
+                # await asyncio.sleep(1)
 
                 steps = get_subtraction_steps(
                     initial_value=texts[-1][0][1],
@@ -1643,6 +1693,8 @@ class Bot:
                         if self.first_contour_reference is not None else 0,
                     steps=10
                     )
+
+                prev_chat_area_img = self.get_chat_area_cropped()
 
                 for i, step in enumerate(steps):
                     step = math.ceil(abs(step))
@@ -1652,6 +1704,14 @@ class Bot:
                     self.scroll_chat_area(direction='up',
                                           scroll_move=step)
                     await asyncio.sleep(1)
+
+                    is_chat_area_the_same = self.is_chat_area_the_same(
+                        prev_chat_area_img=prev_chat_area_img)
+
+                    if is_chat_area_the_same:
+                        return texts
+
+                    prev_chat_area_img = self.get_chat_area_cropped()
 
 
             # Después de hacer scroll (en cualquier caso), volvemos a llamar a la función
@@ -1977,6 +2037,7 @@ class Bot:
                     #       end="\r", flush=True)
                     # print("No Watching target...", end="\r", flush=True)
                     # last_print = "nowatch"
+                    print('no watching')
                     continue
                 else:
                     # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
@@ -1984,6 +2045,7 @@ class Bot:
                     #       end="\r", flush=True)
                     # print(f"Watching target {self.target_name}...", end="\r", flush=True)
                     # last_print = "watching"
+                    print('watching')
                     pass
 
                 if counter > 2 or counter < 2:

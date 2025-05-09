@@ -416,9 +416,6 @@ class ImgHandler:
                   False si está completamente recto en esa sección.
         """
         # Validar el porcentaje de análisis
-        if contour is None:
-            raise ValueError("No se proporcionó el contorno.")
-
         analyze_percent = max(0, min(100, analyze_percent))
 
         # Extraer los puntos del contorno
@@ -436,10 +433,6 @@ class ImgHandler:
         # Extraer las coordenadas x e y del borde superior
         x_coords = [x for x, y in sorted_top_edge]
         y_coords = [y for x, y in sorted_top_edge]
-
-        # print('y_coords', y_coords)
-        # self.show_contours(contours=contour,
-        #                    title='the fuking contour top irregular')
 
         # Excluir los bordes laterales según los márgenes especificados
         if len(x_coords) <= (edge_margin_left + edge_margin_right):
@@ -569,7 +562,7 @@ class ImgHandler:
     def find_contours_by_large_contours_mask(self, image=None):
         mask = self.create_mask_to_large_contours(image=image if image is not None else self.img)
         edged = self.get_edged(mask)
-        contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return contours
 
 
