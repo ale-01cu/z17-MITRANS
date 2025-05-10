@@ -1635,8 +1635,8 @@ class Bot:
         possible_text_contours = self.find_text_area_contours(
             use_first_contour_reference=True if self.was_handled_overflow or iterations > 0 else False)
         #
-        # self.show_contours(contours=possible_text_contours,
-        #                    title="possible text contour")
+        self.show_contours(contours=possible_text_contours,
+                           title="possible text contour")
 
         # self.show_contours(contours=possible_text_contours,
         #                    title="possible text contour")
