@@ -86,7 +86,7 @@ class Bot:
             'msg5': None
         }
 
-        self.is_show_contours_active = True
+        self.is_show_contours_active = False
 
         self.amount_of_time_chats_area_down_scrolled = 0
 
@@ -426,11 +426,112 @@ class Bot:
         return chat_id
 
 
+    async def is_photo_contour(self, contour_target):
+        # Obtener todos los contornos dentro del chat area
+        # Convertir a escala de grises
+        gray = cv2.cvtColor(self.current_screenshot, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar desenfoque más agresivo para reducir ruido
+        blurred = cv2.GaussianBlur(gray, (7, 7), 0)
+
+        # Binarización adaptativa con parámetros ajustados
+        thresh = cv2.adaptiveThreshold(blurred, 255,
+                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY_INV, 21, 5)
+
+        # Eliminar ruido con operaciones morfológicas
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+        # Encontrar contornos
+        contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        possible_text_contours = []
+        chat_contour = self.find_chat_area_contour()
+
+        config = BOT_CONFIG[self.display_resolution]['FIND_TEXT_AREA_CONTOURS']
+        chat_limit_x_porcent = config['chat_limit_x_porcent_in_message_requests_view'] \
+            if self.is_in_principal_view() else config['chat_limit_x_porcent']
+        min_height = config['min_height']
+        chat_start_x_porcent = config['chat_start_x_porcent']
+
+        x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
+        chat_limit_x = x_chat + int(
+            (x_chat + w_chat) * chat_limit_x_porcent)  # Punto medio horizontal del chat subir esto
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            perimeter = cv2.arcLength(contour, True)
+
+            # Filtro de tamaño (ajusta según necesidad)
+            min_w = 40
+            min_h = 0
+
+            # Verifica si tiene el tamaño adecuado
+            if (min_w < w < w_chat * 0.70) and (min_h < h < h_chat - 10):
+                # Verifica si no pasa el limite en el eje y inferior
+                use_first_contour_reference = True
+                is_contour_valid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
+                    if self.first_contour_reference is not None and use_first_contour_reference \
+                    else True
+
+                # is_contour_valid = True
+
+                is_within_chat_width_percent = x + w <= chat_limit_x
+
+                # is_within_chat_width_percent = True
+
+                # Verificar si comienza donde mismo comienza el primer contorno de referencia
+                x_reference = self.first_contour_reference[0] if self.first_contour_reference is not None else 0
+                is_x_valid = (x == x_reference or x_reference - 5 < x < x_reference + 5) \
+                    if x_reference != 0 else True
+
+                # Verifica si está DENTRO del chat_contour
+                if (((x_chat < x < (x_chat + w_chat) * chat_start_x_porcent) and (x + w < x_chat + w_chat))
+                        and ((y > y_chat) and (y + h < y_chat + h_chat))
+                        and is_contour_valid
+                        and is_within_chat_width_percent
+                        and is_x_valid
+                ):
+                    possible_text_contours.append(contour)
+
+
+        def is_contour_unique(new_cnt, existing_cnts, threshold=5):
+            """
+            Devuelve True si el contorno new_cnt no está cerca de ninguno en existing_cnts.
+            Se compara la distancia entre bounding boxes.
+            """
+            x1, y1, w1, h1 = cv2.boundingRect(new_cnt)
+            for cnt in existing_cnts:
+                x2, y2, w2, h2 = cv2.boundingRect(cnt)
+                if abs(x1 - x2) < threshold and abs(y1 - y2) < threshold and \
+                        abs(w1 - w2) < threshold and abs(h1 - h2) < threshold:
+                    return False
+            return True
+
+
+        text_contours = self.find_text_area_contours()
+
+        filtered_contours = [cnt for cnt in possible_text_contours if is_contour_unique(cnt, text_contours)]
+
+        self.show_contours(contours=[contour_target], title='contour target')
+        self.show_contours(contours=filtered_contours, title='filtered_contours')
+
+        for contour in filtered_contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            x_target, y_target, w_target, h_target = cv2.boundingRect(contour_target)
+
+            # Check if target contour is inside contour
+            if x < x_target < x + w and y_target > y and y_target + h_target < y + h:
+                return True
+
+        return False
+
 
     def find_text_area_contours(self, image = None,
                                 use_first_contour_reference = True,
                                 take_all_texts=False, is_other_way=False,
-                                is_quadrilateral=True):
+                                ):
         # img_handler = None
         #
         # if self.is_in_message_requests_view:
@@ -865,7 +966,7 @@ class Bot:
             # Volver a capturar pantalla y contornos
             self.take_screenshot()
             possible_text_contours = self.find_text_area_contours(use_first_contour_reference=not is_first_iter,
-                                                                  is_quadrilateral=False)
+                                                                  )
 
             # self.show_contours(contours=possible_text_contours,
             #                    title='todos los contornos move_to_contour_gradually')
@@ -926,9 +1027,12 @@ class Bot:
         # self.show_contours(contours=possible_text_contours,
         #     title=f"posible contornos de texts is_first_iter {is_first_iter}")
 
+        first_text = possible_text_contours[0]
+        is_photo = await self.is_photo_contour(contour_target=first_text)
 
-        if is_first_iter:
-            first_text = possible_text_contours[0]
+        # self.show_contours(contours=[first_text], title=f'is photo: {is_photo}')
+
+        if is_first_iter and not is_photo:
             x, y, w, h = cv2.boundingRect(first_text)
 
             is_top_edge_irregular = img_handler.is_top_edge_irregular(contour=first_text,
@@ -1036,6 +1140,9 @@ class Bot:
             #     if skip_next_contour else possible_text_contours, title='dentro del bucle')
 
             for i, contour in iter_contours:
+                is_photo = await self.is_photo_contour(contour_target=contour)
+                if is_photo: continue
+
                 x, y, w, h = cv2.boundingRect(contour)
                 # area = cv2.contourArea(contour)
                 # perimeter = cv2.arcLength(contour, closed=True)
@@ -1642,8 +1749,8 @@ class Bot:
         possible_text_contours = self.find_text_area_contours(
             use_first_contour_reference=True if self.was_handled_overflow or iterations > 0 else False)
         #
-        self.show_contours(contours=possible_text_contours,
-                           title="possible text contour")
+        # self.show_contours(contours=possible_text_contours,
+        #                    title="possible text contour")
 
         # self.show_contours(contours=possible_text_contours,
         #                    title="possible text contour")
@@ -2058,18 +2165,15 @@ class Bot:
                 if counter > 2 or counter < 2:
                     if self.is_in_principal_view():
                         pass
-                    elif self.is_in_request_view():
-                        self.go_to_principal_view()
                     else:
-                        continue
+                        self.go_to_principal_view()
 
                 else:
-                    print('aaaaaaaaaaaaaaaaaaaaaaaaaaaa **********************************************')
                     if self.is_in_principal_view():
                         counter = 0
                         self.go_to_message_requests_view()
 
-                    elif self.is_in_request_view():
+                    else:
                         counter = 0
                         self.go_to_principal_view()
 
@@ -2156,7 +2260,7 @@ class Bot:
                             order_cursor += 1
 
                         x, y, w, h = cv2.boundingRect(self.chats_reference)
-                        self.scroll_chats_area(direction='down', scroll_move=int(h * 0.70))
+                        self.scroll_chats_area(direction='down', scroll_move=int(h * 0.50))
 
                     else:
                         # Si ya he bajado 3 veces y no he visto nada entonces subo completo
