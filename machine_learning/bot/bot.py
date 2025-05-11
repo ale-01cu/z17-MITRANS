@@ -972,7 +972,7 @@ class Bot:
 
                 text = self.get_text_by_text_location(
                     x_start=x - 5,
-                    y_start=y + y_start_offset,
+                    y_start=y - y_start_offset,
                     x_end=x + w,
                     y_end=(y + h) - 15,
                     scroll_pos_start=self.scroll_reference,
@@ -1339,7 +1339,7 @@ class Bot:
                                    scroll_steps=True
                                    ):
         # Caso cuando hay texto desbordado (tratamiento diferente)
-        # self.show_contours(contours=[chat_contour],
+        # self.show_contours(contours=[chat_contour],Fre
         #                    title="chat area contour")
         result_image = self.repair_irregular_top_edge(
             image=self.current_screenshot, contour=chat_contour, offset2=300)
@@ -1369,9 +1369,9 @@ class Bot:
         #
         # self.show_contours(contours=[largest_contour_found],
         #                    title="Primer contorno de referencia papu")
-
-        self.show_contours(contours=contours_found, title="Los contornos de La imagen reparada")
-        self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
+        #
+        # self.show_contours(contours=contours_found, title="Los contornos de La imagen reparada")
+        # self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
 
         x_contour_overflow_end = None
         y_contour_overflow_end = None
@@ -1385,116 +1385,121 @@ class Bot:
 
         scroll_attempts = 0
 
-        # looking for the start of the overflow contourf
         while scroll_attempts < MAX_SCROLL_ATTEMPTS:
-            if keyboard.is_pressed('esc'):
-                print("Detenido por el usuario.")
-                exit()
-            self.scroll_chat_area(direction="up", scroll_move=3)
-            amount_scrolled += 3
+            # self.show_contours(contours=[], title="antes de ejecutar el bucle dentro del overflow")
+            scroll_attempts += 1
+            x, y, w, h = cv2.boundingRect(largest_contour_found)
+            steps = get_subtraction_steps(
+              initial_value=y,
+              target_value=y+h,
+              steps=5)
+
+            for i, step in enumerate(steps):
+                step = math.ceil(abs(step))
+                if i == len(steps) - 1:
+                    step = math.ceil(step / 3)
+                self.scroll_chat_area(direction='up',
+                                      scroll_move=step)
+                amount_scrolled += step
+                await asyncio.sleep(1)
+
             self.take_screenshot()
 
-            chat_contour = self.find_chat_area_contour()
+            possible_text_contours = self.find_text_area_contours(use_first_contour_reference=False)
 
-            if chat_contour is None:
+            if len(possible_text_contours) == 0:
                 continue
-            is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
 
-            if not is_overflow:
-                self.show_contours(contours=[chat_contour],
-                                   title=f"chat area contour is overflow {is_overflow}")
+            conours_found = self.find_text_area_contours(
+                use_first_contour_reference=False)
 
-                await asyncio.sleep(0.3)
-                self.take_screenshot()
+            # self.show_contours(contours=conours_found,
+            #                    title="find_text_area_contours")
 
-                conours_found = self.find_text_area_contours(
-                    use_first_contour_reference=False)
-
+            if not conours_found or contours_found is None or len(contours_found) <= 0:
                 # self.show_contours(contours=conours_found,
-                #                    title="find_text_area_contours")
+                #                    title="find_text_area_contours, pero antes del break")
+                break
+            #
+            # self.show_contours(contours=conours_found,
+            #                    title="conours_found")
 
-                if not conours_found or contours_found is None or len(contours_found) <= 0:
-                    # self.show_contours(contours=conours_found,
-                    #                    title="find_text_area_contours, pero antes del break")
-                    break
+            contour_overflow = conours_found[0]
 
-                contour_overflow = conours_found[0]
+            # img_handler = ImgHandler(image=self.current_screenshot)
+            # is_top_edge_irregular = img_handler.is_top_edge_irregular(contour=contour_overflow,
+            #                                                           threshold=1,
+            #                                                           edge_margin_left=0,
+            #                                                           edge_margin_right=0,
+            #                                                           analyze_percent=100)
+            #
+            # if not is_top_edge_irregular:
+            #     return True
+            # self.show_contours(contours=[contour_overflow],
+            #                    title="contour with overflowwwwwwww")
+
+            x, y, w, h = cv2.boundingRect(contour_overflow)
+            x_contour_overflow_start = x
+            y_contour_overflow_start = y
+            y_contour_overflow_start_plus_h = y + h
+
+            # await self.get_texts_did_not_watched_list(
+            #     possible_text_contours=[contour_overflow]
+            # )
+            contour_points = largest_contour_found.squeeze()
+            y_coords = contour_points[:, 1]  # [y1, y2, y3, ...]
+            y_inferior_real = np.percentile(y_coords, 90)  # Ajusta el percentil según necesidad
+
+            text = self.get_text_by_text_location(
+                x_start=x_contour_overflow_start + 15,
+                y_start=y_contour_overflow_start + 25,
+                x_end=x_contour_overflow_end,
+                y_end=y_inferior_real - 20,
+                scroll_pos_start=self.scroll_reference,
+                scroll_pos_end=amount_scrolled,
+            )
+
+            x, y, w, h = self.chat_area_reference
+            pyautogui.click((x + w) / 2, (y + h) / 2)
+
+            if is_initial_overflow and self.is_memory_active:
+                self.add_last_five_texts_watched_v3(last_text=text)
+
+            elif not is_initial_overflow and self.is_memory_active:
+                self.add_last_five_texts_watched_v3(last_text=text, add_to_first_empty=True)
 
 
-                # img_handler = ImgHandler(image=self.current_screenshot)
-                # is_top_edge_irregular = img_handler.is_top_edge_irregular(contour=contour_overflow,
-                #                                                           threshold=1,
-                #                                                           edge_margin_left=0,
-                #                                                           edge_margin_right=0,
-                #                                                           analyze_percent=100)
-                #
-                # if not is_top_edge_irregular:
-                #     return True
+            if self.is_online: await self.websocket.send_websocket_message(
+                message_type="bot_message", message=text)
 
-                self.show_contours(contours=[contour_overflow],
-                                   title="contour with overflowwwwwwww")
+            texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
+                          (x_contour_overflow_end, y_contour_overflow_end, end_scroll_reference)])
 
-                x, y, w, h = cv2.boundingRect(contour_overflow)
-                x_contour_overflow_start = x
-                y_contour_overflow_start = y
 
-                # await self.get_texts_did_not_watched_list(
-                #     possible_text_contours=[contour_overflow]
-                # )
-                contour_points = largest_contour_found.squeeze()
-                y_coords = contour_points[:, 1]  # [y1, y2, y3, ...]
-                y_inferior_real = np.percentile(y_coords, 90)  # Ajusta el percentil según necesidad
+            is_watched = self.is_text_already_watched(text=text, index=len(texts))
 
-                text = self.get_text_by_text_location(
-                    x_start=x_contour_overflow_start + 15,
-                    y_start=y_contour_overflow_start + 25,
-                    x_end=x_contour_overflow_end,
-                    y_end=y_inferior_real - 20,
-                    scroll_pos_start=self.scroll_reference,
-                    scroll_pos_end=amount_scrolled if len(conours_found) == 1 else 0,
+            if is_watched:
+                has_more = False
+                return has_more
+
+
+            if scroll_steps:
+                steps = get_subtraction_steps(
+                    initial_value=y_contour_overflow_start,
+                    target_value=y_contour_overflow_start_plus_h,
+                    steps=5
                 )
 
-                x, y, w, h = self.chat_area_reference
-                pyautogui.click((x + w) / 2, (y + h) / 2)
+                for i, step in enumerate(steps):
+                    step = math.ceil(abs(step))
+                    if i == len(steps) - 1:
+                        step = math.ceil(step - step*0.1)
 
-                if is_initial_overflow and self.is_memory_active:
-                    self.add_last_five_texts_watched_v3(last_text=text)
+                    self.scroll_chat_area(direction='up',
+                                          scroll_move=step)
+                    await asyncio.sleep(1)
 
-                elif not is_initial_overflow and self.is_memory_active:
-                    self.add_last_five_texts_watched_v3(last_text=text, add_to_first_empty=True)
-
-
-                if self.is_online: await self.websocket.send_websocket_message(
-                    message_type="bot_message", message=text)
-
-                texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
-                              (x_contour_overflow_end, y_contour_overflow_end, end_scroll_reference)])
-
-
-                is_watched = self.is_text_already_watched(text=text, index=len(texts))
-
-                if is_watched:
-                    has_more = False
-                    return has_more
-
-
-                if scroll_steps:
-                    steps = get_subtraction_steps(
-                        initial_value=50,
-                        target_value=((y_contour_overflow_end - self.chat_area_reference[1])),
-                        steps=5
-                    )
-
-                    for i, step in enumerate(steps):
-                        step = math.ceil(abs(step))
-                        if i == len(steps) - 1:
-                            step = math.ceil(step - step*0.1)
-
-                        self.scroll_chat_area(direction='up',
-                                              scroll_move=step)
-                        await asyncio.sleep(1)
-
-                break
+            break
 
         if scroll_attempts >= MAX_SCROLL_ATTEMPTS:
             raise RuntimeError("Se ha excedido el número máximo de intentos de scroll.")
@@ -1588,7 +1593,8 @@ class Bot:
             if is_overflow and len(possible_text_contours) == 0:
                 has_more = await self.handle_overflow_text(chat_contour=chat_contour,
                                                 amount_scrolled=scrolled,
-                                                texts=texts, is_initial_overflow=True)
+                                                texts=texts, is_initial_overflow=not self.was_handled_overflow,
+                                                scroll_steps=True)
 
                 self.was_handled_overflow = True
                 scrolled = 0
@@ -1599,6 +1605,7 @@ class Bot:
 
             await asyncio.sleep(1)
 
+        # self.show_contours(contours=[chat_contour], title="sali del bucle del overflow")
 
         if not self.was_handled_overflow:
             self.take_screenshot()
@@ -2190,8 +2197,7 @@ class Bot:
                             x, y, w, h = cv2.boundingRect(button_contour)
                             pyautogui.click(x=x+w/2, y=y+h/2)
 
-                        else:
-                            self.scroll_chat_area(direction='down', scroll_move=1_000_000)
+                        self.scroll_chat_area(direction='down', scroll_move=1_000_000)
 
                         # await asyncio.sleep(1)
                         # self.take_screenshot()
