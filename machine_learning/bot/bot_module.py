@@ -16,11 +16,14 @@ import asyncio
 from websocket_client import WebSocketClient
 from config import BOT_CONFIG
 from inputs_handler import MouseBlocker
+import configparser
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
 pyautogui.FAILSAFE = False
 
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 class Bot:
     def __init__(self, name: str, target_name: str,
@@ -54,23 +57,25 @@ class Bot:
             uri=websocket_uri,
         )
         self.websocket_uri = websocket_uri
-        self.window_handler = WindowHandler(title=target_name, is_active=True)
+
+        self.is_window_handler_active = config.getboolean('CONFIG', 'IS_WINDOW_HANDLER_ACTIVE')
+        self.window_handler = WindowHandler(title=target_name, is_active=self.is_window_handler_active)
         self.first_contour_reference: Tuple[int, int, int, int] | None = None
 
         # self.is_in_message_requests_view = current_bot.name if current_bot else (
         #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
 
-        self.is_online = False
+        self.is_online = config.getboolean('CONFIG', 'IS_ONLINE')
 
         # Esta propiedad sirve para activar o desactivar a funcion
         # de guardar el ultimo texto visto en la base de datos y de
         # solo tomar hasta ese ultimo texto. Si esta en False no lo hará
-        self.is_memory_active = False
-        self.is_only_check = False # Solo para en base al ultimo comentario que ha visto pero no guarda
+        self.is_memory_active = config.getboolean('CONFIG', 'IS_MEMORY_ACTIVE')
+        self.is_only_check = config.getboolean('CONFIG', 'IS_ONLY_CHECK') # Solo para en base al ultimo comentario que ha visto pero no guarda
 
 
         self.was_handled_overflow = False
-        self.messages_amount_limit = 50
+        self.messages_amount_limit = config.getint('CONFIG', 'MESSAGES_AMOUNT_LIMIT')
 
         # Variable para guardar los ultimos textos hasta 5
         # que se vean de un chat, se guardan aqui primero
@@ -86,7 +91,7 @@ class Bot:
             'msg5': None
         }
 
-        self.is_show_contours_active = False
+        self.is_show_contours_active = config.getboolean('CONFIG', 'IS_SHOW_CONTOURS_ACTIVE')
 
         self.amount_of_time_chats_area_down_scrolled = 0
 
@@ -95,6 +100,8 @@ class Bot:
         self.display_resolution = display_resolution
 
         # self.mouse_blocker = MouseBlocker(blocked=True)
+
+        print("messages_amount_limit ", self.messages_amount_limit)
 
 
     def add_last_five_texts_watched(self, last_text: str | None,
@@ -2328,9 +2335,12 @@ class Bot:
 
             except Exception as e:
                 print(f'Error raised: {e}')
+                input("Press Enter to exit...")
 
             finally:
+                # ... existing code ...
                 continue
+                
 
 
     async def turn_on(self):

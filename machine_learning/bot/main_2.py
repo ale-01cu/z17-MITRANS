@@ -1,4 +1,4 @@
-from bot import Bot
+from bot_module import Bot
 import os
 from db.db import engine, Base
 import asyncio
