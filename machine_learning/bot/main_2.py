@@ -10,8 +10,6 @@ Base.metadata.create_all(bind=engine)
 
 dirname = os.path.dirname(__file__)
 
-'pyinstaller --name "OpiCubaBot" main_2.py'
-
 messenger_template_path = os.path.join(dirname, 'templates/messenger_template(1920x1080).png')
 messenger_request_msg_template_path = os.path.join(dirname, 'templates/messenger_request_message_template(1920x1080).png')
 # messenger_template_path = os.path.join(dirname, 'templates/messenger_template(1360x768).png')
@@ -21,7 +19,7 @@ def main():
     screen_width, screen_height = pyautogui.size()
     current_resolution = f"{screen_width}x{screen_height}"
 
-    print(current_resolution)
+    print("Current Resolution: ", current_resolution)
 
     if current_resolution not in RESOLUTIONS_AVILABLES:
         raise Exception(f"La resolución actual {current_resolution} no está disponible. "
@@ -31,11 +29,12 @@ def main():
 
     if current_resolution == '1920x1080':
         templates.append(os.path.join(dirname, 'templates/messenger_template(1920x1080).png'))
-        # templates.append(os.path.join(dirname, 'templates/messenger_template_2(1920x1080).png'))
+        templates.append(os.path.join(dirname, 'templates/messenger_template_2(1920x1080).png'))
         templates.append(os.path.join(dirname, 'templates/messenger_request_message_template(1920x1080).png'))
 
     elif current_resolution == '1360x768':
         templates.append(os.path.join(dirname, 'templates/messenger_template(1360x768).png'))
+        templates.append(os.path.join(dirname, 'templates/messenger_template_2(1360x768).png'))
         templates.append(os.path.join(dirname, 'templates/messenger_request_message_template(1360x768).png'))
 
     bot = Bot(

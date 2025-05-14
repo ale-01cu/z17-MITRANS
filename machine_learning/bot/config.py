@@ -43,7 +43,7 @@ BOT_CONFIG = {
             'max_height': 20,
         },
         "FIND_TEXT_AREA_CONTOURS": {
-            'chat_limit_x_porcent': 0.8,
+            'chat_limit_x_porcent': 1,
             'chat_start_x_porcent': 0.4,
             'chat_limit_x_porcent_in_message_requests_view': 0.30,
             'min_height': 20,
