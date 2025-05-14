@@ -20,6 +20,7 @@ from config import BOT_CONFIG
 from inputs_handler import MouseBlocker
 import configparser
 import random
+from movements_handler import MovementsHandler
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
@@ -58,6 +59,7 @@ class Bot:
         # Initialize WebSocket client
         self.websocket = WebSocketClient(
             uri=websocket_uri,
+            bot_instance=self
         )
         self.websocket_uri = websocket_uri
 
@@ -102,52 +104,8 @@ class Bot:
 
         self.display_resolution = display_resolution
 
+        self.movements_handler = MovementsHandler()
         # self.mouse_blocker = MouseBlocker(blocked=True)
-
-
-    def human_like_mouse_move(self, start, end, duration=None):
-        """
-        Mueve el mouse desde start = (x1,y1) hasta end = (x2,y2)
-        de forma similar a como lo haría un humano.
-        """
-        x1, y1 = start
-        x2, y2 = end
-
-        if duration is None:
-            # Tiempo total del movimiento, aleatorio entre 0.5 y 1.5 segundos
-            duration = random.uniform(0.5, 1.5)
-
-        # Número de pasos intermedios
-        steps = int(duration * 100)
-        interval = duration / steps
-
-        # Generar una curva suave (puede ser aleatoria)
-        # Usamos una interpolación cúbica para dar una sensación más orgánica
-        dx = x2 - x1
-        dy = y2 - y1
-
-        for i in range(steps + 1):
-            # Factor de progreso (easing: acelera y frena al final)
-            if random.random() < 0.1:  # 10% de probabilidad
-                pause_duration = random.uniform(0.05, 0.3)  # Pausa breve entre 50ms y 300ms
-                time.sleep(pause_duration)
-
-            t = i / steps
-            easing = lambda t: t ** 1.5  # Puedes ajustar la potencia
-            t_eased = easing(t)
-
-            x = x1 + dx * t_eased
-            y = y1 + dy * t_eased
-
-            # Añadimos ruido aleatorio pequeño para simular imprecisión humana
-            noise_x = random.uniform(-3, 3)
-            noise_y = random.uniform(-3, 3)
-
-            self.mouse_move(x + noise_x, y + noise_y)
-            time.sleep(interval)
-
-        # Último ajuste final (para asegurar llegar al punto exacto)
-        self.mouse_move(x2, y2)
 
 
     def human_like_scroll(self, scroll_amount, steps=None, base_delay=0.05):
@@ -190,12 +148,17 @@ class Bot:
                 time.sleep(random.uniform(0.05, 0.15))
 
 
-    def mouse_click(self, x, y, duration=0):
-        self.human_like_mouse_move(x, y, duration)
+    def mouse_click(self, x, y, duration=0.1):
+        x_pos, y_pos = pyautogui.position()
+        self.movements_handler.human_like_mouse_move(start=(x_pos, y_pos),
+                                                     end=(x, y), duration=duration)
+        pyautogui.click()
 
 
-    def mouse_move(self, x, y, duration=0):
-        self.human_like_mouse_move(x, y, duration)
+    def mouse_move(self, x, y, duration=0.1):
+        x_pos, y_pos = pyautogui.position()
+        self.movements_handler.human_like_mouse_move(start=(x_pos, y_pos),
+                                                     end=(x, y), duration=duration)
 
 
     def scroll_move(self, scroll_amount: int, steps: int=None, base_delay: int = 0):
@@ -1956,7 +1919,7 @@ class Bot:
 
     def get_text_by_text_location(self, x_start, y_start, x_end,
                                   y_end, scroll_pos_start, scroll_pos_end,
-                                  desactivate_scroll=False, duration=0) -> str | None:
+                                  desactivate_scroll=False, duration=0.1) -> str | None:
 
         # if not desactivate_scroll: self.scroll_chat_area(
         #     direction="up" if scroll_pos_start > self.scroll_reference else "down",
@@ -1984,7 +1947,7 @@ class Bot:
         pyautogui.doubleClick(button="left")
         pyautogui.mouseDown(button="left")
 
-        self.mouse_move(x=x_end, y=y_end, duration=duration)
+        pyautogui.moveTo(x=x_end, y=y_end, duration=duration)
 
         if not desactivate_scroll:
             self.scroll_chat_area(
@@ -2231,7 +2194,13 @@ class Bot:
         #     self.go_to_principal_view()
 
         while True:
+            if self.is_paused:
+                print(f"Bot '{self.name}' is paused. Waiting...")
+                await asyncio.sleep(5)  # Espera 5 segundos antes de volver a chequear
+                continue  # Salta el resto del bucle y vuelve a chequear is_paused
+
             print("Buscando chats...")
+
             try:
                 if keyboard.is_pressed('esc'):
                     print("Detenido por el usuario.")
@@ -2450,7 +2419,7 @@ class Bot:
             finally:
                 # ... existing code ...
                 continue
-                
+
 
 
     async def turn_on(self):

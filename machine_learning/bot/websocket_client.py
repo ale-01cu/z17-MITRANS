@@ -14,7 +14,7 @@ from datetime import datetime
 import time
 
 class WebSocketClient:
-    def __init__(self, uri: str):
+    def __init__(self, uri: str, bot_instance: Optional[object] = None):
         self.uri = uri
         self.connection: Optional[websockets.WebSocketClientProtocol] = None
         self.on_message = self.handle_websocket_message
@@ -30,6 +30,7 @@ class WebSocketClient:
         self._lock = asyncio.Lock()  # Add thread safety
         self._connection_timeout = 10  # New connection timeout
         self._ack_timeout = 8  # Reduced ACK timeout
+        self.bot_instance = bot_instance  # Nuevo atributo
 
     async def _connect(self) -> bool:
         """Improved connection with better error handling"""
@@ -147,6 +148,7 @@ class WebSocketClient:
                     continue
                     
                 data = json.loads(message)
+                print(f"data recibida del servidor: {data}")
                 self.logger.debug(f"Received message: {data}")
                 
                 # Handle ACKs first
@@ -362,20 +364,47 @@ class WebSocketClient:
     async def handle_websocket_message(self, message: dict):
         """Handles incoming WebSocket messages"""
         try:
+            # Asegúrate de que el mensaje es un diccionario (ya debería serlo por json.loads)
+            if not isinstance(message, dict):
+                self.logger.warning(f"Received a message that is not a dictionary: {message}")
+                return
+
+            self.logger.debug(f"Handling message: {message}")
             message_type = message.get("type")
-            data = message.get("data")
+            data = message.get("data")  # Asumiendo que 'data' contiene el campo 'bot_status'
+
+            # ---- INICIO DE LA MODIFICACIÓN ----
+            if data and 'bot_status' in data and self.bot_instance:
+                bot_status_value = data.get('bot_status')
+                if isinstance(bot_status_value, bool):
+                    if bot_status_value:
+                        self.bot_instance.is_paused = False
+                        self.logger.info("Bot status received: True. Bot is now UNPAUSED.")
+                        print("Bot status received: True. Bot is now UNPAUSED.")
+                    else:
+                        self.bot_instance.is_paused = True
+                        self.logger.info("Bot status received: False. Bot is now PAUSED.")
+                        print("Bot status received: False. Bot is now PAUSED.")
+                else:
+                    self.logger.warning(f"Received 'bot_status' but its value is not a boolean: {bot_status_value}")
+            # ---- FIN DE LA MODIFICACIÓN ----
 
             if message_type == "command":
                 # Handle different commands
                 if data.get("action") == "stop":
                     # Handle stop command
-                    pass
+                    if self.bot_instance:  # Ejemplo de cómo podrías usar bot_instance aquí también
+                        self.bot_instance.is_paused = True  # Por ejemplo, parar también pausa el bot
+                        print("Stop command received. Bot is PAUSED.")
                 elif data.get("action") == "start":
                     # Handle start command
-                    pass
+                    if self.bot_instance:
+                        self.bot_instance.is_paused = False
+                        print("Start command received. Bot is UNPAUSED.")
                 # Add more command handlers as needed
 
         except Exception as e:
+            self.logger.error(f"Error handling WebSocket message: {e}")
             print(f"Error handling WebSocket message: {e}")
 
 
