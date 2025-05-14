@@ -1,4 +1,6 @@
 import math
+from email.mime import base
+
 import numpy as np
 import pyautogui
 import cv2
@@ -17,6 +19,7 @@ from websocket_client import WebSocketClient
 from config import BOT_CONFIG
 from inputs_handler import MouseBlocker
 import configparser
+import random
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
@@ -100,6 +103,105 @@ class Bot:
         self.display_resolution = display_resolution
 
         # self.mouse_blocker = MouseBlocker(blocked=True)
+
+
+    def human_like_mouse_move(self, start, end, duration=None):
+        """
+        Mueve el mouse desde start = (x1,y1) hasta end = (x2,y2)
+        de forma similar a como lo haría un humano.
+        """
+        x1, y1 = start
+        x2, y2 = end
+
+        if duration is None:
+            # Tiempo total del movimiento, aleatorio entre 0.5 y 1.5 segundos
+            duration = random.uniform(0.5, 1.5)
+
+        # Número de pasos intermedios
+        steps = int(duration * 100)
+        interval = duration / steps
+
+        # Generar una curva suave (puede ser aleatoria)
+        # Usamos una interpolación cúbica para dar una sensación más orgánica
+        dx = x2 - x1
+        dy = y2 - y1
+
+        for i in range(steps + 1):
+            # Factor de progreso (easing: acelera y frena al final)
+            if random.random() < 0.1:  # 10% de probabilidad
+                pause_duration = random.uniform(0.05, 0.3)  # Pausa breve entre 50ms y 300ms
+                time.sleep(pause_duration)
+
+            t = i / steps
+            easing = lambda t: t ** 1.5  # Puedes ajustar la potencia
+            t_eased = easing(t)
+
+            x = x1 + dx * t_eased
+            y = y1 + dy * t_eased
+
+            # Añadimos ruido aleatorio pequeño para simular imprecisión humana
+            noise_x = random.uniform(-3, 3)
+            noise_y = random.uniform(-3, 3)
+
+            pyautogui.moveTo(x + noise_x, y + noise_y)
+            time.sleep(interval)
+
+        # Último ajuste final (para asegurar llegar al punto exacto)
+        pyautogui.moveTo(x2, y2)
+
+
+    def human_like_scroll(self, scroll_amount, steps=None, base_delay=0.05):
+        """
+        Simula un scroll vertical de manera similar a como lo haría un humano.
+
+        :param scroll_amount: Unidades de scroll (positivo = hacia arriba, negativo = hacia abajo)
+        :param steps: Número de pasos en los que dividir el scroll
+        :param base_delay: Retraso base entre scrolls (en segundos)
+        """
+        total_scroll = scroll_amount
+        direction = 1 if total_scroll > 0 else -1  # 1 para arriba, -1 para abajo
+
+        if steps is None:
+            steps = random.randint(5, 10)  # Cantidad de movimientos discretos
+
+        remaining = abs(total_scroll)
+
+        for i in range(steps):
+            # Determinamos cuánto scroll hacer en este paso
+            if i == steps - 1:
+                scroll_step = remaining * direction  # Último paso consume lo restante
+            else:
+                # Paso aleatorio proporcional al restante
+                step_size = random.uniform(0.1, 0.4) * remaining
+                scroll_step = int(step_size) * direction
+                remaining -= abs(scroll_step)
+
+            # Aplicamos el scroll
+            pyautogui.scroll(scroll_step)
+
+            # Añadimos una pausa aleatoria
+            delay = base_delay + random.uniform(0.01, 0.05)
+            time.sleep(delay)
+
+            # 15% de probabilidad de vacilar (hacer scroll en dirección contraria brevemente)
+            if random.random() < 0.15 and i != steps - 1:  # No en último paso
+                correction = random.randint(5, 20) * (-direction)
+                pyautogui.scroll(correction)
+                time.sleep(random.uniform(0.05, 0.15))
+
+
+    def mouse_click(self, x, y, duration=0):
+        self.human_like_mouse_move(x, y, duration)
+
+
+    def mouse_move(self, x, y, duration=0):
+        self.human_like_mouse_move(x, y, duration)
+
+
+    def scroll_move(self, scroll_amount: int, steps: int=None, base_delay: int = 0):
+        self.human_like_scroll(scroll_amount=scroll_amount,
+                               steps=steps,
+                               base_delay=base_delay)
 
 
     def add_last_five_texts_watched(self, last_text: str | None,
@@ -239,6 +341,9 @@ class Bot:
 
             if chat_area_contour is not None:
                 ignored_contours.append(chat_area_contour)
+
+            # self.show_contours(contours=ignored_contours,
+            #                    title='testing ignored contours')
 
 
             img_handler = ImgHandler(image=self.current_screenshot)

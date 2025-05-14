@@ -789,6 +789,7 @@ class ImgHandler:
         # --- Creación de la máscara para ignorar contornos ---
         mask = np.ones((height, width), dtype=np.uint8) * 255  # Máscara blanca inicial
 
+
         if ignored_contours and ignored_contours is not None and len(ignored_contours) > 0:
             # Crear máscara negra temporal para los contornos
             temp_mask = np.zeros((height, width), dtype=np.uint8)
@@ -801,6 +802,9 @@ class ImgHandler:
         masked_img1 = cv2.bitwise_and(img1, img1, mask=mask)
         masked_img2 = cv2.bitwise_and(img2, img2, mask=mask)
 
+        # self.show_contours(image=masked_img1,
+        #                    contours=ignored_contours,
+        #                    title=f'Contours to ignore {len(ignored_contours)}')
 
         # --- Comparación con diferencia absoluta ---
         diff = cv2.absdiff(masked_img1, masked_img2)
