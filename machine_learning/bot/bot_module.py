@@ -101,8 +101,6 @@ class Bot:
 
         # self.mouse_blocker = MouseBlocker(blocked=True)
 
-        print("messages_amount_limit ", self.messages_amount_limit)
-
 
     def add_last_five_texts_watched(self, last_text: str | None,
                                     msg_2: str | None = None, msg_3: str | None = None,
@@ -225,29 +223,30 @@ class Bot:
         if self.current_screenshot is None:
             return False
 
-        template = cv2.imread(self.target_templates_paths[0])
+        for template_path in self.target_templates_paths:
+            template = cv2.imread(template_path)
 
-        if template is None:
-            return False
+            if template is None:
+                return False
 
-        chats_contour = self.take_chats_container_contour()
-        chat_area_contour = self.find_chat_area_contour()
+            chats_contour = self.take_chats_container_contour()
+            chat_area_contour = self.find_chat_area_contour()
 
-        ignored_contours = []
+            ignored_contours = []
 
-        if chats_contour is not None:
-            ignored_contours.append(chats_contour)
+            if chats_contour is not None:
+                ignored_contours.append(chats_contour)
 
-        if chat_area_contour is not None:
-            ignored_contours.append(chat_area_contour)
+            if chat_area_contour is not None:
+                ignored_contours.append(chat_area_contour)
 
 
-        img_handler = ImgHandler(image=self.current_screenshot)
-        _, _, score = img_handler.compare_messenger_images_with_contours(img_data2=template,
-                                                           ignored_contours=ignored_contours)
+            img_handler = ImgHandler(image=self.current_screenshot)
+            _, _, score = img_handler.compare_messenger_images_with_contours(img_data2=template,
+                                                               ignored_contours=ignored_contours)
 
-        if score > threshold:
-            return True
+            if score > threshold:
+                return True
 
         return False
 
@@ -521,8 +520,8 @@ class Bot:
 
         filtered_contours = [cnt for cnt in possible_text_contours if is_contour_unique(cnt, text_contours)]
 
-        self.show_contours(contours=[contour_target], title='contour target')
-        self.show_contours(contours=filtered_contours, title='filtered_contours')
+        # self.show_contours(contours=[contour_target], title='contour target')
+        # self.show_contours(contours=filtered_contours, title='filtered_contours')
 
         for contour in filtered_contours:
             x, y, w, h = cv2.boundingRect(contour)
@@ -574,18 +573,16 @@ class Bot:
         #                    title="chat_contour-find_text_area_contours")
 
         config = BOT_CONFIG[self.display_resolution]['FIND_TEXT_AREA_CONTOURS']
-        chat_limit_x_porcent = config['chat_limit_x_porcent_in_message_requests_view'] \
-            if self.is_in_principal_view() else config['chat_limit_x_porcent']
+        chat_limit_x_porcent = config['chat_limit_x_porcent']\
+            if self.is_in_principal_view() else config['chat_limit_x_porcent_in_message_requests_view']
         min_height = config['min_height']
         chat_start_x_porcent = config['chat_start_x_porcent']
 
         x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
-        chat_limit_x = x_chat + int((x_chat + w_chat) * chat_limit_x_porcent)   # Punto medio horizontal del chat subir esto
+        chat_limit_x = x_chat + int((x_chat + w_chat) * chat_limit_x_porcent)
 
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
-            perimeter = cv2.arcLength(contour, True)
-
 
             # Filtro de tamaño (ajusta según necesidad)
             min_w = 40 if take_all_texts else 100
@@ -593,7 +590,7 @@ class Bot:
             # max_chat_width_porcent = 0.60 if self.is_in_message_requests_view else 0.70
 
             # Verifica si tiene el tamaño adecuado
-            if (min_w < w < w_chat * 0.70) and (min_h < h < h_chat - 10):
+            if (min_w < w < w_chat * 0.7) and (min_h < h < h_chat - 10):
                 # Verifica si no pasa el limite en el eje y inferior
                 is_contour_valid = y + h < self.first_contour_reference[1] + self.first_contour_reference[-1] \
                     if self.first_contour_reference is not None and use_first_contour_reference \
@@ -1682,13 +1679,12 @@ class Bot:
             has_last_text = True
 
         if not has_more or (not has_last_text and len(texts) >= self.messages_amount_limit):
+            # print("test 1")
             return texts
 
         self.take_screenshot()
 
         chat_contour = self.find_chat_area_contour()
-
-        # self.show_contours(contours=[chat_contour], title="chat_contour")
 
         scrolled = 0
 
@@ -1701,9 +1697,6 @@ class Bot:
                 break
             possible_text_contours = self.find_text_area_contours()
 
-            # self.show_contours(contours=possible_text_contours,
-            #                    title="first checker contours possible text contours")
-
             if is_overflow and len(possible_text_contours) == 0:
                 has_more = await self.handle_overflow_text(chat_contour=chat_contour,
                                                 amount_scrolled=scrolled,
@@ -1713,6 +1706,7 @@ class Bot:
                 self.was_handled_overflow = True
                 scrolled = 0
                 if not has_more or (not has_last_text and len(texts) >= self.messages_amount_limit):
+                    # print("test 2")
                     return texts
             else:
                 break
@@ -1756,8 +1750,8 @@ class Bot:
         possible_text_contours = self.find_text_area_contours(
             use_first_contour_reference=True if self.was_handled_overflow or iterations > 0 else False)
         #
-        # self.show_contours(contours=possible_text_contours,
-        #                    title="possible text contour")
+        self.show_contours(contours=possible_text_contours,
+                           title="possible text contour")
 
         # self.show_contours(contours=possible_text_contours,
         #                    title="possible text contour")
@@ -1773,8 +1767,9 @@ class Bot:
         if chat_contour is None or not isinstance(chat_contour, np.ndarray):
             raise ValueError("No se pudo obtener el contorno del chat.")
 
-        if not possible_text_contours or not isinstance(possible_text_contours, list):
-            return texts
+        # if not possible_text_contours or not isinstance(possible_text_contours, list):
+        #     print("test 3")
+        #     return texts
 
         x, y, w, h = cv2.boundingRect(chat_contour)
         self.chat_area_reference = (x, y, w, h)
@@ -1808,11 +1803,18 @@ class Bot:
                 #                       scroll_move=50)
                 # await asyncio.sleep(1)
 
+                target_value = self.first_contour_reference[1]+self.first_contour_reference[-1]\
+                    if self.first_contour_reference is not None else 0
+
+                # if self.display_resolution == '1360x768':
+                #     x, y, w, h = cv2.boundingRect(chat_contour)
+                #     difference = h - target_value
+                #     target_value += difference
+
                 steps = get_subtraction_steps(
                     initial_value=texts[-1][0][1],
-                    target_value=self.first_contour_reference[1]+self.first_contour_reference[-1]
-                        if self.first_contour_reference is not None else 0,
-                    steps=10
+                    target_value=target_value,
+                    steps=5
                     )
 
                 prev_chat_area_img = self.get_chat_area_cropped()
@@ -1827,9 +1829,10 @@ class Bot:
                     await asyncio.sleep(1)
 
                     is_chat_area_the_same = self.is_chat_area_the_same(
-                        prev_chat_area_img=prev_chat_area_img)
+                        prev_chat_area_img=prev_chat_area_img, threshold=0.97)
 
                     if is_chat_area_the_same:
+                        # print("test 4")
                         return texts
 
                     prev_chat_area_img = self.get_chat_area_cropped()
@@ -1842,6 +1845,7 @@ class Bot:
                 iterations=iterations+1
             )
 
+        # print("test 5")
         return texts
 
 
@@ -2122,7 +2126,7 @@ class Bot:
         #     self.go_to_principal_view()
 
         while True:
-            print("buscando chats o lo que surja")
+            print("Buscando chats...")
             try:
                 if keyboard.is_pressed('esc'):
                     print("Detenido por el usuario.")
@@ -2184,7 +2188,7 @@ class Bot:
                         counter = 0
                         self.go_to_principal_view()
 
-                print(f"Counter: {counter}")
+                # print(f"Counter: {counter}")
 
                 counter += 1
 
@@ -2227,7 +2231,7 @@ class Bot:
                         else:
                             self.scroll_chat_area(direction='down', scroll_move=1_000_000)
 
-                        print("entra a iterar los chats...")
+                        print("Entra a iterar los chats...")
                         for chat in chats[::-1]:
                             x, y, _, _ = cv2.boundingRect(chat)
 
@@ -2272,7 +2276,7 @@ class Bot:
                     else:
                         # Si ya he bajado 3 veces y no he visto nada entonces subo completo
                         # en caso contrario bajar
-                        print('chats_area_scroll_reference ', self.chats_area_scroll_reference)
+                        # print('chats_area_scroll_reference ', self.chats_area_scroll_reference)
                         self.scroll_chats_area(direction='up',
                                                scroll_move=self.chats_area_scroll_reference)
 
@@ -2288,7 +2292,7 @@ class Bot:
                             review_each_view_counter += 1
                             continue
 
-                        print("pasamos a review chats")
+                        # print("pasamos a review chats")
                         self.take_screenshot()
 
                         if self.current_chat_id is None:
@@ -2312,10 +2316,10 @@ class Bot:
 
                         # await asyncio.sleep(1)
                         # self.take_screenshot()
-                        print("antes del review chat")
+                        # print("antes del review chat")
                         await self.review_chat()
 
-                        print("last_five_texts_memory_db_v2 ", self.last_five_texts_memory_db_v2)
+                        # print("last_five_texts_memory_db_v2 ", self.last_five_texts_memory_db_v2)
 
                         self.chat_querys.update_chat_by_chat_id_scraped(id_scraped=self.current_chat_id,
                                                                         last_text_url=None, last_text_index=0,
@@ -2335,7 +2339,8 @@ class Bot:
 
             except Exception as e:
                 print(f'Error raised: {e}')
-                input("Press Enter to exit...")
+                raise e
+                # input("Press Enter to exit...")
 
             finally:
                 # ... existing code ...
