@@ -61,10 +61,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         # Limpiar registro del bot si se desconecta
         if self.user_type == 'bot' and self.__class__.bot_channels.get(self.room_group_name) == self.channel_name:
-            # Actualizar estado del bot para esta sala
-            self.__class__.room_bot_status[self.room_group_name] = False  # ✅ Estado por sala
+            del self.__class__.bot_channels[self.room_group_name]  # ✅ Eliminar de bot_channels
+            self.__class__.room_bot_status[self.room_group_name] = False
             print(f"Bot desconectado de: {self.room_name}")
-            bot_status = self.room_group_name in self.__class__.bot_channels
 
             # Notificar a todos los clientes web
             await self.channel_layer.group_send(
@@ -72,7 +71,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'bot_status',
                     'content': {'bot_status': False},
-                    'status': 'connected' if bot_status else 'disconnected',
+                    'status':'disconnected',
                     'message': 'El bot se ha desconectado de la sala.',
                     'sender': 'system'
                 }
