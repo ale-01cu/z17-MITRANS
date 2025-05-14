@@ -32,12 +32,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # self.__class__.room_bot_status[self.room_group_name] = True  # ✅ Estado por sala
 
             print(f"{self.user_type} registrado en sala: {self.room_name}")
+            bot_status = self.room_group_name in self.__class__.bot_channels
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'bot_status',
                     'content': {'bot_status': True},
-                    'status': 'connected',
+                    'bot_status': bot_status,
+                    'status': 'connected' if bot_status else 'disconnected',
                     'message': 'El bot se ha conectado a la sala.',
                     'sender': 'system'
                 }
@@ -46,11 +48,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         elif self.user_type == 'web':
             # Verificar si el bot está en la sala usando bot_channels (fuente confiable)
-            bot_connected = self.room_group_name in self.__class__.bot_channels
+            bot_status = self.room_group_name in self.__class__.bot_channels
             await self.send(text_data=json.dumps({
                 'type': 'bot_status',
-                'bot_status': bot_connected,  # ✅ Booleano basado en presencia real
-                'status': 'connected' if bot_connected else 'disconnected',
+                'bot_status': bot_status,
+                'status': 'connected' if bot_status else 'disconnected',
                 'message': 'Estado inicial del bot.',
                 'sender': 'system'
             }
@@ -62,6 +64,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Actualizar estado del bot para esta sala
             self.__class__.room_bot_status[self.room_group_name] = False  # ✅ Estado por sala
             print(f"Bot desconectado de: {self.room_name}")
+            bot_status = self.room_group_name in self.__class__.bot_channels
 
             # Notificar a todos los clientes web
             await self.channel_layer.group_send(
@@ -69,7 +72,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'bot_status',
                     'content': {'bot_status': False},
-                    'status': 'disconnected',
+                    'status': 'connected' if bot_status else 'disconnected',
                     'message': 'El bot se ha desconectado de la sala.',
                     'sender': 'system'
                 }
