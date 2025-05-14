@@ -29,12 +29,12 @@ def main():
 
     if current_resolution == '1920x1080':
         templates.append(os.path.join(dirname, 'templates/messenger_template(1920x1080).png'))
-        templates.append(os.path.join(dirname, 'templates/messenger_template_2(1920x1080).png'))
+        # templates.append(os.path.join(dirname, 'templates/messenger_template_2(1920x1080).png'))
         templates.append(os.path.join(dirname, 'templates/messenger_request_message_template(1920x1080).png'))
 
     elif current_resolution == '1360x768':
         templates.append(os.path.join(dirname, 'templates/messenger_template(1360x768).png'))
-        templates.append(os.path.join(dirname, 'templates/messenger_template_2(1360x768).png'))
+        # templates.append(os.path.join(dirname, 'templates/messenger_template_2(1360x768).png'))
         templates.append(os.path.join(dirname, 'templates/messenger_request_message_template(1360x768).png'))
 
     bot = Bot(

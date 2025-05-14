@@ -143,11 +143,11 @@ class Bot:
             noise_x = random.uniform(-3, 3)
             noise_y = random.uniform(-3, 3)
 
-            pyautogui.moveTo(x + noise_x, y + noise_y)
+            self.mouse_move(x + noise_x, y + noise_y)
             time.sleep(interval)
 
         # Último ajuste final (para asegurar llegar al punto exacto)
-        pyautogui.moveTo(x2, y2)
+        self.mouse_move(x2, y2)
 
 
     def human_like_scroll(self, scroll_amount, steps=None, base_delay=0.05):
@@ -823,7 +823,7 @@ class Bot:
     def click_chat(self, chat_ref: tuple[int, int], duration: int = 1):
         x = chat_ref[0]
         y = chat_ref[1]
-        pyautogui.click(x - 100, y, duration=duration)
+        self.mouse_click(x - 100, y, duration=duration)
         time.sleep(3)
 
 
@@ -869,7 +869,7 @@ class Bot:
         #                  y=y_chats + h_chats / 2,
         #                  duration=0.3
         #                  )
-        pyautogui.moveTo(x=x_chats + (w_chats - 15),
+        self.mouse_move(x=x_chats + (w_chats - 15),
                          y=y_chats + (h_chats / 2),
                          duration=1
                          )
@@ -889,9 +889,9 @@ class Bot:
             self.scroll_reference -= scroll_move
 
         if direction == 'up':
-            pyautogui.scroll(abs(scroll_move))
+            self.scroll_move(scroll_amount=abs(scroll_move))
         elif direction == 'down':
-            pyautogui.scroll(-abs(scroll_move))
+            self.scroll_move(scroll_amount=-abs(scroll_move))
 
 
     def scroll_chats_area(self, direction='up', scroll_move=100, move_to_chats_area=True):
@@ -899,7 +899,7 @@ class Bot:
         x_chats, y_chats, w_chats, h_chats = cv2.boundingRect(chats_contour)
 
         if move_to_chats_area:
-            pyautogui.moveTo(x=x_chats + w_chats / 2,
+            self.mouse_move(x=x_chats + w_chats / 2,
                              y=y_chats + h_chats / 2,
                              duration=1
                              )
@@ -912,9 +912,9 @@ class Bot:
             self.chats_area_scroll_reference -= scroll_move
 
         if direction == 'up':
-            pyautogui.scroll(abs(scroll_move))
+            self.scroll_move(scroll_amount=abs(scroll_move))
         elif direction == 'down':
-            pyautogui.scroll(-abs(scroll_move))
+            self.scroll_move(scroll_amount=-abs(scroll_move))
 
 
     def get_last_chat_id_image(self) -> ImgHandler:
@@ -1070,7 +1070,7 @@ class Bot:
             intermediate_y = current_y + (target_y - current_y) * (step / total_steps)
 
             # Mover a posición intermedia
-            pyautogui.moveTo(intermediate_x, intermediate_y, duration=0.1)
+            self.mouse_move(intermediate_x, intermediate_y, duration=0.1)
 
             # Volver a capturar pantalla y contornos
             self.take_screenshot()
@@ -1676,7 +1676,7 @@ class Bot:
             )
 
             x, y, w, h = self.chat_area_reference
-            pyautogui.click((x + w) / 2, (y + h) / 2)
+            self.mouse_click((x + w) / 2, (y + h) / 2)
 
             if is_initial_overflow and self.is_memory_active:
                 self.add_last_five_texts_watched_v3(last_text=text)
@@ -1979,12 +1979,12 @@ class Bot:
         #
         # move_gradually(current_x, current_y, x_start, y_start)
 
-        pyautogui.moveTo(x=x_start, y=y_start, duration=duration)
+        self.mouse_move(x=x_start, y=y_start, duration=duration)
 
         pyautogui.doubleClick(button="left")
         pyautogui.mouseDown(button="left")
 
-        pyautogui.moveTo(x=x_end, y=y_end, duration=duration)
+        self.mouse_move(x=x_end, y=y_end, duration=duration)
 
         if not desactivate_scroll:
             self.scroll_chat_area(
@@ -2076,10 +2076,10 @@ class Bot:
         x, y, w, h = cv2.boundingRect(btn_contour)
         x_cord, y_cord = self.find_message_requests_cords(x, y, h)
 
-        pyautogui.click(x + w/2, y + h/2, duration=1)
+        self.mouse_click(x + w/2, y + h/2, duration=1)
         time.sleep(1)
 
-        pyautogui.click(x_cord, y_cord, duration=1)
+        self.mouse_click(x_cord, y_cord, duration=1)
         time.sleep(1)
 
         # self.is_in_message_requests_view = True
@@ -2090,7 +2090,7 @@ class Bot:
         back_button_contour = self.find_back_arrow_contour()
 
         x, y, w, h = cv2.boundingRect(back_button_contour)
-        pyautogui.click(x+20, y, duration=1)
+        self.mouse_click(x+20, y, duration=1)
         time.sleep(1)
 
         # self.is_in_message_requests_view = False
@@ -2256,7 +2256,7 @@ class Bot:
 
                         # if self.window_handler.is_window_maximized():
                         screen_width, screen_height = pyautogui.size()
-                        pyautogui.moveTo(screen_width/2, screen_height/2)
+                        self.mouse_move(screen_width/2, screen_height/2)
                         pyautogui.keyDown('F11')
                         await asyncio.sleep(8)
 
@@ -2331,7 +2331,7 @@ class Bot:
 
                         if button_contour is not None:
                             x, y, w, h = cv2.boundingRect(button_contour)
-                            pyautogui.click(x=x+w/2, y=y+h/2)
+                            self.mouse_click(x=x+w/2, y=y+h/2)
 
                         else:
                             self.scroll_chat_area(direction='down', scroll_move=1_000_000)
