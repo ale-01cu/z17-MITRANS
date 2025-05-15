@@ -43,7 +43,8 @@ class WebSocketService {
             this.emit('connection_status', {
                 ok: true,
                 clientId: Date.now(), // identificador único opcional
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                sender: 'web'
             });
         };
 
