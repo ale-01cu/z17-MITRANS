@@ -38,14 +38,17 @@ export default function Main() {
   const handleStart = () => {
     setBotStatus("running")
     emit('bot.control', {
-      action: 'connect'
+      action: 'connect',
+      sender: 'web'
     })
   }
   // const handleSuspend = () => setBotStatus("suspended")
   const handleStop = () => {
     setBotStatus("off")
     emit('bot.control', {
-      action: 'disconnect'
+      action: 'disconnect',
+      sender: 'web'
+
     })
   }
 
