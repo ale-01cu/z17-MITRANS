@@ -108,6 +108,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Manejo de acciones
             if message_type == 'bot_control' and sender == 'web' :
                 print('estoy aqui')
+
                 await self.bot_control(action)
                 return
 
@@ -135,16 +136,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
     # channels/consumers.py (modificación en el método handle_bot_control)
-    async def bot_control(self, event):
+    async def bot_control(self, action):
         """Controla el bot desde el frontend, pausando o reanudando su actividad."""
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
         print('aqui llegue')
-        content = event.get['content']
-        print(content)
-        action = content.get("type")
-        print(action)
+
         if bot_channel:
-            if action == ('disconnect'):
+            if action == "disconnect":
                 await self.send_to_bot({
                     "type": "disconnect",
                     "sender": "web"
@@ -230,7 +228,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 bot_channel,
                 {
                     "type": "bot_control",  # Tipo de mensaje que el bot debe manejar
-                    "content": message_data
+                    # "content": message_data
                 }
             )
         else:
