@@ -91,6 +91,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message_id = data.get('message_id')
 
             print("data: ", data)
+            print("sender: ", sender)
 
             # Enviar ACK si hay ID de mensaje
             if message_id:
@@ -133,9 +134,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Controla el bot desde el frontend, pausando o reanudando su actividad."""
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
         if bot_channel:
-            import machine_learning.bot.bot
             if action == 'disconnect':
-                machine_learning.bot.bot.is_paused = True
                 self.__class__.room_bot_status[self.room_group_name] = False  # ✅ Estado por sala
                 print('Bot pausado')
                 await self.channel_layer.group_send(
@@ -148,7 +147,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
             elif action == 'connect':
-                machine_learning.bot.bot.is_paused = False
                 self.__class__.room_bot_status[self.room_group_name] = True  # ✅ Estado por sala
                 print('Bot reanudado')
                 await self.channel_layer.group_send(

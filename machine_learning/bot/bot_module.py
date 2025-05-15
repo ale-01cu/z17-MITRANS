@@ -1,6 +1,4 @@
 import math
-from email.mime import base
-
 import numpy as np
 import pyautogui
 import cv2
@@ -17,17 +15,18 @@ import keyboard
 import asyncio
 from websocket_client import WebSocketClient
 from config import BOT_CONFIG
-from inputs_handler import MouseBlocker
 import configparser
-import random
 from movements_handler import MovementsHandler
+from datetime import datetime
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
 pyautogui.FAILSAFE = False
+LOG_FILE_NAME = "extracted_chats_log.txt"
 
 config = configparser.ConfigParser()
 config.read('config.ini')
+
 
 class Bot:
     def __init__(self, name: str, target_name: str,
@@ -101,51 +100,37 @@ class Bot:
         self.amount_of_time_chats_area_down_scrolled = 0
 
         self.is_paused = False
+        self.save_texts_local_is_active = config.getboolean('CONFIG', 'SAVE_TEXTS_LOCAL_IS_ACTIVE')
 
         self.display_resolution = display_resolution
+        self.log_file_path = LOG_FILE_NAME
 
         self.movements_handler = MovementsHandler()
         # self.mouse_blocker = MouseBlocker(blocked=True)
 
-
-    def human_like_scroll(self, scroll_amount, steps=None, base_delay=0.05):
+    def _save_extracted_text_to_file(self, text_content: str) -> None:
         """
-        Simula un scroll vertical de manera similar a como lo haría un humano.
-
-        :param scroll_amount: Unidades de scroll (positivo = hacia arriba, negativo = hacia abajo)
-        :param steps: Número de pasos en los que dividir el scroll
-        :param base_delay: Retraso base entre scrolls (en segundos)
+        Guarda el texto extraído, el ID del chat actual y la fecha en un archivo .txt.
         """
-        total_scroll = scroll_amount
-        direction = 1 if total_scroll > 0 else -1  # 1 para arriba, -1 para abajo
+        if not text_content or not self.current_chat_id:
+            print("Advertencia: No se guardó texto porque el contenido o el ID del chat está vacío.")
+            return
 
-        if steps is None:
-            steps = random.randint(5, 10)  # Cantidad de movimientos discretos
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        remaining = abs(total_scroll)
+        entry = (
+            f"Text:\n{text_content}\n"
+            f"Current ID: {self.current_chat_id}\n"
+            f"Timestamp: {timestamp}\n"
+        )
 
-        for i in range(steps):
-            # Determinamos cuánto scroll hacer en este paso
-            if i == steps - 1:
-                scroll_step = remaining * direction  # Último paso consume lo restante
-            else:
-                # Paso aleatorio proporcional al restante
-                step_size = random.uniform(0.1, 0.4) * remaining
-                scroll_step = int(step_size) * direction
-                remaining -= abs(scroll_step)
-
-            # Aplicamos el scroll
-            pyautogui.scroll(scroll_step)
-
-            # Añadimos una pausa aleatoria
-            delay = base_delay + random.uniform(0.01, 0.05)
-            time.sleep(delay)
-
-            # 15% de probabilidad de vacilar (hacer scroll en dirección contraria brevemente)
-            if random.random() < 0.15 and i != steps - 1:  # No en último paso
-                correction = random.randint(5, 20) * (-direction)
-                pyautogui.scroll(correction)
-                time.sleep(random.uniform(0.05, 0.15))
+        try:
+            with open(self.log_file_path, "a", encoding="utf-8") as f:
+                f.write(entry)
+                f.write("\n\n")  # Dos filas en blanco como separador
+            # print(f"Texto guardado en {self.log_file_path}") # Opcional: para debugging
+        except Exception as e:
+            print(f"Error al guardar el texto en el archivo: {e}")
 
 
     def mouse_click(self, x, y, duration=0.1):
@@ -162,7 +147,7 @@ class Bot:
 
 
     def scroll_move(self, scroll_amount: int, steps: int=None, base_delay: int = 0):
-        self.human_like_scroll(scroll_amount=scroll_amount,
+        self.movements_handler.human_like_scroll(scroll_amount=scroll_amount,
                                steps=steps,
                                base_delay=base_delay)
 
@@ -284,7 +269,7 @@ class Bot:
         return False
 
 
-    def is_watching_target_v2(self, threshold: float = 0.8):
+    def is_watching_target_v2(self, threshold: float = 0.97):
         if self.current_screenshot is None:
             return False
 
@@ -305,13 +290,14 @@ class Bot:
             if chat_area_contour is not None:
                 ignored_contours.append(chat_area_contour)
 
-            # self.show_contours(contours=ignored_contours,
-            #                    title='testing ignored contours')
+            # self.show_contours(contours=ignored_contours, title='ignored conours')
 
 
             img_handler = ImgHandler(image=self.current_screenshot)
-            _, _, score = img_handler.compare_messenger_images_with_contours(img_data2=template,
+            score = img_handler.compare_images_with_ignored_contours(img_data2=template,
                                                                ignored_contours=ignored_contours)
+
+            if not score: return False
 
             if score > threshold:
                 return True
@@ -852,9 +838,9 @@ class Bot:
             self.scroll_reference -= scroll_move
 
         if direction == 'up':
-            self.scroll_move(scroll_amount=abs(scroll_move))
+            pyautogui.scroll(abs(scroll_move))
         elif direction == 'down':
-            self.scroll_move(scroll_amount=-abs(scroll_move))
+            pyautogui.scroll(-abs(scroll_move))
 
 
     def scroll_chats_area(self, direction='up', scroll_move=100, move_to_chats_area=True):
@@ -875,9 +861,9 @@ class Bot:
             self.chats_area_scroll_reference -= scroll_move
 
         if direction == 'up':
-            self.scroll_move(scroll_amount=abs(scroll_move))
+            pyautogui.scroll(abs(scroll_move))
         elif direction == 'down':
-            self.scroll_move(scroll_amount=-abs(scroll_move))
+            pyautogui.scroll(-abs(scroll_move))
 
 
     def get_last_chat_id_image(self) -> ImgHandler:
@@ -1147,7 +1133,7 @@ class Bot:
                 # self.show_contours(contours=[first_text], title='el primer contorno')
 
                 text = self.get_text_by_text_location(
-                    x_start=x - 5,
+                    x_start=x + 5 if 50 > h > 40 else x - 5,
                     y_start=y - y_start_offset,
                     x_end=x + w,
                     y_end=(y + h) - 15,
@@ -1159,6 +1145,9 @@ class Bot:
                 if self.is_online: await self.websocket.send_websocket_message(
                     message_type="bot_message", message=text,
                     name=self.name, current_chat_id=self.current_chat_id)
+
+                if self.save_texts_local_is_active:
+                    self._save_extracted_text_to_file(text_content=text)
 
 
                 if self.first_contour_reference is None:
@@ -1216,18 +1205,8 @@ class Bot:
                 if is_photo: continue
 
                 x, y, w, h = cv2.boundingRect(contour)
-                # area = cv2.contourArea(contour)
-                # perimeter = cv2.arcLength(contour, closed=True)
-                # epsilon = 0.01 * cv2.arcLength(contour, True)
-                # approx = cv2.approxPolyDP(contour, epsilon, True)
-                # num_vertices = len(approx)
-                # hull = cv2.convexHull(contour)
-                # defects = cv2.convexityDefects(contour, hull)
                 # self.show_contours(contours=[contour],
-                #                    title=f'area {area}, '
-                #                          f'perimeter {perimeter}, '
-                #                          f'num_vertices {num_vertices}, '
-                #                          f'defects ')
+                #                    title=f'h={h}')
 
                 if skip_next_contour:
                     skip_next_contour = False
@@ -1269,7 +1248,7 @@ class Bot:
                     y_start_offset = config['y_start_offset']
 
                     text = self.get_text_by_text_location(
-                        x_start=x - 5,
+                        x_start=x + 5 if 50 > h > 40 else x - 5,
                         y_start=y + y_start_offset,
                         x_end=x + w,
                         y_end=(y + h) - 15,
@@ -1537,9 +1516,6 @@ class Bot:
         #                    title="Contorno de Overflow Seleccionado (v2)")
         largest_contour_found = self.find_closest_contour(contours_found)  # Usamos la variable existente
 
-        print("Largest contour found: ", largest_contour_found)
-
-
         if is_initial_overflow and self.first_contour_reference is None and largest_contour_found is not None:
             x, y, w, h = cv2.boundingRect(largest_contour_found)
             self.first_contour_reference = (x, y , w, h)
@@ -1583,11 +1559,6 @@ class Bot:
                 await asyncio.sleep(1)
 
             self.take_screenshot()
-
-            possible_text_contours = self.find_text_area_contours(use_first_contour_reference=False)
-
-            if len(possible_text_contours) == 0:
-                continue
 
             conours_found = self.find_text_area_contours(
                 use_first_contour_reference=False)
@@ -1650,6 +1621,9 @@ class Bot:
 
             if self.is_online: await self.websocket.send_websocket_message(
                 message_type="bot_message", message=text)
+
+            if self.save_texts_local_is_active:
+                self._save_extracted_text_to_file(text_content=text)
 
             texts.append([(x_contour_overflow_start, y_contour_overflow_start, self.scroll_reference),
                           (x_contour_overflow_end, y_contour_overflow_end, end_scroll_reference)])
