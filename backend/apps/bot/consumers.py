@@ -91,6 +91,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message_id = data.get('message_id')
 
             print("data: ", data)
+            print('data :','sender', sender,message_type)
 
             # Enviar ACK si hay ID de mensaje
             if message_id:
@@ -103,14 +104,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps(ack_message))
 
             # Manejo de acciones
-            if message_type == 'control_bot' and sender == 'web':
+            if message_type == 'control.bot' :
                 await self.handle_bot_control(data.get('action'))
                 return
 
             if sender == 'bot':
                 await self.process_bot_message(content)
-            elif sender == 'web':
-                await self.process_web_message(content)
+            # elif sender == 'web':
+            #     await self.process_web_message(content)
 
         except Exception as e:
             print(f"Error procesando mensaje: {str(e)}")
@@ -132,17 +133,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def handle_bot_control(self, action):
         """Controla el bot desde el frontend, pausando o reanudando su actividad."""
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
+        print('aqui llegue')
         if bot_channel:
             import machine_learning.bot.bot
             if action == 'disconnect':
                 machine_learning.bot.bot.is_paused = True
                 self.__class__.room_bot_status[self.room_group_name] = False  # ✅ Estado por sala
                 print('Bot pausado')
+                bot_status = self.room_group_name in self.__class__.bot_channels
+                print(bot_status)
                 await self.channel_layer.group_send(
-                    self.room_group_name,
+                    self.send_to_bot,
                     {
-                        'type': 'bot_status',
-                        'status': 'disconnected',
+                        'type': 'bot_status',  # ✅ Corregir de 'bot_status'
+                        'status':  'connected' if bot_status else 'disconnected',
                         'message': 'El bot ha sido pausado por un usuario.',
                         'sender': 'system'
                     }
@@ -154,10 +158,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
-                        'type': 'bot.status',
+                        'type': 'bot_status',  # ✅ Corregir de 'bot.status' a 'bot_status'
                         'status': 'connected',
                         'message': 'El bot ha sido reanudado por un usuario.',
-                        'sender': 'system'
+                        'sender': 'web'
                     }
                 )
             else:
