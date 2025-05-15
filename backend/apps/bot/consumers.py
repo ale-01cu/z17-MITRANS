@@ -104,7 +104,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps(ack_message))
 
             # Manejo de acciones
-            if message_type == 'control.bot' :
+            if message_type == 'control.bot' and sender == 'web':
                 await self.handle_bot_control(data.get('action'))
                 return
 
@@ -120,16 +120,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': 'Error procesando mensaje'
             }))
 
-    async def bot_status(self, event):
-        status = event['status']
-        message = event['message']
-        # Enviar estado del bot al cliente web
-        await self.send(text_data=json.dumps({
-            'type': 'bot_status',
-            'status': status,
-            'message': message
-        }))
+    # async def bot_status(self, event):
+    #     status = event['status']
+    #     message = event['message']
+    #     # Enviar estado del bot al cliente web
+    #     await self.send(text_data=json.dumps({
+    #         'type': 'bot_status',
+    #         'status': status,
+    #         'message': message
+    #     }))
 
+    # channels/consumers.py (modificación en el método handle_bot_control)
     async def handle_bot_control(self, action):
         """Controla el bot desde el frontend, pausando o reanudando su actividad."""
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
@@ -137,6 +138,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if bot_channel:
             import machine_learning.bot.bot
             if action == 'disconnect':
+
                 machine_learning.bot.bot.is_paused = True
                 self.__class__.room_bot_status[self.room_group_name] = False  # ✅ Estado por sala
                 print('Bot pausado')
