@@ -806,6 +806,7 @@ class ImgHandler:
         #                    contours=ignored_contours,
         #                    title=f'Contours to ignore {len(ignored_contours)}')
 
+
         # --- Comparación con diferencia absoluta ---
         diff = cv2.absdiff(masked_img1, masked_img2)
         gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
@@ -827,6 +828,104 @@ class ImgHandler:
         return are_equal_diff, diff, score
 
 
+    def compare_images_with_ignored_contours(self,
+                                             img_path1=None, img_data1=None,
+                                             img_path2=None, img_data2=None,
+                                             ignored_contours=[], threshold=0.97
+                                             ) -> float | bool:
+        """
+        Compara dos imágenes ignorando regiones definidas por contornos de OpenCV.
 
+        Args:
+            img_path1 (str): Ruta a la primera imagen.
+            img_path2 (str): Ruta a la segunda imagen.
+            ignored_contours (list): Lista de contornos (arrays NumPy) que definen áreas a ignorar.
+            threshold (int): Umbral de diferencia permitida en píxeles (fuera de áreas ignoradas).
 
+        Returns:
+            bool: True si las imágenes son iguales (ignorando contornos), False en caso contrario.
+            numpy.ndarray: Imagen de diferencia (áreas no ignoradas).
+            float: Puntaje SSIM (si está disponible).
+        """
 
+        # --- Carga de imágenes (código existente) ---
+        img1 = None
+        img2 = None
+
+        # Carga de imagen 1
+        if img_data1 is not None:
+            if isinstance(img_data1, np.ndarray):
+                img1 = img_data1.copy()
+            else:
+                print("Error: img_data1 no es un array NumPy válido.")
+                return False
+        elif img_path1 is not None:
+            img1 = cv2.imread(img_path1)
+            if img1 is None:
+                print(f"Error: No se pudo cargar {img_path1}")
+                return False
+        else:
+            img1 = self.img.copy() if isinstance(self.img, np.ndarray) else None
+            if img1 is None:
+                print("Error: No se proporcionó img1 válida.")
+                return False
+
+        # Carga de imagen 2
+        if img_data2 is not None:
+            if isinstance(img_data2, np.ndarray):
+                img2 = img_data2.copy()
+            else:
+                print("Error: img_data2 no es un array NumPy válido.")
+                return False
+        elif img_path2 is not None:
+            img2 = cv2.imread(img_path2)
+            if img2 is None:
+                print(f"Error: No se pudo cargar {img_path2}")
+                return False
+        else:
+            raise ValueError("Debe proporcionar 'img_path2' o 'img_data2'.")
+
+        # Verificación de dimensiones
+        if img1.shape != img2.shape:
+            print(f"Error: Dimensiones diferentes - Img1: {img1.shape}, Img2: {img2.shape}")
+            return False
+
+        gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+
+        mask = np.ones(img1.shape, dtype=np.uint8) * 255
+        dynamic_areas = [cv2.boundingRect(contour) for contour in ignored_contours]  # Ejemplo de coordenadas
+
+        for (x, y, w, h) in dynamic_areas:
+            cv2.rectangle(mask, (x, y), (x + w, y + h), (0, 0, 255), -1)  # Rojo para áreas dinámicas
+
+        overlay1 = img1.copy()
+        overlay2 = img2.copy()
+
+        for (x, y, w, h) in dynamic_areas:
+            cv2.rectangle(overlay1, (x, y), (x + w, y + h), (0, 0, 255), -1)  # Rojo sólido
+            cv2.rectangle(overlay2, (x, y), (x + w, y + h), (0, 0, 255), -1)
+
+        lower_red = np.array([0, 0, 100])  # Rango bajo del rojo
+        upper_red = np.array([80, 80, 255])  # Rango alto del rojo
+
+        mask_red1 = cv2.inRange(overlay1, lower_red, upper_red)
+        mask_red2 = cv2.inRange(overlay2, lower_red, upper_red)
+
+        # Máscara combinada para ignorar áreas rojas en ambas imágenes
+        mask_combined = cv2.bitwise_or(mask_red1, mask_red2)
+
+        # Invertimos la máscara: ahora blanco = comparar, negro = ignorar
+        mask_to_compare = cv2.bitwise_not(mask_combined)
+
+        # 3. Convertir a escala de grises SOLO PARA COMPARAR (no altera overlays)
+        gray_overlay1 = cv2.cvtColor(overlay1, cv2.COLOR_BGR2GRAY)
+        gray_overlay2 = cv2.cvtColor(overlay2, cv2.COLOR_BGR2GRAY)
+
+        # 4. Aplicar la máscara a las imágenes en escala de grises
+        masked_gray1 = cv2.bitwise_and(gray_overlay1, gray_overlay1, mask=mask_to_compare)
+        masked_gray2 = cv2.bitwise_and(gray_overlay2, gray_overlay2, mask=mask_to_compare)
+
+        similarity, _ = ssim(masked_gray1, masked_gray2, full=True)
+
+        return similarity

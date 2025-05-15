@@ -20,7 +20,7 @@ BOT_CONFIG = {
         },
         "GET_TEXTS_DID_NOT_WATCHED": {
             'x_start_offset': 10,
-            'y_start_offset': 15,
+            'y_start_offset': 0,
             'scroll_move': 35,
         },
         "REVIEW_CHAT": {

@@ -238,3 +238,43 @@ class MovementsHandler:
 
         # Asegurar posición final exacta
         pyautogui.moveTo(path[-1][0], path[-1][1])
+
+
+    def human_like_scroll(self, scroll_amount, steps=None, base_delay=0.05):
+        """
+        Simula un scroll vertical de manera similar a como lo haría un humano.
+
+        :param scroll_amount: Unidades de scroll (positivo = hacia arriba, negativo = hacia abajo)
+        :param steps: Número de pasos en los que dividir el scroll
+        :param base_delay: Retraso base entre scrolls (en segundos)
+        """
+        total_scroll = scroll_amount
+        direction = 1 if total_scroll > 0 else -1  # 1 para arriba, -1 para abajo
+
+        if steps is None:
+            steps = random.randint(5, 10)  # Cantidad de movimientos discretos
+
+        remaining = abs(total_scroll)
+
+        for i in range(steps):
+            # Determinamos cuánto scroll hacer en este paso
+            if i == steps - 1:
+                scroll_step = remaining * direction  # Último paso consume lo restante
+            else:
+                # Paso aleatorio proporcional al restante
+                step_size = random.uniform(0.1, 0.4) * remaining
+                scroll_step = int(step_size) * direction
+                remaining -= abs(scroll_step)
+
+            # Aplicamos el scroll
+            pyautogui.scroll(scroll_step)
+
+            # Añadimos una pausa aleatoria
+            delay = base_delay + random.uniform(0.01, 0.05)
+            time.sleep(delay)
+
+            # 15% de probabilidad de vacilar (hacer scroll en dirección contraria brevemente)
+            if random.random() < 0.15 and i != steps - 1:  # No en último paso
+                correction = random.randint(5, 20) * (-direction)
+                pyautogui.scroll(correction)
+                time.sleep(random.uniform(0.05, 0.15))
