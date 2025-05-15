@@ -53,7 +53,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': 'bot_status',
                 'bot_status': bot_status,
                 'status': 'connected' if bot_status else 'disconnected',
-                'message': 'Estado inicial del bot.',
+                'message': 'Estado inicial del bot',
                 'sender': 'system'
             }
             ))
@@ -89,9 +89,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             sender = data.get('sender')
             content = data.get('content')
             message_id = data.get('message_id')
+            action = data.get('action')
 
             print("data: ", data)
             print('data :','sender', sender,message_type)
+            print("esta es la accion ", action)
 
             # Enviar ACK si hay ID de mensaje
             if message_id:
@@ -104,9 +106,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps(ack_message))
 
             # Manejo de acciones
-            if message_type == 'bot.control' :
+            if message_type == 'bot_control' and sender == 'web' :
                 print('estoy aqui')
-                await self.handle_bot_control(data.get('action'))
+                await self.bot_control(action)
                 return
 
             if sender == 'bot':
@@ -122,58 +124,45 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': 'Error procesando mensaje'
             }))
 
-    # async def bot_status(self, event):
-    #     status = event['status']
-    #     message = event['message']
-    #     # Enviar estado del bot al cliente web
-    #     await self.send(text_data=json.dumps({
-    #         'type': 'bot_status',
-    #         'status': status,
-    #         'message': message
-    #     }))
+    async def bot_status(self, event):
+        status = event['status']
+        message = event['message']
+        # Enviar estado del bot al cliente web
+        await self.send(text_data=json.dumps({
+            'type': 'bot_status',
+            'status': status,
+            'message': message
+        }))
 
     # channels/consumers.py (modificación en el método handle_bot_control)
-    async def handle_bot_control(self, action):
+    async def bot_control(self, event):
         """Controla el bot desde el frontend, pausando o reanudando su actividad."""
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
         print('aqui llegue')
+        content = event.get['content']
+        print(content)
+        action = content.get("type")
+        print(action)
         if bot_channel:
-            from machine_learning import Bot
-            if action == 'disconnect':
-
-                Bot.is_paused = False
-                self.__class__.room_bot_status[self.room_group_name] = False  # ✅ Estado por sala
-                print('Bot pausado')
-                bot_status = self.room_group_name in self.__class__.bot_channels
-                print(bot_status)
-                await self.channel_layer.group_send(
-                    self.send_to_bot,
-                    {
-                        'type': 'bot_status',  # ✅ Corregir de 'bot_status'
-                        'status':  'connected' if bot_status else 'disconnected',
-                        'message': 'El bot ha sido pausado por un usuario.',
-                        'sender': 'system'
-                    }
-                )
-            elif action == 'connect':
-                Bot.is_paused = False
-                self.__class__.room_bot_status[self.room_group_name] = True  # ✅ Estado por sala
-                print('Bot reanudado')
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'bot_status',  # ✅ Corregir de 'bot.status' a 'bot_status'
-                        'status': 'connected',
-                        'message': 'El bot ha sido reanudado por un usuario.',
-                        'sender': 'web'
-                    }
-                )
+            if action == ('disconnect'):
+                await self.send_to_bot({
+                    "type": "disconnect",
+                    "sender": "web"
+                })
+                self.__class__.room_bot_status[self.room_group_name] = False
+                print("Bot pausado")
+            elif action == "connect":
+                await self.send_to_bot({
+                    "type": "connect",
+                    "sender": "web"
+                })
+                self.__class__.room_bot_status[self.room_group_name] = True
+                print("Bot reanudado")
             else:
                 print(f"Acción desconocida: {action}")
-                await self.notify_group('system', f'Acción desconocida: {action}')
+
         else:
-            print("No se encontró el canal del bot para esta sala.")
-            await self.notify_group('system', 'No se encontró el canal del bot para esta sala.')
+            print("No se encontró el canal del bot")
 
     async def process_bot_message(self, content_data):
         from apps.comment.models import Comment
@@ -232,15 +221,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender': event['sender'],
             }))
 
-    async def send_to_bot(self, event):
-        """Envía mensajes al bot"""
-        if self.user_type == 'bot':
-            await self.send(text_data=json.dumps({
-                'type': 'message',
-                'content': event['content'],
-                'sender': event['sender'],
-                'message_id': str(uuid.uuid4())
-            }))
+    async def send_to_bot(self, message_data):
+        """Envía mensajes al bot usando su canal guardado."""
+        bot_channel = self.__class__.bot_channels.get(self.room_group_name)
+        if bot_channel:
+            # Envía el mensaje directamente al canal del bot
+            await self.channel_layer.send(
+                bot_channel,
+                {
+                    "type": "bot_control",  # Tipo de mensaje que el bot debe manejar
+                    "content": message_data
+                }
+            )
+        else:
+            print("Error: No hay un bot conectado en esta sala.")
 
     async def notify_group(self, msg_type, message):
         """Notifica al grupo"""
