@@ -104,14 +104,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps(ack_message))
 
             # Manejo de acciones
-            if message_type == 'control.bot' and sender == 'web':
+            if message_type == 'bot.control' :
+                print('estoy aqui')
                 await self.handle_bot_control(data.get('action'))
                 return
 
             if sender == 'bot':
                 await self.process_bot_message(content)
-            # elif sender == 'web':
-            #     await self.process_web_message(content)
+            elif sender == 'web':
+                pass
+                # await self.process_web_message(content)
 
         except Exception as e:
             print(f"Error procesando mensaje: {str(e)}")
@@ -136,10 +138,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
         print('aqui llegue')
         if bot_channel:
-            import machine_learning.bot.bot
+            from machine_learning import Bot
             if action == 'disconnect':
 
-                machine_learning.bot.bot.is_paused = True
+                Bot.is_paused = False
                 self.__class__.room_bot_status[self.room_group_name] = False  # ✅ Estado por sala
                 print('Bot pausado')
                 bot_status = self.room_group_name in self.__class__.bot_channels
@@ -154,7 +156,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
             elif action == 'connect':
-                machine_learning.bot.bot.is_paused = False
+                Bot.is_paused = False
                 self.__class__.room_bot_status[self.room_group_name] = True  # ✅ Estado por sala
                 print('Bot reanudado')
                 await self.channel_layer.group_send(
