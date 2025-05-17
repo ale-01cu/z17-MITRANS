@@ -1141,6 +1141,9 @@ class Bot:
                     desactivate_scroll=True
                 )
 
+                if isinstance(text, str):
+                    text = text.strip()
+
                 if self.is_online: await self.websocket.send_websocket_message(
                     message_type="bot_message", message=text,
                     name=self.name, current_chat_id=self.current_chat_id)
@@ -1255,6 +1258,9 @@ class Bot:
                         scroll_pos_end=self.scroll_reference,
                         desactivate_scroll=True
                     )
+
+                    if isinstance(text, str):
+                        text = text.strip()
 
                     if self.is_online: await self.websocket.send_websocket_message(
                         message_type="bot_message", message=text,
@@ -2081,6 +2087,10 @@ class Bot:
         #                    title=f'is in principal view {len(valid_contours) > 1}')
 
         # Devolver True si hay más de un contorno válido
+        # if len(valid_contours) == 0:
+        #     pyautogui.keyDown('F5')
+        #     raise Exception('Interface is Bug. Reloading...')
+
         return len(valid_contours) > 1
 
 
@@ -2289,6 +2299,7 @@ class Bot:
                         print("Entra a iterar los chats...")
                         for chat in chats[::-1]:
                             x, y, _, _ = cv2.boundingRect(chat)
+                            self.first_contour_reference = None
 
                             chat_id = self.extract_chat_id(chat_ref=(x, y))
                             chat_id_reference = order_chats_ids[order_cursor]
