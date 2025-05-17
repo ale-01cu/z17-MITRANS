@@ -520,7 +520,6 @@ class Bot:
 
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
-            perimeter = cv2.arcLength(contour, True)
 
             # Filtro de tamaño (ajusta según necesidad)
             min_w = 40
@@ -657,8 +656,9 @@ class Bot:
 
                 # Verificar si comienza donde mismo comienza el primer contorno de referencia
                 x_reference = self.first_contour_reference[0] if self.first_contour_reference is not None else 0
-                is_x_valid = (x == x_reference or x_reference - 5 < x < x_reference + 5) \
+                is_x_valid = (x == x_reference or x_reference - 2 < x < x_reference + 2) \
                     if x_reference != 0 else True
+
 
                 # Verifica si está DENTRO del chat_contour
                 if (((x_chat < x < (x_chat + w_chat) * chat_start_x_porcent) and (x + w < x_chat + w_chat))
@@ -667,6 +667,12 @@ class Bot:
                     and is_within_chat_width_percent
                     and is_x_valid
                     ):
+
+                    if self.first_contour_reference is None:
+                        self.first_contour_reference = (x, y, w, h)
+
+                    # self.show_contours(contours=[contour],
+                    #                    title=f'x={x} x_reference={x_reference} is_x_valid={is_x_valid}')
 
                     possible_text_contours.append(contour)
 
@@ -1085,11 +1091,11 @@ class Bot:
         #     title=f"posible contornos de texts is_first_iter {is_first_iter}")
 
         first_text = possible_text_contours[0]
-        is_photo = await self.is_photo_contour(contour_target=first_text)
+        # is_photo = await self.is_photo_contour(contour_target=first_text)
 
         # self.show_contours(contours=[first_text], title=f'is photo: {is_photo}')
 
-        if is_first_iter and not is_photo:
+        if is_first_iter:
             x, y, w, h = cv2.boundingRect(first_text)
 
             # is_top_edge_irregular = img_handler.is_top_edge_irregular(contour=first_text,
@@ -1152,9 +1158,9 @@ class Bot:
                     self._save_extracted_text_to_file(text_content=text)
 
 
-                if self.first_contour_reference is None:
-                    # self.show_contours(contours=[first_text], title='tirst contour reference')
-                    self.first_contour_reference = (x, y, w, h)
+                # if self.first_contour_reference is None:
+                #     # self.show_contours(contours=[first_text], title='tirst contour reference')
+                #     self.first_contour_reference = (x, y, w, h)
 
                 is_watched = self.is_text_already_watched(text=text, index=len(texts))
 
@@ -1203,10 +1209,13 @@ class Bot:
             #     if skip_next_contour else possible_text_contours, title='dentro del bucle')
 
             for i, contour in iter_contours:
-                is_photo = await self.is_photo_contour(contour_target=contour)
-                if is_photo: continue
+                # is_photo = await self.is_photo_contour(contour_target=contour)
+                # if is_photo: continue
 
                 x, y, w, h = cv2.boundingRect(contour)
+                # self.show_contours(contours=[contour], title=f'is_photo '
+                #                                              f'x-{x} first_contour_reference '
+                #                                              f'{self.first_contour_reference}')
                 # self.show_contours(contours=[contour],
                 #                    title=f'h={h}')
 
@@ -1244,6 +1253,9 @@ class Bot:
 
                 else:
                     skip_next_contour = False
+
+                    # if self.first_contour_reference is None and i == 0:
+                    #     self.first_contour_reference = (x, y, w, h)
 
                     config = BOT_CONFIG[self.display_resolution]['GET_TEXTS_DID_NOT_WATCHED']
                     x_start_offset = config['x_start_offset']
