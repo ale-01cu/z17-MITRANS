@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import React, { useEffect, useState, type ReactNode } from "react";
 import getUsersMe from "~/api/auth/get-users-me-api";
 import { createContext, useContext } from "react";
 import { type User } from "~/types/user";
@@ -9,6 +9,7 @@ import { CACHE_DURATION, CACHE_KEY, CACHE_TIMESTAMP_KEY } from "~/config"
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>
 }
 
 
@@ -18,6 +19,7 @@ interface AuthContextType {
 export const UserContext = createContext<AuthContextType>({
   user: null,         // Objeto del usuario o null
   isLoading: true,    // Estado de carga inicial
+  setUser: () => {}
   // Podrías añadir funciones aquí si las necesitas (login, logout, etc.)
   // login: (userData) => {},
   // logout: () => {},
@@ -93,6 +95,7 @@ const UserProvider = ({ children }: UserProviderProps) => {
   const value = {
     user,
     isLoading,
+    setUser
     // login, // Descomenta si añades la función login
     // logout, // Descomenta si añades la función logout
   };

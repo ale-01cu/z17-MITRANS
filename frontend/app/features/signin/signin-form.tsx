@@ -9,6 +9,7 @@ import { useFetcher } from "react-router"
 import { useNavigate } from "react-router"
 import ErrorMessage from "~/components/error-message"
 import type { SigninFormData } from "~/types/signin"
+import { useAuth } from "~/hooks/useAuth"
 
 interface ErrorsResponse {
   request?: string,
@@ -24,13 +25,18 @@ export default function SigninForm() {
   const isLoading = fetcher.state == "submitting"
   const navegate = useNavigate()
   const [ resErrors, setResErrors ] = useState<ErrorsResponse>({})
+  const { setUser } = useAuth()
 
   useEffect(() => {
     if(!fetcher.data) return
 
     if(fetcher.data?.ok === false) 
       setResErrors(fetcher.data.error)
-    else navegate("/")
+    else {
+      const userData = fetcher.data?.userData
+      setUser(userData)
+      navegate("/")
+    }
 
   }, [fetcher.data])
 

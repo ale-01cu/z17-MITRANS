@@ -16,6 +16,7 @@ const responseMap: Record<string, string> = {
 }
 
 export default async function clientAction({ request }: Route.ClientActionArgs) {
+
   try {
     const formData = await request.formData()
     const data = {
@@ -41,7 +42,7 @@ export default async function clientAction({ request }: Route.ClientActionArgs) 
     localStorage.setItem(CACHE_KEY, JSON.stringify(userData));
     localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
 
-    return {ok: true}
+    return {ok: true, userData}
 
   } catch (error: any) {
     if(error.type === "validation") {
