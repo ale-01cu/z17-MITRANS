@@ -34,12 +34,9 @@ class WebSocketClient:
 
     async def _connect(self) -> bool:
         """Improved connection with better error handling"""
-        print("test 1")
         async with self._lock:
             if self.is_connected:
                 return True
-
-            print("test 2")
 
             try:
                 self.connection = await asyncio.wait_for(
@@ -52,7 +49,6 @@ class WebSocketClient:
                     ),
                     timeout=self._connection_timeout
                 )
-                print("test 3")
 
                 self.is_connected = True
                 self._reconnect_attempts = 0
@@ -63,8 +59,6 @@ class WebSocketClient:
                 self._keepalive_task = asyncio.create_task(self._keepalive())
                 self._listen_task = asyncio.create_task(self._listen())
                 self._send_task = asyncio.create_task(self._process_send_queue())
-
-                print("test 4")
 
                 return True
                 

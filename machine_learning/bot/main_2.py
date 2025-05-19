@@ -3,7 +3,8 @@ import os
 from db.db import engine, Base
 import asyncio
 import pyautogui
-from config import RESOLUTIONS_AVILABLES
+from config import RESOLUTIONS_AVILABLES, config_logger
+import logging
 
 # Crear todas las tablas en la base de datos
 Base.metadata.create_all(bind=engine)
@@ -37,10 +38,18 @@ def main():
         # templates.append(os.path.join(dirname, 'templates/messenger_template_2(1360x768).png'))
         templates.append(os.path.join(dirname, 'templates/messenger_request_message_template(1360x768).png'))
 
+    logger = config_logger(
+        nombre_logger='MessengerBot',
+        nombre_fichero_log='log_messenger_bot.log',
+        nivel_log=logging.DEBUG,  # Captura desde mensajes DEBUG hacia arriba
+        directorio_logs='logs'
+    )
+
     bot = Bot(
         name='MessengerBot',
         target_name='Messenger',
         target_templates_paths=templates,
+        logger=logger,
         websocket_uri="ws://localhost:8000/ws/chat/sala1/bot/",
         display_resolution=current_resolution
     )

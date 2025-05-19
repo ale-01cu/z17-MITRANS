@@ -1,3 +1,4 @@
+import logging
 import math
 import numpy as np
 import pyautogui
@@ -18,6 +19,7 @@ from config import BOT_CONFIG
 import configparser
 from movements_handler import MovementsHandler
 from datetime import datetime
+from logging import Logger
 
 MAX_ITERATIONS = 100  # Ejemplo de límite
 MAX_SCROLL_ATTEMPTS = 50  # Ejemplo de límite
@@ -31,8 +33,9 @@ config.read('config.ini')
 class Bot:
     def __init__(self, name: str, target_name: str,
                  target_templates_paths: list[str], websocket_uri: str,
-                 display_resolution: str) -> None:
+                 display_resolution: str, logger: Logger) -> None:
 
+        self.logger = logger
         self.name = name
         self.target_name = target_name
 
@@ -64,7 +67,7 @@ class Bot:
 
         self.is_window_handler_active = config.getboolean('CONFIG', 'IS_WINDOW_HANDLER_ACTIVE')
         self.window_handler = WindowHandler(title=target_name, is_active=self.is_window_handler_active)
-        self.first_contour_reference: Tuple[int, int, int, int] | None = (534, 913, 518, 45) # TODO aqui poner una config para el resto de resoluciones que no sean 1920x1080
+        self.first_contour_reference: Tuple[int, int, int, int] | None = BOT_CONFIG[display_resolution]['FIRST_CONTOUR_REFERENCE']
 
         # self.is_in_message_requests_view = current_bot.name if current_bot else (
         #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
@@ -107,12 +110,14 @@ class Bot:
         self.movements_handler = MovementsHandler()
         # self.mouse_blocker = MouseBlocker(blocked=True)
 
+        self.last_text_from_get_text_by_location: str | None = None
+
     def _save_extracted_text_to_file(self, text_content: str) -> None:
         """
         Guarda el texto extraído, el ID del chat actual y la fecha en un archivo .txt.
         """
         if not text_content or not self.current_chat_id:
-            print("Advertencia: No se guardó texto porque el contenido o el ID del chat está vacío.")
+            self.logger.warning("Advertencia: No se guardó texto porque el contenido o el ID del chat está vacío.")
             return
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -129,7 +134,7 @@ class Bot:
                 f.write("\n\n")  # Dos filas en blanco como separador
             # print(f"Texto guardado en {self.log_file_path}") # Opcional: para debugging
         except Exception as e:
-            print(f"Error al guardar el texto en el archivo: {e}")
+            self.logger.error(f"Error al guardar el texto en el archivo: {e}")
 
 
     def mouse_click(self, x, y, duration=0.1):
@@ -473,8 +478,6 @@ class Bot:
 
         if chat_id is None:
             return None
-
-        print("chat id ", chat_id)
 
         # self.show_contours(image=roi, contours=[],
         #                    title=f'chat id')
@@ -1060,8 +1063,6 @@ class Bot:
         # Borde inferior del next_contour: y2 + h2
         distance = y1 - (y2 + h2)
 
-        print(f"distance {distance}")
-
         # self.show_contours(contours=[current_contour, next_contour],
         #                    title=f'distance {distance}')
 
@@ -1093,7 +1094,7 @@ class Bot:
         first_text = possible_text_contours[0]
         # is_photo = await self.is_photo_contour(contour_target=first_text)
 
-        # self.show_contours(contours=[first_text], title=f'is photo: {is_photo}')
+        # self.show_contours(contours=[first_text], title=f'first text')
 
         if is_first_iter:
             x, y, w, h = cv2.boundingRect(first_text)
@@ -1135,10 +1136,16 @@ class Bot:
                     if first_text_gradually is not None:
                         first_text = first_text_gradually
 
+
                 x, y, w, h = cv2.boundingRect(first_text)
+                self.show_contours(contours=[first_text],
+                                   title=f'h={h}')
+
+                min_height_text_location = config['min_height_text_location']
+                max_height_text_location = config['max_height_text_location']
 
                 text = self.get_text_by_text_location(
-                    x_start=x + 5 if 50 > h > 40 else x - 5,
+                    x_start=x + 5 if max_height_text_location > h > min_height_text_location else x - 5,
                     y_start=y - y_start_offset,
                     x_end=x + w,
                     y_end=(y + h) - 15,
@@ -1147,41 +1154,43 @@ class Bot:
                     desactivate_scroll=True
                 )
 
-                if isinstance(text, str):
-                    text = text.strip()
+                if text:
 
-                if self.is_online: await self.websocket.send_websocket_message(
-                    message_type="bot_message", message=text,
-                    name=self.name, current_chat_id=self.current_chat_id)
+                    if isinstance(text, str):
+                        text = text.strip()
 
-                if self.save_texts_local_is_active:
-                    self._save_extracted_text_to_file(text_content=text)
+                    if self.is_online: await self.websocket.send_websocket_message(
+                        message_type="bot_message", message=text,
+                        name=self.name, current_chat_id=self.current_chat_id)
 
-
-                # if self.first_contour_reference is None:
-                #     # self.show_contours(contours=[first_text], title='tirst contour reference')
-                #     self.first_contour_reference = (x, y, w, h)
-
-                is_watched = self.is_text_already_watched(text=text, index=len(texts))
-
-                if not is_watched:
-                    start_location = (x, y, self.scroll_reference)
-                    end_location = (x + w, y + h, self.scroll_reference)
-                    texts_did_not_watched.append([start_location, end_location])
-
-                    if text:
-                        last_text = text
-                        # self.chat_querys.update_chat_by_chat_id_scraped(
-                        #     id_scraped=self.current_chat_id, last_text=text,
-                        # )
-
-                    if keyboard.is_pressed('esc'):
-                        print("Detenido por el usuario.")
-                        exit()
+                    if self.save_texts_local_is_active:
+                        self._save_extracted_text_to_file(text_content=text)
 
 
-                else:
-                    has_more = False
+                    # if self.first_contour_reference is None:
+                    #     # self.show_contours(contours=[first_text], title='tirst contour reference')
+                    #     self.first_contour_reference = (x, y, w, h)
+
+                    is_watched = self.is_text_already_watched(text=text, index=len(texts))
+
+                    if not is_watched:
+                        start_location = (x, y, self.scroll_reference)
+                        end_location = (x + w, y + h, self.scroll_reference)
+                        texts_did_not_watched.append([start_location, end_location])
+
+                        if text:
+                            last_text = text
+                            # self.chat_querys.update_chat_by_chat_id_scraped(
+                            #     id_scraped=self.current_chat_id, last_text=text,
+                            # )
+
+                        if keyboard.is_pressed('esc'):
+                            self.logger.info("Detenido por el usuario.")
+                            exit()
+
+
+                    else:
+                        has_more = False
 
             if not was_handled_overflow:
                 config = BOT_CONFIG[self.display_resolution]['GET_TEXTS_DID_NOT_WATCHED']
@@ -1199,7 +1208,7 @@ class Bot:
                 # self.show_contours(contours=possible_text_contours, title='faaaaaaaak')
 
 
-        # self.show_contours(contours=possible_text_contours, title='faaaaaaaak2')
+        self.show_contours(contours=possible_text_contours, title='faaaaaaaak2')
 
         if has_more:
             iter_contours = enumerate(possible_text_contours[1:]) \
@@ -1216,8 +1225,8 @@ class Bot:
                 # self.show_contours(contours=[contour], title=f'is_photo '
                 #                                              f'x-{x} first_contour_reference '
                 #                                              f'{self.first_contour_reference}')
-                # self.show_contours(contours=[contour],
-                #                    title=f'h={h}')
+                self.show_contours(contours=[contour],
+                                   title=f'h={h}')
 
                 if skip_next_contour:
                     skip_next_contour = False
@@ -1260,9 +1269,11 @@ class Bot:
                     config = BOT_CONFIG[self.display_resolution]['GET_TEXTS_DID_NOT_WATCHED']
                     x_start_offset = config['x_start_offset']
                     y_start_offset = config['y_start_offset']
+                    min_height_text_location = config['min_height_text_location']
+                    max_height_text_location = config['max_height_text_location']
 
                     text = self.get_text_by_text_location(
-                        x_start=x + 5 if 50 > h > 40 else x - 5,
+                        x_start=x + 5 if max_height_text_location > h > min_height_text_location else x - 5,
                         y_start=y + y_start_offset,
                         x_end=x + w,
                         y_end=(y + h) - 15,
@@ -1270,6 +1281,9 @@ class Bot:
                         scroll_pos_end=self.scroll_reference,
                         desactivate_scroll=True
                     )
+
+                    if not text:
+                        continue
 
                     if isinstance(text, str):
                         text = text.strip()
@@ -1300,11 +1314,8 @@ class Bot:
                         break
 
                     if keyboard.is_pressed('esc'):
-                        print("Detenido por el usuario.")
+                        self.logger.info("Detenido por el usuario.")
                         exit()
-
-        print('is_memory_active ', self.is_memory_active)
-        print('is_first_iter ' , is_first_iter)
 
         if self.is_memory_active and is_first_iter:
             self.add_last_five_texts_watched_v3(last_text=last_text, msg_2=msg2, msg_3=msg3,
@@ -1439,19 +1450,14 @@ class Bot:
         min_contour_width = 20  # Ignorar contornos con ancho menor a esto
 
         if not self.chat_area_reference:
-            print("Error: chat_area_reference no está definido...")
+            self.logger.error("Error: chat_area_reference no está definido...")
             return None
 
         x_chat, y_chat, w_chat, h_chat = self.chat_area_reference
         chat_top_edge = y_chat  # Coordenada Y superior del área del chat
 
-        print(f"--- Buscando contorno en overflow (Lógica v2) ---")
-        print(f"Chat Area Top Edge: {chat_top_edge}")
-        print(f"Tolerancia Distancia Y: {y_distance_tolerance}")
-        print(f"Filtros: Altura > {min_contour_height}, Ancho > {min_contour_width}")
-
         if not contours_found:
-            print("No se encontraron contornos después de reparar la imagen.")
+            self.logger.error("No se encontraron contornos después de reparar la imagen.")
             return None  # O manejar de otra forma
 
         for contour in contours_found:
@@ -1459,51 +1465,35 @@ class Bot:
 
             # Aplicar filtros básicos
             if h < min_contour_height or w < min_contour_width:
-                print(f"Contorno: (x={x}, y={y}, w={w}, h={h}) -> Filtrado (tamaño pequeño)")
                 continue  # Ignorar contornos demasiado pequeños
 
             # NUEVA MÉTRICA PRIMARIA: Distancia del borde SUPERIOR del contorno al borde SUPERIOR del chat
             distance_y = abs(y - chat_top_edge)
 
-            print(f"Contorno: (x={x}, y={y}, w={w}, h={h}), DistanciaY={distance_y:.2f}")
-
             # 1. ¿Es este contorno significativamente más cercano en Y que el mejor encontrado?
             if distance_y < min_distance_y_found - y_distance_tolerance:
-                print(
-                    f"  -> Nuevo mejor: Más cercano en Y (DistanciaY {distance_y:.2f} < {min_distance_y_found:.2f} - {y_distance_tolerance})")
                 min_distance_y_found = distance_y
                 max_height_at_min_y_distance = h
                 best_contour = contour
 
             # 2. ¿Está este contorno a una distancia Y muy similar al mejor encontrado?
             elif abs(distance_y - min_distance_y_found) <= y_distance_tolerance:
-                print(
-                    f"  -> Similar distancia Y (abs({distance_y:.2f} - {min_distance_y_found:.2f}) <= {y_distance_tolerance})")
                 # Si está a una distancia Y similar, usamos la ALTURA como desempate
                 if h > max_height_at_min_y_distance:
-                    print(f"    -> Mejor por altura (Altura {h} > {max_height_at_min_y_distance})")
                     # Mantenemos/actualizamos la min_distance_y_found y la altura
                     min_distance_y_found = min(distance_y, min_distance_y_found)
                     max_height_at_min_y_distance = h
                     best_contour = contour
                 else:
-                    print(f"    -> No mejor por altura (Altura {h} <= {max_height_at_min_y_distance})")
+                    pass
             else:
+                pass
                 # Este caso es para contornos que están más lejos en Y (más abajo) que el mejor encontrado + tolerancia
-                print(
-                    f"  -> Ignorado: Más lejano en Y (DistanciaY {distance_y:.2f} > {min_distance_y_found:.2f} + {y_distance_tolerance})")
 
         if best_contour is not None:
             x_lcf, y_lcf, w_lcf, h_lcf = cv2.boundingRect(best_contour)
-            print(f"--- Contorno seleccionado para overflow (v2) ---")
-            print(
-                f"Contorno Final: (x={x_lcf}, y={y_lcf}, w={w_lcf}, h={h_lcf}), DistanciaY Final={min_distance_y_found:.2f}, Altura={max_height_at_min_y_distance}")
-            print(f"---------------------------------------------")
-            # self.show_contours(contours=[largest_contour_found], title="Contorno de Overflow Seleccionado (v2)")
         else:
-            print(f"--- No se seleccionó ningún contorno para overflow (v2) ---")
             return None  # O manejar adecuadamente
-
 
         return best_contour
 
@@ -1628,6 +1618,9 @@ class Bot:
                 scroll_pos_end=amount_scrolled,
             )
 
+            if not text:
+                continue
+
             x, y, w, h = self.chat_area_reference
             self.mouse_click((x + w) / 2, (y + h) / 2)
 
@@ -1744,7 +1737,6 @@ class Bot:
             has_last_text = True
 
         if not has_more or (not has_last_text and len(texts) >= self.messages_amount_limit):
-            # print("test 1")
             return texts
 
         self.take_screenshot()
@@ -1775,7 +1767,6 @@ class Bot:
                 self.was_handled_overflow = True
                 scrolled = 0
                 if not has_more or (not has_last_text and len(texts) >= self.messages_amount_limit):
-                    # print("test 2")
                     return texts
             else:
                 break
@@ -1806,7 +1797,20 @@ class Bot:
                 x_1, y_1, w_1, h_1 = cv2.boundingRect(possible_text_contours[0])
                 x_2, y_2, w_2, h_2 = cv2.boundingRect(all_texts_contours[0])
 
-                if w_2 != w_1 and iterations == 0:
+                # self.show_contours(contours=[possible_text_contours[0]],
+                #                    title=f'possible texts contour w={w_1}')
+                # self.show_contours(contours=[all_texts_contours[0]],
+                #                    title=f"all texts contour w={w_2}")
+
+                w_1_min = w_1 - 5
+                w_1_max = w_1 + 5
+                w_2_min = w_2 - 5
+                w_2_max = w_2 + 5
+
+                are_different = w_2_min > w_1 > w_2_max or w_1_min > w_2 > w_1_max
+
+                if are_different and iterations == 0:
+                    # self.show_contours(contours=[], title='antes de hacer scroll')
                     config = BOT_CONFIG[self.display_resolution]['REVIEW_CHAT']
                     scroll_move = config['scroll_move']
 
@@ -1923,27 +1927,6 @@ class Bot:
                                   y_end, scroll_pos_start, scroll_pos_end,
                                   desactivate_scroll=False, duration=0.1) -> str | None:
 
-        # if not desactivate_scroll: self.scroll_chat_area(
-        #     direction="up" if scroll_pos_start > self.scroll_reference else "down",
-        #     scroll_move=scroll_pos_start,
-        #     move_to_chat = False
-        # )
-
-        # def move_gradually(start_x, start_y, end_x, end_y, steps=20, duration=0.5):
-        #     current_x, current_y = start_x, start_y
-        #     step_x = (end_x - start_x) / steps
-        #     step_y = (end_y - start_y) / steps
-        #
-        #     for i in range(steps):
-        #         current_x += step_x
-        #         current_y += step_y
-        #         pyautogui.moveTo(int(current_x), int(current_y), duration=duration/steps)
-        #
-        #
-        # current_x, current_y = pyautogui.position()
-        #
-        # move_gradually(current_x, current_y, x_start, y_start)
-
         self.mouse_move(x=x_start, y=y_start, duration=duration)
 
         pyautogui.doubleClick(button="left")
@@ -1971,7 +1954,41 @@ class Bot:
             )
             time.sleep(1)
 
-        return pyperclip.paste()
+        current_extracted_text = pyperclip.paste()
+
+        if current_extracted_text is not None and isinstance(current_extracted_text, str):
+            # Normalizar para una comparación más robusta (opcional, pero recomendado)
+            normalized_current_text = current_extracted_text.strip()
+            normalized_last_text = (
+                self.last_text_from_get_text_by_location.strip()
+                if self.last_text_from_get_text_by_location is not None
+                else None
+            )
+
+            if normalized_current_text == normalized_last_text:
+                self.logger.warning(
+                    f"El texto extraído ('{normalized_current_text[:50]}...') "
+                    f"es idéntico al extraído previamente por get_text_by_text_location."
+                )
+                return None
+
+            # Actualizar el último texto extraído por esta función
+            self.last_text_from_get_text_by_location = current_extracted_text
+        elif current_extracted_text is None and self.last_text_from_get_text_by_location is None:
+            # Ambos son None, podría considerarse "igual" en cierto sentido
+            self.logger.debug(
+                "Tanto el texto actual extraído como el anterior por get_text_by_text_location son None."
+            )
+            return None
+            # self.last_text_from_get_text_by_location ya es None
+        else:
+            # Uno es None y el otro no, o el actual no es string. Actualizar.
+            if self.current_screenshot is None:
+                return None
+
+            self.last_text_from_get_text_by_location = current_extracted_text
+
+        return current_extracted_text
 
         """
         Alternativa
@@ -2193,7 +2210,7 @@ class Bot:
 
         chats_scrroll_done = False
 
-        print("Running...")
+        self.logger.info("Running...")
         last_print = ""
 
         # if not self.is_in_principal_view():
@@ -2201,15 +2218,15 @@ class Bot:
 
         while True:
             if self.is_paused:
-                print(f"Bot '{self.name}' is paused. Waiting...")
+                logging.info(f"Bot '{self.name}' is paused. Waiting...")
                 await asyncio.sleep(5)  # Espera 5 segundos antes de volver a chequear
                 continue  # Salta el resto del bucle y vuelve a chequear is_paused
 
-            print("Buscando chats...")
+            logging.info("Buscando chats...")
 
             try:
                 if keyboard.is_pressed('esc'):
-                    print("Detenido por el usuario.")
+                    self.logger.info("Detenido por el usuario.")
                     exit()
                 # pyautogui.keyDown('F11')
                 self.take_screenshot()
@@ -2242,7 +2259,7 @@ class Bot:
                     #       end="\r", flush=True)
                     # print("No Watching target...", end="\r", flush=True)
                     # last_print = "nowatch"
-                    print('no watching')
+                    self.logger.info('No Watching')
                     continue
                 else:
                     # Si estamos viendo el objetivo, imprimir "Watching target {self.target_name}..."
@@ -2250,7 +2267,7 @@ class Bot:
                     #       end="\r", flush=True)
                     # print(f"Watching target {self.target_name}...", end="\r", flush=True)
                     # last_print = "watching"
-                    print('watching')
+                    self.logger.info('watching')
                     pass
 
                 if counter > 2 or counter < 2:
@@ -2311,7 +2328,7 @@ class Bot:
                         else:
                             self.scroll_chat_area(direction='down', scroll_move=1_000_000)
 
-                        print("Entra a iterar los chats...")
+                        self.logger.info("Revisndo Chats...")
                         for chat in chats[::-1]:
                             x, y, _, _ = cv2.boundingRect(chat)
                             self.first_contour_reference = None
@@ -2419,7 +2436,7 @@ class Bot:
             #     self.go_to_principal_view()
 
             except Exception as e:
-                print(f'Error raised: {e}')
+                self.logger.error(f'Error raised: {e}')
                 raise e
                 # input("Press Enter to exit...")
 

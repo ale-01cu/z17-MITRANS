@@ -1,3 +1,4 @@
+
 def get_subtraction_steps(initial_value, target_value, steps):
     """
     Returns a list of equal subtraction amounts to adjust initial_value to target_value in specified steps.
