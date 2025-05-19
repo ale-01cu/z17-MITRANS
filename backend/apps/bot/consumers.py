@@ -112,7 +112,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.bot_control(action)
                 return
 
-            if sender == 'bot':
+            if sender == 'bot' or action == 'bot_message' or message_type=='bot_message':
                 await self.process_bot_message(content)
             elif sender == 'web':
                 pass
@@ -159,8 +159,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
                 print(f"Acción desconocida: {action}")
 
-        # else:
-        #     print("No se encontró el canal del bot")
+    async def bot_message(self, event):
+        """Maneja mensajes de tipo 'bot_message'."""
+        await self.send(text_data=json.dumps({
+            'type': 'bot_message',
+            'content': event['content'],
+            'sender': event['sender'],
+            'label': event['content'].get('label', '')
+        }
+        ))
+
+    async def message(self, event):
+        """Maneja mensajes de tipo 'message' (ej: desde web)."""
+        await self.send(text_data=json.dumps({
+            'type': 'message',
+            'content': event['content'],
+            'sender': event['sender']
+        }
+        ))
+
+    async def send_to_web(self, event):
+        """Envía mensajes a los clientes web."""
+        await self.send(text_data=json.dumps({
+            'type': event['type'],
+            'content': event['content'],
+            'sender': event['sender']
+        }))
 
     async def process_bot_message(self, content_data):
         from apps.comment.models import Comment
@@ -188,7 +212,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                'type': 'message',
+                'type': 'bot_message',
                 'content': {
                     'message': message,
                     'label': label,
