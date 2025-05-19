@@ -1,6 +1,8 @@
 import React, { useState, type ReactNode, useEffect } from "react";
 import { createContext } from "react";
 import { useWebSocket } from "~/hooks/useWebSocket";
+import { toast } from "sonner";
+import { useLocation } from "react-router";
 
 // Definimos un tipo para los posibles estados del bot
 type BotStatus = "running" | "off" | "working";
@@ -23,21 +25,27 @@ const BotProvider = ({ children }: BotProviderProps) => {
     // Especificamos el tipo genérico en useState
     const [botStatus, setBotStatus] = useState<BotStatus>('running');
     const websocket = useWebSocket();
+    const location = useLocation()
 
     useEffect(() => {
-       console.log('use effecto maestro');
-       
        const unsuscribe = websocket.subscribe('bot_status', (data) => {
-         console.log({data});
-         
          const botStatus = data?.status
-         console.log({botStatus});
-         
          setBotStatus(botStatus === 'connected' ? 'running' : 'off')
        });
    
        return () => unsuscribe()
      }, [websocket.subscribe])
+
+
+     useEffect(() => {
+        const unsubscribe = websocket.subscribe('message', (data) => {
+            if(location.pathname !== '/bot') {
+                toast.info(data?.content)
+            }
+        });
+
+        return () => unsubscribe()
+     }, [websocket.subscribe, location.pathname])
 
 
     const data = {
