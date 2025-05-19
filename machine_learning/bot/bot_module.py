@@ -1516,8 +1516,10 @@ class Bot:
         # Caso cuando hay texto desbordado (tratamiento diferente)
         # self.show_contours(contours=[chat_contour],Fre
         #                    title="chat area contour")
+        _, _, w, _ = cv2.boundingRect(chat_contour)
+
         result_image = self.repair_irregular_top_edge(
-            image=self.current_screenshot, contour=chat_contour, offset2=300)
+            image=self.current_screenshot, contour=chat_contour, offset2=w)
 
         contours_found = self.find_text_area_contours(image=result_image,
                                                     use_first_contour_reference=False,
@@ -1542,7 +1544,7 @@ class Bot:
         # self.show_contours(contours=[largest_contour_found],
         #                    title="Primer contorno de referencia papu")
         #
-        # self.show_contours(contours=contours_found, title="Los contornos de La imagen reparada")
+        # self.show_contours(image=result_image, contours=contours_found, title="Los contornos de La imagen reparada")
         # self.show_contours(contours=[largest_contour_found], title="El ultimo contorno de la imagen reparada")
 
         x_contour_overflow_end = None
@@ -1602,8 +1604,8 @@ class Bot:
             #
             # if not is_top_edge_irregular:
             #     return True
-            self.show_contours(contours=[contour_overflow],
-                               title="contour with overflowwwwwwww")
+            # self.show_contours(contours=[contour_overflow],
+            #                    title="contour with overflowwwwwwww")
 
             x, y, w, h = cv2.boundingRect(contour_overflow)
             x_contour_overflow_start = x

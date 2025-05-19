@@ -98,14 +98,14 @@ class WebSocketClient:
                 'timestamp': datetime.now().isoformat(),
                 'retries': 0
             }
-            print("ulala")
-    
+
             max_retries = 3
             for attempt in range(max_retries):
                 ack_event = asyncio.Event()
                 self._message_callbacks[message_id] = ack_event
                 
                 try:
+                    print(f"message -------------> {message_with_id}")
                     await self.connection.send(json.dumps(message_with_id))
                     self.logger.debug(f"Sent message (ID: {message_id}): {message}")
                     
