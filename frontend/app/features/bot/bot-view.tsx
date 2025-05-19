@@ -8,8 +8,7 @@ export default function BotView() {
 
     useEffect(() => {
         // Suscribirse a los mensajes del servidor
-        const unsubscribe = subscribe('message', (data) => {
-            console.log('Respuesta del bot recibida:', data);
+        const unsubscribe = subscribe('bot_message', (data) => {
             setServerResponse(prev => {
               return [...prev, data.content]
             });
@@ -18,8 +17,6 @@ export default function BotView() {
         // Limpieza al desmontar
         return () => unsubscribe();
     }, [subscribe, serverResponse]);
-
-    console.log({serverResponse})
 
     return (
       <Card className="flex-1 p-4 overflow-hidden flex flex-col">

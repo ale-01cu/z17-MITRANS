@@ -27,8 +27,8 @@ BOT_CONFIG = {
             'x_start_offset': 10,
             'y_start_offset': 0,
             'scroll_move': 35,
-            'min_height_text_location': 50,
-            'max_height_text_location': 40,
+            'min_height_text_location': 40,
+            'max_height_text_location': 50,
         },
         "REVIEW_CHAT": {
             'scroll_move': 45,
@@ -60,8 +60,8 @@ BOT_CONFIG = {
             'x_start_offset': 10,
             'y_start_offset': 10,
             'scroll_move': 25,
-            'min_height_text_location': 45,
-            'max_height_text_location': 35,
+            'min_height_text_location': 35,
+            'max_height_text_location': 45,
         },
         "REVIEW_CHAT": {
             'scroll_move': 35,
