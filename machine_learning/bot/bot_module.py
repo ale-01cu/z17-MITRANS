@@ -1639,7 +1639,8 @@ class Bot:
 
 
             if self.is_online: await self.websocket.send_websocket_message(
-                message_type="bot_message", message=text)
+                message_type="bot_message", message=text,
+                name=self.name, current_chat_id=self.current_chat_id)
 
             if self.save_texts_local_is_active:
                 self._save_extracted_text_to_file(text_content=text)
