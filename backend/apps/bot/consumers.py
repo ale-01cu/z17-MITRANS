@@ -141,26 +141,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
         print('aqui llegue')
 
-        if bot_channel:
-            if action == "disconnect":
+        # if bot_channel:
+        if action == "disconnect":
                 await self.send_to_bot({
                     "type": "disconnect",
-                    "sender": "web"
+                    "sendecd bar": "web"
                 })
                 self.__class__.room_bot_status[self.room_group_name] = False
                 print("Bot pausado")
-            elif action == "connect":
+        elif action == "connect":
                 await self.send_to_bot({
                     "type": "connect",
                     "sender": "web"
                 })
                 self.__class__.room_bot_status[self.room_group_name] = True
                 print("Bot reanudado")
-            else:
+        else:
                 print(f"Acción desconocida: {action}")
 
-        else:
-            print("No se encontró el canal del bot")
+        # else:
+        #     print("No se encontró el canal del bot")
 
     async def process_bot_message(self, content_data):
         from apps.comment.models import Comment
@@ -223,13 +223,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Envía mensajes al bot usando su canal guardado."""
         bot_channel = self.__class__.bot_channels.get(self.room_group_name)
         if bot_channel:
-            # Envía el mensaje directamente al canal del bot
             await self.channel_layer.send(
                 bot_channel,
-                {
-                    "type": "bot_control",  # Tipo de mensaje que el bot debe manejar
-                    # "content": message_data
-                }
+                message_data  # ¡Aquí se envía message_data con 'type'!
             )
         else:
             print("Error: No hay un bot conectado en esta sala.")
