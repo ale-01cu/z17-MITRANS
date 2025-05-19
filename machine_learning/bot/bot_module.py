@@ -64,7 +64,7 @@ class Bot:
 
         self.is_window_handler_active = config.getboolean('CONFIG', 'IS_WINDOW_HANDLER_ACTIVE')
         self.window_handler = WindowHandler(title=target_name, is_active=self.is_window_handler_active)
-        self.first_contour_reference: Tuple[int, int, int, int] | None = None
+        self.first_contour_reference: Tuple[int, int, int, int] | None = (534, 913, 518, 45) # TODO aqui poner una config para el resto de resoluciones que no sean 1920x1080
 
         # self.is_in_message_requests_view = current_bot.name if current_bot else (
         #     self.bot_querys.get_bot_by_name(name=self.name).is_in_message_requests_view)
@@ -1097,6 +1097,7 @@ class Bot:
 
         if is_first_iter:
             x, y, w, h = cv2.boundingRect(first_text)
+            # self.show_contours(contours=[first_text], title=f'w={w} h={h} x={x} y={y}')
 
             # is_top_edge_irregular = img_handler.is_top_edge_irregular(contour=first_text,
             #                                                             threshold=1,
@@ -1135,7 +1136,6 @@ class Bot:
                         first_text = first_text_gradually
 
                 x, y, w, h = cv2.boundingRect(first_text)
-                # self.show_contours(contours=[first_text], title='el primer contorno')
 
                 text = self.get_text_by_text_location(
                     x_start=x + 5 if 50 > h > 40 else x - 5,
@@ -1681,6 +1681,62 @@ class Bot:
         return has_more
 
 
+    def find_first_contour_reference(self):
+        self.take_screenshot()
+
+        gray = cv2.cvtColor(self.current_screenshot, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar desenfoque más agresivo para reducir ruido
+        blurred = cv2.GaussianBlur(gray, (7, 7), 0)
+
+        # Binarización adaptativa con parámetros ajustados
+        thresh = cv2.adaptiveThreshold(blurred, 255,
+                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY_INV, 21, 5)
+
+        # Eliminar ruido con operaciones morfológicas
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+        # Encontrar contornos
+        contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        valid_contours = []
+
+        chat_contour = self.find_chat_area_contour()
+        x_chat, y_chat, w_chat, h_chat = cv2.boundingRect(chat_contour)
+
+        config = BOT_CONFIG[self.display_resolution]['FIND_TEXT_AREA_CONTOURS']
+        chat_limit_x_porcent = config['chat_limit_x_porcent'] \
+            if self.is_in_principal_view() else config['chat_limit_x_porcent_in_message_requests_view']
+        min_height = config['min_height']
+        chat_start_x_porcent = config['chat_start_x_porcent']
+
+        chat_limit_x = x_chat + int((x_chat + w_chat) * chat_limit_x_porcent)
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+
+            min_w = 40
+            min_h = 0
+
+
+            # Verifica si está DENTRO del chat_contour
+            if (((x_chat < x < (x_chat + w_chat) * chat_start_x_porcent) and (x + w < x_chat + w_chat))
+                    and ((y > y_chat) and (y + h < y_chat + h_chat))
+            ):
+
+                 valid_contours.append(contour)
+
+        self.show_contours(contours=valid_contours,
+                           title=f'first contour reference')
+
+        x, y, w, h = cv2.boundingRect(valid_contours[0])
+
+        self.show_contours(contours=[valid_contours[0]],
+                           title=f'x={x} y={y} w={w} h={h}')
+
+
+
     def is_chat_area_the_same(self, prev_chat_area_img = None, threshold = 0.8):
         """
         Verifica si el chat area de la página actual es el mismo que el del chat area anterior.
@@ -1725,6 +1781,9 @@ class Bot:
         :return: List of text contours
         """
 
+        # if iterations == 0:
+        #     self.find_first_contour_reference()
+
         if not self.current_chat_id:
             pass
 
@@ -1760,7 +1819,7 @@ class Bot:
             if not is_overflow:
                 break
             possible_text_contours = self.find_text_area_contours()
-            self.show_contours(contours=possible_text_contours, title=f'is_overflow={is_overflow} {len(possible_text_contours) == 0}')
+            # self.show_contours(contours=possible_text_contours, title=f'is_overflow={is_overflow} {len(possible_text_contours) == 0}')
 
 
             if is_overflow and len(possible_text_contours) == 0:
