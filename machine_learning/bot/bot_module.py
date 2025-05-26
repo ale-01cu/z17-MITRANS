@@ -1129,12 +1129,12 @@ class Bot:
                 y_start_offset = config['y_start_offset']
 
                 # self.show_contours(contours=[first_text], title='el primer contorno')
-                if is_first_iter and not was_handled_overflow:
-                    first_text_gradually = await self.move_to_contour_gradually(x+x_start_offset,
-                                                                      y+y_start_offset,
-                                                                      is_first_iter=is_first_iter)
-                    if first_text_gradually is not None:
-                        first_text = first_text_gradually
+                # if is_first_iter and not was_handled_overflow:
+                #     first_text_gradually = await self.move_to_contour_gradually(x+x_start_offset,
+                #                                                       y+y_start_offset,
+                #                                                       is_first_iter=is_first_iter)
+                #     if first_text_gradually is not None:
+                #         first_text = first_text_gradually
 
 
                 x, y, w, h = cv2.boundingRect(first_text)
@@ -1211,8 +1211,10 @@ class Bot:
         self.show_contours(contours=possible_text_contours, title='faaaaaaaak2')
 
         if has_more:
-            iter_contours = enumerate(possible_text_contours[1:]) \
-                if is_first_iter else enumerate(possible_text_contours)
+            # iter_contours = enumerate(possible_text_contours[1:]) \
+            #     if is_first_iter else enumerate(possible_text_contours)
+
+            iter_contours = enumerate(possible_text_contours)
 
             # self.show_contours(contours=possible_text_contours[1:] \
             #     if skip_next_contour else possible_text_contours, title='dentro del bucle')
@@ -1754,7 +1756,7 @@ class Bot:
             is_overflow = self.is_there_text_overflow(chat_contour=chat_contour)
             if not is_overflow:
                 break
-            possible_text_contours = self.find_text_area_contours()
+            possible_text_contours = self.find_text_area_contours(use_first_contour_reference=not iterations == 0)
             # self.show_contours(contours=possible_text_contours, title=f'is_overflow={is_overflow} {len(possible_text_contours) == 0}')
 
 

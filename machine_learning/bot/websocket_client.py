@@ -1,14 +1,8 @@
-import websockets
-import asyncio
-import json
-from typing import Optional, Callable
-import logging
-
 import asyncio
 import websockets
 import json
 import logging
-from typing import Optional, Callable, Dict, Any
+from typing import Optional, Dict, Any
 import uuid
 from datetime import datetime
 import time

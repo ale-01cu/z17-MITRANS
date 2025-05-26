@@ -52,7 +52,8 @@ LOCAL_APPS = [
     'apps.img_process',
     'apps.comment_user_owner',
     'apps.bot',
-    'apps.stats'
+    'apps.stats',
+    'apps.messenger'
 ]
 
 THIRD_APPS = [
@@ -272,8 +273,8 @@ CHANNEL_LAYERS = {
         },
     },
 }
-# CELERY_BROKER_URL = "redis://localhost:6379/0"
-# CELERY_RESULT_BACKEND = "redis://localhost:6379/"
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/"
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Para collectstatic
@@ -285,3 +286,10 @@ logging.basicConfig(
     format='INFO:     %(message)s',
     handlers=[logging.StreamHandler()]
 )
+
+
+FACEBOOK_PAGE_ID = env('FACEBOOK_PAGE_ID')
+FACEBOOK_ACCESS_TOKEN = env('FACEBOOK_ACCESS_TOKEN')
+FACEBOOK_API_VERSION = env('FACEBOOK_API_VERSION')
+FACEBOOK_BASE_URL = f"https://graph.facebook.com/{FACEBOOK_API_VERSION}"
+FACEBOOK_PAGE_NAME = env('FACEBOOK_PAGE_NAME')
