@@ -59,6 +59,26 @@ def get_message_details(message_id: str):
     return response.json()
 
 
+def debug_graphqlAPI():
+    converstions = get_conversations()
+
+    for conversation in converstions['data']:
+        messages = get_messages(conversation_id=conversation['id'])
+        messages = messages['messages']['data']
+
+        for msg in messages:
+            msg_detail = get_message_details(message_id=msg['id'])
+            id = msg_detail['id']
+            message = msg_detail['message']
+            user_from = msg_detail['from']['name']
+            users_to = msg_detail['to']['data']
+
+            # print(f'Antes del bucle del print.')
+
+            for user_to in users_to:
+                user_to_name = user_to['name']
+                print(f'Messages from {user_from} to {user_to_name} -> {message}')
+
 
 # Conversation Schema
 # {
