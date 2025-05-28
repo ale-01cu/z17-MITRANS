@@ -32,7 +32,7 @@ const DashboardMain = () => {
   console.log({stats})
 
   return ( 
-    <>
+    <div className="py-10 space-y-4">
     <DashHeader/>
 
     <Tabs defaultValue="overview" className="space-y-4 min-h-screen" onValueChange={setActiveTab}>
@@ -91,7 +91,7 @@ const DashboardMain = () => {
         </div>
       </TabsContent>
     </Tabs>
-    </>
+    </div>
     
   );
 }

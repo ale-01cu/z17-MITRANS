@@ -63,11 +63,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <UserProvider> {/* <-- Envolver aquí */}
-      <WebSocketProvider>
-        <BotProvider>
-          <Outlet />
-        </BotProvider>
-      </WebSocketProvider>
+      {/* <WebSocketProvider> */}
+        {/* <BotProvider> */}
+      <Outlet />
+        {/* </BotProvider> */}
+      {/* </WebSocketProvider> */}
     </UserProvider>
   )
 }
