@@ -6,7 +6,8 @@ export default [
       index("routes/dashboard.tsx"),
       route("/extract", "routes/extract.tsx"),
       route("/comment", "routes/comments.tsx"),
-      route("/bot", "routes/bot.tsx")
+      route("/bot", "routes/bot.tsx"),
+      route("/users", "routes/users.tsx")
   
     ]),
   ]),

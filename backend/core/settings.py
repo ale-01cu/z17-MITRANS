@@ -221,8 +221,8 @@ DJOSER = {
     # 'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': ['http://localhost:8000/google'],
     'SERIALIZERS': {
         'user_create': 'apps.user.serializers.UserAddSerializer',
-        'user': 'apps.user.serializers.UserAddSerializer',
-        'current_user': 'apps.user.serializers.UserAddSerializer',
+        'user': 'apps.user.serializers.UserSerializer',
+        'current_user': 'apps.user.serializers.UserSerializer',
     },
 }
 
