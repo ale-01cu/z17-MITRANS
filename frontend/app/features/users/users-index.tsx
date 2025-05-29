@@ -68,23 +68,28 @@ export default function UsersIndex() {
     const validateForm = (data: UserFormData): FormErrors => {
       const errors: FormErrors = {}
   
-      if (!data.firstName.trim()) {
-        errors.firstName = "First name is required"
-      } else if (data.firstName.length < 2) {
-        errors.firstName = "First name must be at least 2 characters"
-      }
+      // if (!data.firstName.trim()) {
+      //   errors.firstName = "First name is required"
+      // } else if (data.firstName.length < 2) {
+      //   errors.firstName = "First name must be at least 2 characters"
+      // }
   
-      if (!data.lastName.trim()) {
-        errors.lastName = "Last name is required"
-      } else if (data.lastName.length < 2) {
-        errors.lastName = "Last name must be at least 2 characters"
-      }
+      // if (!data.lastName.trim()) {
+      //   errors.lastName = "Last name is required"
+      // } else if (data.lastName.length < 2) {
+      //   errors.lastName = "Last name must be at least 2 characters"
+      // }
   
-      if (!data.email.trim()) {
-        errors.email = "Email is required"
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-        errors.email = "Please enter a valid email address"
+      // if (!data.email.trim()) {
+      //   errors.email = "Email is required"
+      // } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      //   errors.email = "Please enter a valid email address"
+      // }
+
+      if(editingUser && !data.role.trim()) {
+        errors.role = "El rol es requerido."
       }
+
   
       // if (!data.role) {
       //   errors.role = "Role is required"
@@ -116,8 +121,8 @@ export default function UsersIndex() {
     }
   
     // Create user
-    const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault()
+    const handleCreateUser = async () => {
+      // e.preventDefault()
       const errors = validateForm(formData)
       console.log({errors});
       
@@ -192,8 +197,8 @@ export default function UsersIndex() {
     }
   
     // Update user
-    const handleUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault()
+    const handleUpdateUser = async () => {
+      // e.preventDefault()
       if (!editingUser) return
   
       const errors = validateForm(formData)
@@ -289,7 +294,6 @@ export default function UsersIndex() {
           </div>
           <AddUser
             formData={formData}
-            formErrors={formErrors}
             handleCreateUser={handleCreateUser}
             isCreateDialogOpen={isCreateDialogOpen}
             isLoading={isLoading}

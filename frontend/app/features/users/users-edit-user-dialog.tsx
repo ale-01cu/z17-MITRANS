@@ -1,10 +1,21 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "~/components/ui/dialog"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter
+} from "~/components/ui/dialog"
 import { Label } from "~/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import type { FormErrors, UserFormData } from './users-types'
 import { SUPERUSER_TEXT_ROLE, BASE_TEXT_ROLE, STAFF_TEXT_ROLE } from "./users-utils"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { UpdateUserSchema } from "./users-schemas"
+import { useEffect } from "react"
 
 const roles = [
   {
@@ -31,7 +42,7 @@ interface UsersEditUserDialogProps {
   setFormData: React.Dispatch<React.SetStateAction<UserFormData>>, 
   formErrors: FormErrors, 
   isLoading: boolean, 
-  handleUpdateUser: (e: React.FormEvent<HTMLFormElement>) => void
+  handleUpdateUser: () => Promise<void>
 }
 
 export default function UsersEditUserDialog({ 
@@ -43,8 +54,34 @@ export default function UsersEditUserDialog({
   isLoading, 
   handleUpdateUser 
 }: UsersEditUserDialogProps) {
+  const { register, handleSubmit, setValue, formState: { errors }, reset } = useForm({ 
+    resolver: zodResolver(UpdateUserSchema) })
 
-  console.log({formData});
+    useEffect(() => {
+      if (isEditDialogOpen && formData) {
+        reset({
+          username: formData.username,
+          email: formData.email,
+          // Map to what RHF expects based on your schema/register names
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          // role and status are not directly registered in the same way with RHF for simple inputs
+          // but their values are controlled by formData and used by Select components.
+          // RHF will validate based on the actual form submission.
+          // If you had specific RHF validation on role/status that needed to be primed,
+          // you might also call setValue for them here, but often not necessary for Selects.
+        });
+      }
+    }, [isEditDialogOpen, formData, reset]); // <--- DEPENDENCIES
+
+
+  const myHandleSubmit = async () => {
+    await handleUpdateUser()
+    // setValue('username', '');
+    // setValue('email', '');
+    // setValue('first_name', '');
+    // setValue('last_name', '');
+  }
   
 
   return (
@@ -54,7 +91,7 @@ export default function UsersEditUserDialog({
           <DialogTitle>Editar Usuario</DialogTitle>
           <DialogDescription>Actualizar información del usuario. Haz cambios y salvalos cuando esten listos.</DialogDescription>
         </DialogHeader>
-        <form id="edit-user-form" onSubmit={handleUpdateUser} className="grid gap-4 py-4">
+        <form id="edit-user-form" onSubmit={handleSubmit(myHandleSubmit)} className="grid gap-4 py-4">
           <div className="flex flex-col gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">Nombre de usuario *</Label>
@@ -62,10 +99,11 @@ export default function UsersEditUserDialog({
                 id="username"
                 type="username"
                 value={formData.username}
-                onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
                 className={formErrors.username ? "border-red-500" : ""}
+                {...register('username', { onChange: (e) => setFormData((prev) => ({ ...prev, username: e.target.value })) })}
+              
               />
-              {formErrors.username && <p className="text-sm text-red-500">{formErrors.username}</p>}
+              {errors.username?.message && <p className="text-sm text-red-500">{errors.username?.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="editEmail">Correo *</Label>
@@ -73,10 +111,11 @@ export default function UsersEditUserDialog({
                 id="editEmail"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                 className={formErrors.email ? "border-red-500" : ""}
+                {...register('email', { onChange: (e) => setFormData((prev) => ({ ...prev, email: e.target.value })) })}
+
               />
-              {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
+              {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
             </div>
 
             <div className="flex gap-4">
@@ -85,20 +124,21 @@ export default function UsersEditUserDialog({
                 <Input
                   id="editFirstName"
                   value={formData.firstName}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                   className={formErrors.firstName ? "border-red-500" : ""}
+                  {...register('first_name', { onChange: (e) => setFormData((prev) => ({ ...prev, firstName: e.target.value })) })}
                 />
-                {formErrors.firstName && <p className="text-sm text-red-500">{formErrors.firstName}</p>}
+                {errors.first_name && <p className="text-sm text-red-500">{errors.first_name.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editLastName">Apellidos *</Label>
                 <Input
                   id="editLastName"
                   value={formData.lastName}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
                   className={formErrors.lastName ? "border-red-500" : ""}
+                  {...register('last_name', { onChange: (e) => setFormData((prev) => ({ ...prev, lastName: e.target.value })) })}
+
                 />
-                {formErrors.lastName && <p className="text-sm text-red-500">{formErrors.lastName}</p>}
+                {errors.last_name && <p className="text-sm text-red-500">{errors.last_name.message}</p>}
               </div>
             </div>
           </div>
