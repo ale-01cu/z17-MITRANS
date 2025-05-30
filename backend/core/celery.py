@@ -14,10 +14,13 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'fetch-api-data-every-second': { # Nombre descriptivo de la tarea
-        'task': 'apps.messenger.tasks.fetch_and_store_api_data', # Ruta a tu tarea
-        'schedule': 5,  # Ejecutar cada 1.0 segundo
-        # 'args': (16, 16) # Argumentos opcionales para la tarea
+    'tarea-periodica-cada-5-minutos': {
+        'task': 'core.startup_tasks.tarea_periodica',
+        'schedule': 300.0,  # 300 segundos = 5 minutos
+    },
+    'fetch-api-data-every-second': {
+        'task': 'apps.messenger.tasks.fetch_and_store_api_data',
+        'schedule': 5,
     },
     # Puedes añadir más tareas programadas aquí
     # 'add-every-30-seconds': {

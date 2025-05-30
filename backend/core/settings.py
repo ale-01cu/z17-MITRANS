@@ -44,6 +44,7 @@ BASE_APPS = [
 ]
 
 LOCAL_APPS = [
+    'core.startup_tasks.StartupConfig',
     'apps.user',
     'apps.comment',
     'apps.classification',
@@ -53,7 +54,8 @@ LOCAL_APPS = [
     'apps.comment_user_owner',
     'apps.bot',
     'apps.stats',
-    'apps.messenger'
+    'apps.messenger.apps.MessengerConfig',
+    # 'apps.messenger.MyappConfig'
 ]
 
 THIRD_APPS = [
@@ -62,7 +64,7 @@ THIRD_APPS = [
     'djoser',
     'drf_spectacular',
     'channels',
-    'django_celery_beat'
+    'background_task'
 ]
 
 INSTALLED_APPS = BASE_APPS + LOCAL_APPS + THIRD_APPS
@@ -104,22 +106,22 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': env('DATABASE_NAME'),
-        'USER': env('DATABASE_USERNAME'),
-        'PASSWORD': env('DATABASE_PASSWORD'),
-        'HOST': env('DATABASE_HOST'),
-        'DATABASE_PORT': env('DATABASE_PORT'),
-    }
-}
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': env('DATABASE_NAME'),
+#         'USER': env('DATABASE_USERNAME'),
+#         'PASSWORD': env('DATABASE_PASSWORD'),
+#         'HOST': env('DATABASE_HOST'),
+#         'DATABASE_PORT': env('DATABASE_PORT'),
 #     }
 # }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

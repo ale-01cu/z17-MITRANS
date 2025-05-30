@@ -30,6 +30,7 @@ class Conversation(models.Model):
 class Message(models.Model):
     # ID de messenger
     id_messenger = models.AutoField(primary_key=True)
+    message_id = models.CharField(max_length=255, unique=True)
 
     # Relacion de 1 a muchos con la conversación
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE)
@@ -54,3 +55,8 @@ class Message(models.Model):
 
     def __str__(self):
         return f'{self.sender.username}: {self.content}'
+
+
+class LastProcessedMessage(models.Model):
+    last_message_id = models.CharField(max_length=255)
+    updated_at = models.DateTimeField(auto_now=True)
