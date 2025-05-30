@@ -13,7 +13,7 @@ import { BotContext } from "~/context/BotProvider"
 export default function Main() {
   // Sample chat messages
   // Bot status
-  const { emit } = useWebSocketContext()
+  // const { emit } = useWebSocketContext()
   // const [botStatus, setBotStatus] = useState<"running" | "off" | "working">("running")
   const isSuperUser = useIsSuperuser()
   const { botStatus, setBotStatus } = useContext(BotContext)
@@ -36,20 +36,20 @@ export default function Main() {
 
   // Handle bot actions
   const handleStart = () => {
-    setBotStatus("running")
-    emit('bot.control', {
-      action: 'connect',
-      sender: 'web'
-    })
+    // setBotStatus("running")
+    // emit('bot.control', {
+    //   action: 'connect',
+    //   sender: 'web'
+    // })
   }
   // const handleSuspend = () => setBotStatus("suspended")
   const handleStop = () => {
-    setBotStatus("off")
-    emit('bot.control', {
-      action: 'disconnect',
-      sender: 'web'
+    // setBotStatus("off")
+    // emit('bot.control', {
+    //   action: 'disconnect',
+    //   sender: 'web'
 
-    })
+    // })
   }
 
 
@@ -86,7 +86,7 @@ export default function Main() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen p-4 gap-4">
+    <div className="flex flex-col md:flex-row h-screen py-10 gap-4">
       {/* Chat Section */}
       <BotView/>
 

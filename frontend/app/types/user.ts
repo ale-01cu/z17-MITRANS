@@ -1,4 +1,5 @@
 export interface User {
+  id: number | null
   external_id: string
   username: string
   email: string
@@ -6,5 +7,7 @@ export interface User {
   last_name: string
   is_superuser: boolean,
   is_staff: boolean,
-  role: string
+  role: string,
+  is_active: boolean,
+  create_at: string
 }

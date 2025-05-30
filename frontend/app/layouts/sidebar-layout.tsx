@@ -34,13 +34,13 @@ const SidebarLayout = () => {
 
   return ( 
     <SidebarProvider>
-      <WebSocketContext.Provider value={websocket}>
-        <AppSidebar />
-        <SidebarTrigger />
-        <main className="w-full min-h-screen pr-6">
-          <Outlet/>
-        </main>
-      </WebSocketContext.Provider>
+      {/* <WebSocketContext.Provider value={websocket}> */}
+      <AppSidebar />
+      <SidebarTrigger />
+      <main className="w-full min-h-screen pr-6">
+        <Outlet/>
+      </main>
+      {/* </WebSocketContext.Provider> */}
     </SidebarProvider>
   );
 }

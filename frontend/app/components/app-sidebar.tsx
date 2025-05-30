@@ -38,9 +38,15 @@ const baseItems = [
     requiresSuperuserOrManager: true, // Añadimos una bandera para identificarlo
   },
   {
-    title: "Gestionar Quejas",
+    title: "Gestionar Opiniones",
     url: "/comment",
     icon: MessageSquareTextIcon,
+  },
+  {
+    title: "Gestionar Usuarios",
+    url: "/users",
+    icon: User,
+    requiresSuperuser: true,
   },
   // {
   //   title: "Configuraciones",
