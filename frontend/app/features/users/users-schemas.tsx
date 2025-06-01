@@ -30,7 +30,6 @@ export const UpdateUserSchema = z
     email: z.string().email({ message: "Correo electrónico inválido" }),
     first_name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres" }),
     last_name: z.string().min(3, { message: "El apellido debe tener al menos 3 caracteres" }),
-    role: z.string().min(1, { message: "Debe de seleccionar un rol." }),
   });
 
 
