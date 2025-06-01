@@ -18,7 +18,7 @@ class Comment(models.Model):
     )
 
     messenger_id = models.CharField(
-        max_length=50,
+        max_length=255,
         unique=True,
         editable=False,
         verbose_name="ID de Messenger",
