@@ -35,7 +35,7 @@ def messenger_api_task():
         # si no lo es que pase a la siguiente conversacion.
 
         curr_conv = conv_api_data['updated_time']
-        conversation = Conversation.objects.get(messenger_id=conversation_api_id).first()
+        conversation = Conversation.objects.filter(messenger_id=conversation_api_id).first()
 
         if conversation:
             curr_conv_clean = curr_conv.split('+')[0]  # '2025-05-30T17:53:56'
@@ -46,7 +46,7 @@ def messenger_api_task():
             old_dt = datetime.strptime(old_conv, "%Y-%m-%d %H:%M:%S")
 
             # Comparar
-            if curr_dt < old_dt:
+            if curr_dt <= old_dt:
                 continue
 
         messages_data = get_messages(conversation_api_id)  # Renombrado para claridad
@@ -62,7 +62,7 @@ def messenger_api_task():
             # Verificar que el mensaje ya fue leido o no
             # si es el primer mensaje y ya fue leido entonces detener toda la revision
             # en caso de que el primero no sea leido continuar
-            conversation = Conversation.objects.get(messenger_id=conversation_api_id).first()
+            conversation = Conversation.objects.filter(messenger_id=conversation_api_id).first()
 
             if conversation:
                 comment = Comment.objects.filter(
@@ -82,7 +82,7 @@ def messenger_api_task():
                     stop_loop_conversations = True  # Indicamos que no se procesen más conversaciones
                     logger.info(
                         f"Most recent message for conversation API ID {conversation_api_id} already in DB. Stopping further conversation processing.")
-                break  # Salir del bucle de mensajes para esta conversación
+                break  # Salir del bucle de mensajError processing messagees para esta conversación
 
             msg_details_api = get_message_details(message_api_data['id'])
 
@@ -100,7 +100,7 @@ def messenger_api_task():
             if user_from == FACEBOOK_PAGE_NAME:
                 continue
 
-            user = UserOwner.objects.filter(name=user_from)
+            user = UserOwner.objects.filter(name=user_from).first()
             if not user:
                 user = UserOwner.objects.create(
                     name=user_from
@@ -115,7 +115,7 @@ def messenger_api_task():
                 # Ajusta 'id_messenger' al nombre real del campo en tu modelo Conversation
                 # que almacena el ID de la conversación de la API.us
 
-                conversation = Conversation.objects.get(messenger_id=conversation_api_id).first()
+                conversation = Conversation.objects.filter(messenger_id=conversation_api_id).first()
 
                 if not conversation:
                     conversation = Conversation.objects.create(
@@ -143,7 +143,7 @@ def messenger_api_task():
                         created_at=created_time
                     )
 
-                conversation = Conversation.objects.get(messenger_id=conversation_api_id).first()
+                conversation = Conversation.objects.filter(messenger_id=conversation_api_id).first()
 
                 # Guardar el mensaje
                 Comment.objects.create(

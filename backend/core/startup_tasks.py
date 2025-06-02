@@ -1,7 +1,6 @@
 from django.apps import AppConfig
 import threading
 import time
-from apps.messenger.graphqlAPI import debug_graphqlAPI
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.dispatch import receiver
@@ -10,12 +9,13 @@ from django.core.signals import request_started
 _thread = None
 
 def tarea_periodica():
+    from apps.messenger.tasks import messenger_api_task
     while True:
         print("=== TAREA EJECUTÁNDOSE ===")
-        try:
-            debug_graphqlAPI()
-        except Exception as e:
-            print(f"Error al ejecutar debug_graphqlAPI: {str(e)}")
+        # try:
+        messenger_api_task()
+        # except Exception as e:
+        #     print(f"Error al ejecutar messenger_api_task: {str(e)}")
         time.sleep(300)  # Espera 300 segundos (5 minutos)
 
 class StartupConfig(AppConfig):
