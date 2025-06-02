@@ -1,9 +1,9 @@
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
   DialogFooter
 } from "~/components/ui/dialog"
 import { Label } from "~/components/ui/label"
@@ -36,25 +36,25 @@ const roles = [
 ]
 
 interface UsersEditUserDialogProps {
-  isEditDialogOpen: boolean, 
-  setIsEditDialogOpen: React.Dispatch<React.SetStateAction<boolean>>, 
-  formData: UserFormData, 
-  setFormData: React.Dispatch<React.SetStateAction<UserFormData>>, 
-  formErrors: FormErrors, 
-  isLoading: boolean, 
+  isEditDialogOpen: boolean,
+  setIsEditDialogOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  formData: UserFormData,
+  setFormData: React.Dispatch<React.SetStateAction<UserFormData>>,
+  formErrors: FormErrors,
+  isLoading: boolean,
   handleUpdateUser: () => Promise<void>
 }
 
-export default function UsersEditUserDialog({ 
-  isEditDialogOpen, 
-  setIsEditDialogOpen, 
-  formData, 
-  setFormData, 
-  formErrors, 
-  isLoading, 
-  handleUpdateUser 
+export default function UsersEditUserDialog({
+  isEditDialogOpen,
+  setIsEditDialogOpen,
+  formData,
+  setFormData,
+  formErrors,
+  isLoading,
+  handleUpdateUser
 }: UsersEditUserDialogProps) {
-  const { register, handleSubmit, setValue, formState: { errors }, reset } = useForm({ 
+  const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(UpdateUserSchema) })
 
     useEffect(() => {
@@ -82,7 +82,10 @@ export default function UsersEditUserDialog({
     // setValue('first_name', '');
     // setValue('last_name', '');
   }
-  
+
+  console.log({errors});
+
+
 
   return (
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -101,7 +104,7 @@ export default function UsersEditUserDialog({
                 value={formData.username}
                 className={formErrors.username ? "border-red-500" : ""}
                 {...register('username', { onChange: (e) => setFormData((prev) => ({ ...prev, username: e.target.value })) })}
-              
+
               />
               {errors.username?.message && <p className="text-sm text-red-500">{errors.username?.message}</p>}
             </div>
@@ -142,7 +145,7 @@ export default function UsersEditUserDialog({
               </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="editRole">Rol *</Label>
@@ -186,7 +189,7 @@ export default function UsersEditUserDialog({
             Cancelar
           </Button>
           <Button form="edit-user-form" type="submit" disabled={isLoading}>
-            {isLoading ? "Actualizando..." : "Actualizar Usuarior"}
+            {isLoading ? "Actualizando..." : "Actualizar Usuario"}
           </Button>
         </DialogFooter>
       </DialogContent>

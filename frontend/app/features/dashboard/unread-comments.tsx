@@ -68,25 +68,28 @@ const UnReadComments = () => {
               <Loader2 className="w-6 h-6 animate-spin"/>
             </div>
           }
-          {comments?.map((Opinión) => (
-            <div key={Opinión.id} className="flex items-start gap-4 rounded-lg border p-3">
+          {comments?.map((opinion) => (
+            <div key={opinion.id} className="flex items-start gap-4 rounded-lg border p-3 relative">
               <div className="flex-1 space-y-1">
-                <p className="text-sm font-medium leading-none">{Opinión?.user?.username}</p>
-                <p className="text-sm text-muted-foreground">{Opinión.text}</p>
-                {
-                  Opinión?.classification && (
-                    <div className="text-white rounded-lg text-xs p-2 text-center max-w-48" style={{ background: getClassificationColor(Opinión.classification.name) }}>
-                      {Opinión.classification?.name}
-                    </div>
-                  )
-                }
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  <span>{transformDate(Opinión.created_at)}</span>
+                <p className="text-sm font-medium leading-none">{opinion?.user?.username}</p>
+                <p className="text-sm text-muted-foreground">{opinion.text}</p>
+
+                <div className="w-full flex justify-between">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>{transformDate(opinion.created_at)}</span>
+                  </div>
+                  {
+                    opinion?.classification && (
+                      <div className="text-white rounded-lg text-xs p-2 text-center max-w-48" style={{ background: getClassificationColor(opinion.classification.name) }}>
+                        {opinion.classification?.name}
+                      </div>
+                    )
+                  }
                 </div>
               </div>
 
-              <div>
+              <div className="absolute right-3 top-0">
                 <Button variant="secondary" className="w-10 h-4 text-[10px]">
                   Nuevo
                 </Button>

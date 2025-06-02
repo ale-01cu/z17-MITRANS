@@ -1,6 +1,7 @@
 from django.db import models
 from simple_history.models import HistoricalRecords
 import uuid
+from apps.messenger.models import Conversation
 
 
 # Create your models here.
@@ -15,6 +16,15 @@ class Comment(models.Model):
         editable=False,
         verbose_name="ID externo"
     )
+
+    messenger_id = models.CharField(
+        max_length=255,
+        unique=True,
+        editable=False,
+        verbose_name="ID de Messenger",
+        null=True
+    )
+
     text = models.TextField(
         verbose_name="Comentario"
     )
@@ -53,6 +63,16 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         verbose_name="Fuente",
     )
+
+    messenger_conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE
+    )
+
+    messenger_created_at = models.DateTimeField(
+        verbose_name="Fecha de creación en messenger"
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Fecha de creación"
@@ -63,13 +83,16 @@ class Comment(models.Model):
     def __str__(self):
         return f"Comment(text={self.text}, user={self.user}, created_at={self.created_at})"
 
+
     @property
     def _history_user(self):
         return self.changed_by
 
+
     @_history_user.setter
     def _history_user(self, value):
         self.changed_by = value
+
 
     def save(self, *args, **kwargs):
         if not self.external_id:
