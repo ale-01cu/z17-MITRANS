@@ -13,7 +13,7 @@ interface BotContextI {
 }
 
 export const BotContext = createContext<BotContextI>({
-    botStatus: 'running',
+    botStatus: 'off',
     setBotStatus: () => {} // Función vacía (solo para valor por defecto)
 });
 

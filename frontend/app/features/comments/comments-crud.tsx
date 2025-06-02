@@ -25,6 +25,7 @@ import TimeSelector from "~/components/time-selector"
 import ExportToExcelBtn from "./export-to-excel-btn"
 import ExportAllToExcelBtn from "./export-all-to-excel-btn"
 import ImportFromExcelDialog from "./import-from-excel-dialog"
+import useComments from "~/hooks/useComments"
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
@@ -36,7 +37,6 @@ export default function CommentsCrud() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [currentComment, setCurrentComment] = useState<CommentServerResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [deleteIsLoading, setDeleteIsLoading] = useState<boolean>(false)
   const [pages, setPages] = useState<number>(0)
   const [selectedComments, setSelectedComments] = useState<CommentServerResponse[]>([])
@@ -47,23 +47,15 @@ export default function CommentsCrud() {
   const debounceSearchTerm = useDebounce(searchTerm, 200)
   const [ newCommentCounter, setNewCommentCounter ] = useState(0)
   const [ lastHours, setLastHours ] = useState<string | undefined>()
+  const [ isDetailOpen, setIsDetailopen ] = useState(false)
+  const [ commentDetail, setCommentDetail ] = useState<CommentServerResponse | null>(null)
+  const { data, isFetching } = useComments(currentPage)
 
   useEffect(() => {
-      setIsLoading(true)
-      listCommentsApi({ page: currentPage })
-        .then(data => {
-          setComments(data.results)
-          setFilteredComments(data.results)
-          setPages(data.pages)
-        })
-        .catch(e => {
-          console.error("Error fetching data:", e)
-        })
-       .finally(() => {
-         setIsLoading(false)
-       })
-
-  }, [currentPage])
+    setComments(data?.results || [])
+    setFilteredComments(data?.results || [])
+    setPages(data?.pages || 0)
+  }, [currentPage, data])
 
   useEffect(() => {
     const term = debounceSearchTerm?.toLowerCase() || ""
@@ -161,6 +153,11 @@ export default function CommentsCrud() {
     setIsDeleteOpen(true)
   }
 
+  const openDetailDialog = (comment: CommentServerResponse) => {
+    setCommentDetail(comment)
+    setIsDetailopen(true)
+  }
+
   console.log({filteredComments});
   
 
@@ -170,12 +167,13 @@ export default function CommentsCrud() {
       <Card className="rounded-md flex-3">
         <CommentsListTable
           filteredComments={filteredComments}
-          isLoading={isLoading}
+          isLoading={isFetching}
           openEditDialog={openEditDialog}
           openDeleteDialog={openDeleteDialog}
           selectedComments={selectedComments}
           setSelectedComments={setSelectedComments}
           isConsultant={isConsultant}
+          openDetailDialog={openDetailDialog}
         />
         <CommentListPagination
           nextUrl={`/comment?page=${currentPage+1}`}
@@ -248,6 +246,64 @@ export default function CommentsCrud() {
         </Card>
       </div>
       
+
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailopen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalle del la Opinión</DialogTitle>
+            {/* <DialogDescription>Complete el formulario para crear un nueva Opinión.</DialogDescription> */}
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <div className="flex flex-col gap-2">
+              <span>
+                Usuario Propietario
+              </span>
+              <span className="text-sm">
+                {commentDetail?.user_owner?.name || "-"}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <span>
+                Fuente
+              </span>
+              <span className="text-sm">
+                {commentDetail?.source.name || "-"}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span>
+                Clasificación
+              </span>
+              <span className="text-sm">
+                {commentDetail?.classification?.name || "-"}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span>
+                Contenido
+              </span>
+              <span className="text-sm">
+                {commentDetail?.text || '-'}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span>
+                Fecha
+              </span>
+              <span className="text-sm">
+                {commentDetail?.created_at || "-"}
+              </span>
+            </div>
+
+            {commentDetail?.is_new && "Nuevo"}
+          </div>
+
+        </DialogContent>
+      </Dialog>
 
      {!isConsultant &&  <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">

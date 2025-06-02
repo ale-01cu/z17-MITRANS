@@ -1,9 +1,17 @@
-import { Edit, Trash2, Loader } from "lucide-react";
+import { Edit, Trash2, Loader, Eye } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Checkbox } from "~/components/ui/checkbox";
 import type { CommentServerResponse } from "~/types/comments";
 import { getClassificationColor, transformDate } from "~/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 
 interface CommentsListTableProps {
   filteredComments: CommentServerResponse[];
@@ -13,6 +21,7 @@ interface CommentsListTableProps {
   selectedComments: CommentServerResponse[];
   setSelectedComments: (comments: CommentServerResponse[]) => void;
   isConsultant: boolean;
+  openDetailDialog: (comment: CommentServerResponse) => void;
 }
 
 const CommentsListTable = ({
@@ -23,6 +32,7 @@ const CommentsListTable = ({
   selectedComments,
   setSelectedComments,
   isConsultant,
+  openDetailDialog
 }: CommentsListTableProps) => {
   const toggleComment = (comment: CommentServerResponse) => {
     const isSelected = selectedComments.some((c) => c.id === comment.id);
@@ -89,19 +99,19 @@ const CommentsListTable = ({
               className="cursor-pointer" // Cambiamos el cursor para indicar que es clickeable
             >
               <TableCell className="relative">
-                {comment.is_new && <span className="absolute left-1 top-1 text-[8px] bg-green-400 rounded-full w-2 h-2"></span>}
+                {comment.is_new && <span className="absolute -left-1 top-[36%] text-[8px] bg-green-400 rounded-full w-1.5 h-4"></span>}
 
                 <Checkbox
                   checked={selectedComments.some((c) => c.id === comment.id)}
                   onCheckedChange={() => toggleComment(comment)}
                 />
               </TableCell>
-              <TableCell className="relative">
+              <TableCell className="relative min-w-0 max-w-16 xl:max-w-24 2xl:max-w-36 truncate">
                 {comment.user_owner?.name}
               </TableCell>
               <TableCell>{comment.source?.name}</TableCell>
               <TableCell><div className="text-xs">{transformDate(comment.created_at)}</div></TableCell>
-              <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-56 truncate">{comment.text}</TableCell>
+              <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-36 truncate">{comment.text}</TableCell>
               <TableCell>
                 <div
                   className="text-white rounded-lg w-32 text-xs p-2 text-center"
@@ -113,11 +123,16 @@ const CommentsListTable = ({
               {!isConsultant && (
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    {/* {comment.is_new && 
-                      <span className="text-xs">
-                        Nuevo
-                      </span>
-                    } */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Evitamos que el clic en el botón active el evento de la fila
+                        openDetailDialog(comment);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="outline"
                       size="icon"
