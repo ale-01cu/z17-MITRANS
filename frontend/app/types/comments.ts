@@ -23,5 +23,6 @@ export interface CommentServerResponse {
   user_owner: UserOwner | null
   source: Source
   created_at: string
+  is_new: boolean
 
 }
