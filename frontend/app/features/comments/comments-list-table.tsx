@@ -88,13 +88,17 @@ const CommentsListTable = ({
               onClick={() => toggleComment(comment)} // Agregamos el evento onClick aquí
               className="cursor-pointer" // Cambiamos el cursor para indicar que es clickeable
             >
-              <TableCell>
+              <TableCell className="relative">
+                {comment.is_new && <span className="absolute left-1 top-1 text-[8px] bg-green-400 rounded-full w-2 h-2"></span>}
+
                 <Checkbox
                   checked={selectedComments.some((c) => c.id === comment.id)}
                   onCheckedChange={() => toggleComment(comment)}
                 />
               </TableCell>
-              <TableCell>{comment.user_owner?.name}</TableCell>
+              <TableCell className="relative">
+                {comment.user_owner?.name}
+              </TableCell>
               <TableCell>{comment.source?.name}</TableCell>
               <TableCell><div className="text-xs">{transformDate(comment.created_at)}</div></TableCell>
               <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-56 truncate">{comment.text}</TableCell>
@@ -109,6 +113,11 @@ const CommentsListTable = ({
               {!isConsultant && (
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
+                    {/* {comment.is_new && 
+                      <span className="text-xs">
+                        Nuevo
+                      </span>
+                    } */}
                     <Button
                       variant="outline"
                       size="icon"

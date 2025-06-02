@@ -8,7 +8,8 @@ from apps.source.serializers import SourceSerializer
 from apps.classification.serializers import ClassificationSerializer
 from apps.classification.models import Classification
 from django.core.exceptions import ObjectDoesNotExist
-
+from datetime import timedelta
+from django.utils import timezone
 
 class CommentSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
@@ -32,22 +33,30 @@ class CommentSerializer(serializers.ModelSerializer):
         source='source'  # <--- IMPORTANTE: Vincula este campo de entrada al campo 'source' del modelo
     )
 
+    is_new = serializers.SerializerMethodField()
+
     class Meta:
         model = Comment
         fields = ['id', 'text', 'classification',
                   'user', 'created_at', 'user_owner_id',
                   'user_owner_name', 'user_owner',
-                  'source_id', 'source', 'classification_id', 'external_id'
+                  'source_id', 'source', 'classification_id', 'external_id', 'is_new'
                   ]
 
         read_only_fields = ['id', 'created_at', 'user',
-                            'user_owner', 'source'
+                            'user_owner', 'source', 'is_new'
                             ]
 
     def get_id(self, obj):
         if isinstance(obj, dict):
             return obj.get('external_id')
         return getattr(obj, 'external_id', None)  # Maneja caso None seguro
+
+
+    def get_is_new(self, obj):
+        now = timezone.now()
+        time_threshold = now - timedelta(hours=24)
+        return obj.created_at >= time_threshold
 
 
     def create(self, validated_data):
