@@ -10,14 +10,14 @@ import { Toaster } from "~/components/ui/sonner";
 import { createContext, useContext } from "react";
 import { useWebSocket } from "./hooks/useWebSocket";
 import UserProvider from "./context/UserProvider";
-import { WebSocketProvider } from "./context/WebSocketProvider";
-import BotProvider from "./context/BotProvider";
-
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import type { Route } from "./+types/root";
 import "./app.css";
 
 // Mantenemos la definición del contexto aquí ya que es global
 export const WebSocketContext = createContext<ReturnType<typeof useWebSocket> | null>(null);
+
+const queryClient = new QueryClient()
 
 
 export const useWebSocketContext = () => {
@@ -51,7 +51,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
         <Toaster />
         <ScrollRestoration />
         <Scripts />
