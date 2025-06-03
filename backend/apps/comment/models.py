@@ -2,6 +2,7 @@ from django.db import models
 from simple_history.models import HistoricalRecords
 import uuid
 from apps.messenger.models import Conversation
+from apps.user.models import Entity
 
 
 # Create your models here.
@@ -67,6 +68,12 @@ class Comment(models.Model):
     messenger_conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE
+    )
+
+    entity = models.ForeignKey(
+        Entity,
+        on_delete=models.CASCADE,
+        verbose_name='Entidad'
     )
 
     messenger_created_at = models.DateTimeField(

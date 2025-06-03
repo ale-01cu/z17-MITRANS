@@ -1,4 +1,5 @@
 from django.db import models
+from simple_history.models import HistoricalRecords
 import uuid
 
 # Create your models here.
@@ -29,6 +30,8 @@ class Source(models.Model):
         auto_now_add=True,
         verbose_name="Fecha de creación"
     )
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"Source(name={self.name}, url={self.url}, created_at={self.created_at})"

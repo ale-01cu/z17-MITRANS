@@ -613,7 +613,7 @@ class Bot:
             contours = img_handler.find_contours_by_large_contours_mask()
             # self.show_contours(contours=contours, title="find_contours_by_large_contours_mask")
 
-        # self.show_contours(contours=contours, title="find_text_area_contours")
+        self.show_contours(contours=contours, title="find_text_area_contours")
 
         possible_text_contours = []
         chat_contour = self.find_chat_area_contour()

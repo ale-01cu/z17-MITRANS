@@ -61,7 +61,7 @@ export default function UsersList({ users, handleEditUser, handleDeleteUser, sea
                             {user.is_active ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{new Date(user.create_at).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>

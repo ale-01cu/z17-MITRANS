@@ -3,6 +3,101 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from simple_history.models import HistoricalRecords
 import uuid
 
+
+
+
+class Entity(models.Model):
+    class Meta:
+        verbose_name = 'Entidad'
+        verbose_name_plural = 'Entidades'
+
+    external_id = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False,
+        verbose_name="ID externo"
+    )
+
+    name = models.CharField(
+        max_length=120,
+        unique=True,
+        verbose_name='Nombre de Usuario'
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Activo',
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name='Fecha de creado',
+        auto_now_add=True
+    )
+
+    history = HistoricalRecords()
+
+    def save(self, *args, **kwargs):
+        if not self.external_id:
+            unique_id = uuid.uuid4().hex
+            self.external_id = f"enty_{unique_id}"
+        super().save(*args, **kwargs)
+
+
+    def __str__(self):
+        return self.name
+
+
+class FacebookPage(models.Model):
+    class Meta:
+        verbose_name = 'Página de Facebook'
+        verbose_name_plural = 'Páginas de Facebook'
+
+    external_id = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False,
+        verbose_name="ID externo"
+    )
+
+    entity = models.OneToOneField(
+        Entity,
+        on_delete=models.CASCADE,
+        verbose_name='Entidad'
+    )
+
+    facebook_access_token = models.CharField(
+        max_length=255,
+        null=True,
+        verbose_name='Token de acceso a Facebook'
+    )
+
+    facebook_page_id = models.CharField(
+        max_length=255,
+        null=True,
+        verbose_name='ID de la página de Facebook'
+    )
+
+    facebook_page_name = models.CharField(
+        max_length=255,
+        null=True,
+        verbose_name='Nombre de la página de Facebook'
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name='Fecha de creado',
+        auto_now_add=True
+    )
+
+    history = HistoricalRecords()
+
+    def save(self, *args, **kwargs):
+        if not self.external_id:
+            unique_id = uuid.uuid4().hex
+            self.external_id = f"fb_page_{unique_id}"
+        super().save(*args, **kwargs)
+
+
+
 class UserAccountManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
         if not username:
@@ -81,9 +176,18 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         verbose_name="Rol"
     )
 
-    create_at = models.DateTimeField(
+    created_at = models.DateTimeField(
         verbose_name='Fecha de creado',
         auto_now_add=True
+    )
+
+
+    entity = models.ForeignKey(
+        Entity,
+        on_delete=models.CASCADE,
+        verbose_name='Entidad',
+        null=True,
+        blank=True,
     )
 
     history = HistoricalRecords()

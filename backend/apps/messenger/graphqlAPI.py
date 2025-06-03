@@ -4,82 +4,93 @@ from django.conf import settings
 import requests
 
 BASE_URL = settings.FACEBOOK_BASE_URL
-PAGE_ID = settings.FACEBOOK_PAGE_ID
-ACCESS_TOKEN = settings.FACEBOOK_ACCESS_TOKEN
 
 
-def get_conversations(platform: str = "messenger"):
-    """
-    Obtiene todas las conversaciones de la página
-    """
-    url = f"{BASE_URL}/{PAGE_ID}/conversations"
-    params = {
-        "platform": platform,
-        "access_token": ACCESS_TOKEN
-    }
-    response = requests.get(url, params=params)
-    return response.json()
+class FacebookAPIGraphql:
+
+    def __init__(self,
+                 facebook_page_name: str = None,
+                 facebook_access_token: str = None,
+                 facebook_page_id: str = None):
+
+        self.facebook_page_name = facebook_page_name
+        self.facebook_access_token = facebook_access_token
+        self.facebook_page_id = facebook_page_id
 
 
-def get_conversation_with_user(user_id: str, platform: str = "messenger"):
-    """
-    Obtiene la conversación con un usuario específico
-    """
-    url = f"{BASE_URL}/{PAGE_ID}/conversations"
-    params = {
-        "platform": platform,
-        "user_id": user_id,
-        "access_token": ACCESS_TOKEN
-    }
-    response = requests.get(url, params=params)
-    return response.json()
+    def get_conversations(self, platform: str = "messenger"):
+        """
+        Obtiene todas las conversaciones de la página
+        """
+        url = f"{BASE_URL}/{self.facebook_page_id}/conversations"
+
+        params = {
+            "platform": platform,
+            "access_token": self.facebook_access_token
+        }
+        response = requests.get(url, params=params)
+        return response.json()
 
 
-def get_messages(conversation_id: str):
-    """
-    Obtiene los mensajes de una conversación específica
-    """
-    url = f"{BASE_URL}/{conversation_id}"
-    params = {
-        "fields": "messages",
-        "access_token": ACCESS_TOKEN
-    }
-    response = requests.get(url, params=params)
-    return response.json()
+    def get_conversation_with_user(self, user_id: str, platform: str = "messenger"):
+        """
+        Obtiene la conversación con un usuario específico
+        """
+        url = f"{BASE_URL}/{self.facebook_page_id}/conversations"
+        params = {
+            "platform": platform,
+            "user_id": user_id,
+            "access_token": self.facebook_access_token
+        }
+        response = requests.get(url, params=params)
+        return response.json()
 
 
-def get_message_details(message_id: str):
-    """
-    Obtiene detalles de un mensaje específico
-    """
-    url = f"{BASE_URL}/{message_id}"
-    params = {
-        "fields": "id,created_time,from,to,message",
-        "access_token": ACCESS_TOKEN
-    }
-    response = requests.get(url, params=params)
-    return response.json()
+    def get_messages(self, conversation_id: str):
+        """
+        Obtiene los mensajes de una conversación específica
+        """
+        url = f"{BASE_URL}/{conversation_id}"
+        params = {
+            "fields": "messages",
+            "access_token": self.facebook_access_token
+        }
+        response = requests.get(url, params=params)
+        return response.json()
 
 
-def debug_graphqlAPI():
-    converstions = get_conversations()
+    def get_message_details(self, message_id: str):
+        """
+        Obtiene detalles de un mensaje específico
+        """
+        url = f"{BASE_URL}/{message_id}"
+        params = {
+            "fields": "id,created_time,from,to,message",
+            "access_token": self.facebook_access_token
+        }
+        response = requests.get(url, params=params)
+        return response.json()
 
-    for conversation in converstions['data']:
-        messages = get_messages(conversation_id=conversation['id'])
-        messages = messages['messages']['data']
 
-        for msg in messages:
-            msg_detail = get_message_details(message_id=msg['id'])
-            id = msg_detail['id']
-            message = msg_detail['message']
-            user_from = msg_detail['from']['name']
-            users_to = msg_detail['to']['data']
+    def debug_graphqlAPI(self):
+        converstions = self.get_conversations()
 
-            print(f'Antes del bucle del print.')
+        for conversation in converstions['data']:
+            messages = self.get_messages(conversation_id=conversation['id'])
+            messages = messages['messages']['data']
 
-            for user_to in users_to:
-                user_to_name = user_to['name']
-                print(f'Messages from {user_from} to {user_to_name} -> {message}')
+            for msg in messages:
+                msg_detail = self.get_message_details(message_id=msg['id'])
+                id = msg_detail['id']
+                message = msg_detail['message']
+                user_from = msg_detail['from']['name']
+                users_to = msg_detail['to']['data']
+
+                print(f'Antes del bucle del print.')
+
+                for user_to in users_to:
+                    user_to_name = user_to['name']
+                    print(f'Messages from {user_from} to {user_to_name} -> {message}')
 
 # def task_consult():
 #     """

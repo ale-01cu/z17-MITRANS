@@ -9,5 +9,5 @@ export interface User {
   is_staff: boolean,
   role: string,
   is_active: boolean,
-  create_at: string
+  created_at: string
 }

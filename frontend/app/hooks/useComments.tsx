@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query"
 import listCommentsApi from "~/api/comments/list-comments-api"
 
 export default function useComments(currentPage: number) {
-  const { data, isFetching } = useQuery({
+  const { data, status } = useQuery({
     queryKey: ['comments'], 
-    refetchInterval: 300000,
+    refetchInterval: 5000,
     staleTime: 5000,
     gcTime: 3000,
     queryFn: async () => await listCommentsApi({ page: currentPage })}
@@ -13,6 +13,6 @@ export default function useComments(currentPage: number) {
 
   return {
     data,
-    isFetching
+    isFetching: status === 'pending'
   }
 }

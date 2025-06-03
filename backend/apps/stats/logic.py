@@ -17,74 +17,73 @@ CLASSIFICATION_COLORS = {
     'default': "#CCCCCC"         # Color por defecto si falta alguna clasificación
 }
 
-def get_comments_by_classification_counts(): # Renombrada para el nuevo formato
+def get_comments_by_classification_counts(user):
     """
-    Calcula el número de comentarios para cada clasificación y devuelve
-    una lista de diccionarios con formato {name, value, color}.
+    Calcula el número de comentarios para cada clasificación, filtrando por la entidad del usuario,
+    y devuelve una lista de diccionarios con formato {name, value, color}.
+
+    Args:
+        user: El usuario autenticado (debe tener el campo 'entity')
 
     Returns:
-        list: Una lista de diccionarios, donde cada diccionario representa
-              una clasificación con su nombre, número de comentarios (value),
-              y un color asociado. Devuelve una lista vacía en caso de error.
-              Ej: [{'name': 'sugerencia', 'value': 5, 'color': '#4DABFF'}, ...]
+        list: Una lista de diccionarios con el formato:
+              [{'name': 'sugerencia', 'value': 5, 'color': '#4DABFF'}, ...]
+              Devuelve lista vacía en caso de error.
     """
     try:
-        # 1. Anotar cada Classification con la cuenta de sus comentarios relacionados
+        # Filtro base: solo comentarios de la entidad del usuario (si no es superusuario)
+        # if user.entity is None return empty list
+        base_filter = {}
+
+        if not user.is_superuser and hasattr(user, 'entity') and user.entity:
+            base_filter = {'comments__user_owner__entity': user.entity}
+
+        # 1. Anotar cada Classification con la cuenta de comentarios (filtrados por entidad)
         classification_counts_qs = Classification.objects.annotate(
-            comment_count=Count('comments')  # Usando el related_name 'comments'
+            comment_count=Count(
+                'comments',
+                filter=Q(**base_filter)  # Aplicamos el filtro aquí
+            )
         ).values(
             'name',
             'comment_count'
         )
 
-        # 2. Preparar la lista de resultados en el formato deseado
+        # 2. Preparar los resultados en el formato deseado
         formatted_results = []
         for item in classification_counts_qs:
             classification_name = item['name']
             comment_count = item['comment_count']
 
-            # Obtener el color del diccionario, usando 'default' si no se encuentra
+            # Saltar clasificaciones con 0 comentarios (opcional)
+            if comment_count == 0:
+                continue
+
             color = CLASSIFICATION_COLORS.get(classification_name, CLASSIFICATION_COLORS['default'])
 
-            # Añadir el diccionario formateado a la lista
             formatted_results.append({
                 "name": classification_name,
                 "value": comment_count,
                 "color": color
             })
 
-        # 3. Devolver la lista formateada. La vista se encargará de la Response.
         return formatted_results
 
     except Exception as e:
-        # Loguear el error para depuración es importante
-        print(f"Error en get_comments_by_classification_formatted: {e}")
-        # Devolver una lista vacía para indicar un fallo
-        return []
-
-    except Exception as e:
-        # Es buena idea loguear el error aquí para depuración
         print(f"Error en get_comments_by_classification_counts: {e}")
-        # Devolver un diccionario vacío o None para indicar fallo a la vista llamadora
-        return {}
+        return []  # Devuelve lista vacía en caso de error
 
 
-def get_comment_statistics_with_percentages(): # Renombrado para claridad
+def get_comment_statistics_with_percentages(user):
     """
-    Calcula estadísticas sobre los comentarios, incluyendo porcentajes relativos.
+    Calcula estadísticas sobre los comentarios de la misma entidad que el usuario,
+    incluyendo porcentajes relativos.
+
+    Args:
+        user: El usuario autenticado (debe tener el campo 'entity')
 
     Returns:
-        dict: Un diccionario con las siguientes claves:
-            - total_comments (int): Número total de comentarios.
-            - classified_comments (int): Número de comentarios que tienen una clasificación asignada.
-            - unclassified_comments (int): Número de comentarios que NO tienen clasificación.
-            - urgent_comments (int): Número de comentarios clasificados como 'pregunta' o 'denuncia'.
-            - new_unread_comments (int): Número de comentarios marcados como no leídos (is_read=False).
-            - comments_last_month (int): Número de comentarios creados en los últimos 30 días.
-            - percentage_last_month_vs_total (float): % de comentarios del último mes sobre el total.
-            - percentage_classified_vs_total (float): % de comentarios clasificados sobre el total.
-            - percentage_unclassified_vs_total (float): % de comentarios no clasificados sobre el total.
-            - percentage_urgent_vs_classified (float): % de comentarios urgentes sobre los clasificados.
+        dict: Un diccionario con estadísticas filtradas por entidad.
     """
     # Define los nombres de las clasificaciones consideradas urgentes
     urgent_classification_names = ['pregunta', 'denuncia']
@@ -93,50 +92,64 @@ def get_comment_statistics_with_percentages(): # Renombrado para claridad
     now = timezone.now()
     one_month_ago = now - timedelta(days=30)
 
-    # --- 1. Realiza la consulta de agregación para obtener las cuentas ---
-    statistics_counts = Comment.objects.aggregate(
+    # Filtro base: solo comentarios de la entidad del usuario (si no es superusuario)
+    # if user.entity is None return empty value
+    base_filter = Q()
+
+    if not user.is_superuser and hasattr(user, 'entity') and user.entity:
+        base_filter = Q(user_owner__entity=user.entity)
+
+    # --- 1. Realiza la consulta de agregación con filtro por entidad ---
+    statistics_counts = Comment.objects.filter(base_filter).aggregate(
         total_comments=Count('pk'),
         classified_comments=Count('pk', filter=Q(classification__isnull=False)),
         unclassified_comments=Count('pk', filter=Q(classification__isnull=True)),
         urgent_comments=Count('pk', filter=Q(classification__name__in=urgent_classification_names)),
-        # Cuenta comentarios creados desde hace un mes hasta ahora
+        new_unread_comments=Count('pk'),
         comments_last_month=Count('pk', filter=Q(created_at__gte=one_month_ago))
     )
 
-    # --- 2. Calcula los porcentajes usando las cuentas obtenidas ---
-    # Usa .get(key, 0) para evitar errores si alguna cuenta fuera None (aunque Count devuelve 0)
+    # --- 2. Calcula los porcentajes ---
     total = statistics_counts.get('total_comments', 0)
     classified = statistics_counts.get('classified_comments', 0)
     unclassified = statistics_counts.get('unclassified_comments', 0)
     urgent = statistics_counts.get('urgent_comments', 0)
     last_month = statistics_counts.get('comments_last_month', 0)
+    new_unread = statistics_counts.get('new_unread_comments', 0)
 
-    # Función auxiliar para calcular porcentaje y manejar división por cero
     def calculate_percentage(numerator, denominator):
-        if denominator > 0:
-            return round((numerator / denominator) * 100, 1) # Redondea a 1 decimal
-        return 0.0 # O 0 si prefieres entero
+        return round((numerator / denominator) * 100, 1) if denominator > 0 else 0.0
 
-    percentage_last_month_vs_total = calculate_percentage(last_month, total)
-    percentage_classified_vs_total = calculate_percentage(classified, total)
-    percentage_unclassified_vs_total = calculate_percentage(unclassified, total)
-    percentage_urgent_vs_classified = calculate_percentage(urgent, classified) # ¡Base es 'classified'!
-
-    # --- 3. Combina las cuentas y los porcentajes en el diccionario final ---
-    # Crea una copia para no modificar el diccionario original si no se desea
-    final_statistics = statistics_counts.copy()
-    final_statistics['percentage_last_month_vs_total'] = percentage_last_month_vs_total
-    final_statistics['percentage_classified_vs_total'] = percentage_classified_vs_total
-    final_statistics['percentage_unclassified_vs_total'] = percentage_unclassified_vs_total
-    final_statistics['percentage_urgent_vs_classified'] = percentage_urgent_vs_classified
+    # --- 3. Prepara el diccionario final ---
+    final_statistics = {
+        'total_comments': total,
+        'classified_comments': classified,
+        'unclassified_comments': unclassified,
+        'urgent_comments': urgent,
+        'new_unread_comments': new_unread,
+        'comments_last_month': last_month,
+        'percentage_last_month_vs_total': calculate_percentage(last_month, total),
+        'percentage_classified_vs_total': calculate_percentage(classified, total),
+        'percentage_unclassified_vs_total': calculate_percentage(unclassified, total),
+        'percentage_urgent_vs_classified': calculate_percentage(urgent, classified),
+    }
 
     return final_statistics
 
 
-def get_classification_timeline(start_date=None, end_date=None, period='day'):
+def get_classification_timeline(user, start_date=None, end_date=None, period='day'):
     """
-    Genera una línea de tiempo con la frecuencia de comentarios por clasificación.
-    (Docstring igual que antes)
+    Genera una línea de tiempo con la frecuencia de comentarios por clasificación,
+    filtrada por la entidad del usuario.
+
+    Args:
+        user: El usuario autenticado (debe tener el campo 'entity')
+        start_date: Fecha de inicio (opcional)
+        end_date: Fecha de fin (opcional)
+        period: Periodo de agrupación ('day', 'week' o 'month')
+
+    Returns:
+        list: Lista de diccionarios con la frecuencia de comentarios por periodo y clasificación
     """
     # --- 1. Definir fechas y clasificaciones ---
     today = date.today()
@@ -158,23 +171,29 @@ def get_classification_timeline(start_date=None, end_date=None, period='day'):
         TruncClass = TruncMonth
         date_format = "%Y-%m"
         output_date_format = lambda d: d.strftime(date_format)
-    else: # Default to 'day'
+    else:  # Default to 'day'
         period = 'day'
         TruncClass = TruncDate
         date_format = "%Y-%m-%d"
         output_date_format = lambda d: d.strftime(date_format)
 
-    # --- 3. Construir la consulta de agregación ---
-    queryset = Comment.objects.filter(
-        classification__isnull=False,
-        # Asegúrate de que el campo sea DateTimeField o DateField para que __date funcione
-        created_at__date__gte=start_date,
-        created_at__date__lte=end_date,
-        classification__name__in=classification_names
-    ).annotate(
-        period_start=TruncClass('created_at') # Trunca a Date
+    # --- 3. Construir la consulta con filtro por entidad ---
+    base_filter = Q(classification__isnull=False,
+                    created_at__date__gte=start_date,
+                    created_at__date__lte=end_date,
+                    classification__name__in=classification_names)
+
+    # Añadir filtro por entidad si el usuario no es superusuario
+    # if user.entity is None return empty value
+    base_filter &= Q()
+
+    if not user.is_superuser and hasattr(user, 'entity') and user.entity:
+        base_filter &= Q(user_owner__entity=user.entity)
+
+    queryset = Comment.objects.filter(base_filter).annotate(
+        period_start=TruncClass('created_at')
     ).values(
-        'period_start', # Ya es un Date
+        'period_start',
         'classification__name'
     ).annotate(
         count=Count('id')
@@ -186,10 +205,7 @@ def get_classification_timeline(start_date=None, end_date=None, period='day'):
     timeline_data = defaultdict(lambda: {name: 0 for name in classification_names})
 
     for item in queryset:
-        # --- CORRECCIÓN AQUÍ ---
-        # item['period_start'] ya es un objeto datetime.date
         period_start_date = item['period_start']
-        # -------------------------
         class_name = item['classification__name']
         count = item['count']
 

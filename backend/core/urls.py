@@ -41,4 +41,5 @@ urlpatterns = [
     path('api/img-proc/', include('apps.img_process.urls')),
     path('api/user-owner/', include('apps.comment_user_owner.urls')),
     path('api/stats/', include('apps.stats.urls')),
+    path('api/users/', include('apps.user.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

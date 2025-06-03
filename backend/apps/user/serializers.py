@@ -18,7 +18,7 @@ class UserSerializer(BaseUserSerializer):
             'is_staff',
             'role',
             'is_active',
-            'create_at'
+            'created_at'
         )
 
     # Hacemos que el password no sea obligatorio
@@ -44,6 +44,6 @@ class UserAddSerializer(UserCreateSerializer):
             'is_staff',
             'role',
             'is_active',
-            'create_at'
+            'created_at'
         )
 

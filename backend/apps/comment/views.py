@@ -60,18 +60,32 @@ class CommentAPIView(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
     def get_queryset(self):
-        # Obtener el parámetro de horas desde la solicitud
+        queryset = super().get_queryset()
+
+        user = self.request.user
+
+        # 1. Filtro por entidad del usuario autenticado (si no es superusuario)
+        # if self.request.user.entity is None return empty value
+        if user.is_superuser:
+            return queryset.all()
+
+        if hasattr(user, 'entity') and user.entity:
+            queryset = queryset.filter(entity=user.entity).select_related('entity')
+
+        else:
+            return queryset.none()
+
+        # 2. Filtro opcional por horas (manteniendo la lógica existente)
         hours = self.request.query_params.get('last_hours')
         if hours:
             try:
                 hours = int(hours)
-                # Calcular la fecha y hora hace X horas
                 time_threshold = now() - timedelta(hours=hours)
-                # Filtrar comentarios creados después de esa fecha
-                return self.queryset.filter(created_at__gte=time_threshold)
+                queryset = queryset.filter(created_at__gte=time_threshold)
             except ValueError:
-                pass  # Ignorar si el parámetro no es un número válido
-        return self.queryset
+                pass  # Ignorar si el parámetro no es válido
+
+        return queryset
 
 
 REQUIRED_FIELDS: List[str] = ['Comentario', 'Fuente']

@@ -1,9 +1,5 @@
 # my_app/tasks.py
-from .graphqlAPI import (
-    get_conversations,
-    get_messages,
-    get_message_details
-)
+from .graphqlAPI import FacebookAPIGraphql
 from django.conf import settings
 import logging
 from datetime import datetime
@@ -11,15 +7,25 @@ from .models import Conversation
 from apps.comment_user_owner.models import UserOwner
 from apps.comment.models import Comment
 from apps.source.models import Source
+from apps.user.models import Entity
+from apps.classification.ml.model_loader import predict_comment_label
+from apps.classification.models import Classification
 
 logger = logging.getLogger(__name__)
 
 FACEBOOK_PAGE_NAME = settings.FACEBOOK_PAGE_NAME
 
-def messenger_api_task():
+def messenger_api_task(facebook_page_name: str = None,
+                       facebook_access_token: str = None,
+                       facebook_page_id: str = None,
+                       entity_name: str = None):
     logger.info("Executing messenger_api_task")
 
-    conversations_data = get_conversations()  # Renombrado para claridad
+    apiGql = FacebookAPIGraphql(facebook_page_name,
+                                    facebook_access_token,
+                                    facebook_page_id)
+
+    conversations_data = apiGql.get_conversations()  # Renombrado para claridad
     stop_loop_conversations = False  # Renombrado para claridad
 
     if not conversations_data or 'data' not in conversations_data:
@@ -49,7 +55,7 @@ def messenger_api_task():
             if curr_dt <= old_dt:
                 continue
 
-        messages_data = get_messages(conversation_api_id)  # Renombrado para claridad
+        messages_data = apiGql.get_messages(conversation_api_id)  # Renombrado para claridad
 
         if not messages_data or 'messages' not in messages_data:
             logger.error(f"No messages data received or format is incorrect for conversation {conversation_api_id}.")
@@ -84,7 +90,7 @@ def messenger_api_task():
                         f"Most recent message for conversation API ID {conversation_api_id} already in DB. Stopping further conversation processing.")
                 break  # Salir del bucle de mensajError processing messagees para esta conversación
 
-            msg_details_api = get_message_details(message_api_data['id'])
+            msg_details_api = apiGql.get_message_details(message_api_data['id'])
 
             if not msg_details_api:
                 logger.error(f"Could not get details for message API ID: {message_api_data['id']}")
@@ -143,7 +149,18 @@ def messenger_api_task():
                         created_at=created_time
                     )
 
+                label = predict_comment_label(comment=message_content)
+
+                classification = Classification.objects.filter(name=label).first()
+
+                if not classification:
+                    classification = Classification.objects.create(
+                        name=label,
+                        description=f"Etiqueta generada automáticamente para el comentario '{message_content}'",
+                    )
+
                 conversation = Conversation.objects.filter(messenger_id=conversation_api_id).first()
+                entity = Entity.objects.filter(name=entity_name).first()
 
                 # Guardar el mensaje
                 Comment.objects.create(
@@ -151,8 +168,9 @@ def messenger_api_task():
                     text=message_content,
                     user=None,
                     user_owner=user,
+                    entity=entity,
                     post=None,
-                    classification=None,
+                    classification=classification,
                     source=source,
                     messenger_conversation=conversation,
                     messenger_created_at=created_time

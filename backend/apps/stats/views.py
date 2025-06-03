@@ -11,9 +11,9 @@ class StatsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        comments_by_classification = get_comments_by_classification_counts()
-        statistics = get_comment_statistics_with_percentages()
-        classification_timeline = get_classification_timeline()
+        comments_by_classification = get_comments_by_classification_counts(user=request.user)
+        statistics = get_comment_statistics_with_percentages(user=request.user)
+        classification_timeline = get_classification_timeline(user=request.user)
 
         return Response({
             'comments_by_classification': comments_by_classification,

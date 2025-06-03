@@ -55,7 +55,6 @@ LOCAL_APPS = [
     'apps.bot',
     'apps.stats',
     'apps.messenger.apps.MessengerConfig',
-    # 'apps.messenger.MyappConfig'
 ]
 
 THIRD_APPS = [
