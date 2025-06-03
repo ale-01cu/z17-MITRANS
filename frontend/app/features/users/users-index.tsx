@@ -86,9 +86,9 @@ export default function UsersIndex() {
       //   errors.email = "Please enter a valid email address"
       // }
 
-      if(editingUser && !data.role.trim()) {
-        errors.role = "El rol es requerido."
-      }
+      // if(editingUser && !data.role.trim()) {
+      //   errors.role = "El rol es requerido."
+      // }
 
   
       // if (!data.role) {
@@ -123,21 +123,26 @@ export default function UsersIndex() {
     // Create user
     const handleCreateUser = async () => {
       // e.preventDefault()
+
+      
       const errors = validateForm(formData)
       console.log({errors});
       
-  
+      
       if (isDuplicateEmail(formData.email)) {
         errors.email = "Ya existe un usuario con ese email."
       }
-  
+
+      console.log(Object.keys(errors).length);
+      
+      
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors)
         return
       }
-  
+      
       setIsLoading(true)
-  
+
       try {
         const newUser: User = {
           id: null,
@@ -150,14 +155,19 @@ export default function UsersIndex() {
           is_active: false,
           is_superuser: formData.role === SUPERUSER_TEXT_ROLE,
           is_staff: formData.role === STAFF_TEXT_ROLE,
-          create_at: new Date().toString(),
+          created_at: new Date().toString(),
         }
 
-        await postCreateUsersApi({
+        const newUserCreated = await postCreateUsersApi({
           ...newUser, 
           password: formData.password, 
           re_password: formData.re_password
         })
+
+        newUser.id = newUserCreated.id
+
+        console.log({newUser});
+        
         
         setUsers((prev) => [...prev, newUser])
         setIsCreateDialogOpen(false)
@@ -179,6 +189,8 @@ export default function UsersIndex() {
   
     // Edit user
     const handleEditUser = (user: User) => {
+      console.log({user});
+      
       setEditingUser(user)
       setFormData({
         username: user.username,
@@ -202,7 +214,7 @@ export default function UsersIndex() {
       if (!editingUser) return
   
       const errors = validateForm(formData)
-  
+
       if (isDuplicateEmail(formData.email, editingUser.external_id)) {
         errors.email = "Ya existe un usuario con este correo"
       }
@@ -213,7 +225,7 @@ export default function UsersIndex() {
       }
   
       setIsLoading(true)
-  
+
       try {
         // Simulate API call
         await putUsersApi({
@@ -251,6 +263,8 @@ export default function UsersIndex() {
           style: { backgroundColor: "#17c964" },
         })
       } catch (error) {
+        console.log({error});
+        
         toast("Error actualizando al usuario", {
           description: "Hubo un error actualizando el usuario. Por favor intentelo de nuevo.",
           style: { backgroundColor: "#f31260" },
@@ -283,7 +297,7 @@ export default function UsersIndex() {
         setIsLoading(false)
       }
     }
-  
+
     return (
       <div className="container mx-auto py-10 space-y-4">
         {/* Header */}

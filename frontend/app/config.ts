@@ -11,6 +11,7 @@ export const API_TOKEN_REFRESH = '/auth/jwt/refresh/'
 export const API_SIGNUP = '/auth/users/'
 export const API_USER_ME = '/auth/users/me/'
 export const API_USERS = '/auth/users/'
+export const API_LIST_USERS = '/api/users/'
 
 
 export const API_COMMENTS = "/api/comment/"

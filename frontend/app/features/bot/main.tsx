@@ -1,21 +1,18 @@
-import { useEffect, useState } from "react"
 import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/card"
 import { Badge } from "~/components/ui/badge"
-import { Play, Pause, Power } from "lucide-react"
+import { Play, Power } from "lucide-react"
 import BotView from "./bot-view"
-import useIsSuperuser from "~/hooks/useIsSuperuser"
-import { useWebSocket } from "~/hooks/useWebSocket"
-import { useWebSocketContext } from "~/root"
 import { useContext } from "react"
 import { BotContext } from "~/context/BotProvider"
+import useIsManager from "~/hooks/useIsManager"
 
 export default function Main() {
   // Sample chat messages
   // Bot status
   // const { emit } = useWebSocketContext()
   // const [botStatus, setBotStatus] = useState<"running" | "off" | "working">("running")
-  const isSuperUser = useIsSuperuser()
+  const isManager = useIsManager()
   const { botStatus, setBotStatus } = useContext(BotContext)
 
   // useEffect(() => {
@@ -99,7 +96,7 @@ export default function Main() {
           <Badge className={`${getStatusColor()} text-white`}>{getStatusText()}</Badge>
         </div>
 
-        {isSuperUser && <div className="space-y-3 mt-auto">
+        {isManager && <div className="space-y-3 mt-auto">
           <h3 className="font-medium mb-2">Controles:</h3>
           <Button
             className="w-full flex items-center justify-center"

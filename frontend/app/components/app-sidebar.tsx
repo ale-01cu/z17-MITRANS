@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
   SidebarFooter
 } from "~/components/ui/sidebar"
-import { Calendar, Home, Search, Settings, Pickaxe, MessageSquareTextIcon, Bot, User, User2 } from "lucide-react"
+import { Home, Pickaxe, MessageSquareTextIcon, Bot, User, User2 } from "lucide-react"
 import { Button } from "./ui/button"
 import { useLocation, useNavigate } from "react-router"
 import { removeCookie } from "~/utils/cookies"
@@ -28,14 +28,14 @@ const baseItems = [
     title: "Bot",
     url: "/bot",
     icon: Bot,
-    requiresSuperuser: true, // Añadimos una bandera para identificarlo
+    requiresManager: true, // Añadimos una bandera para identificarlo
   },
   // El item "Extraer" se manejará condicionalmente
   {
     title: "Extraer",
     url: "/extract",
     icon: Pickaxe,
-    requiresSuperuserOrManager: true, // Añadimos una bandera para identificarlo
+    requiresManager: true, // Añadimos una bandera para identificarlo
   },
   {
     title: "Gestionar Opiniones",
@@ -46,7 +46,7 @@ const baseItems = [
     title: "Gestionar Usuarios",
     url: "/users",
     icon: User,
-    requiresSuperuser: true,
+    requiresManager: true,
   },
   // {
   //   title: "Configuraciones",
@@ -75,11 +75,8 @@ export function AppSidebar() {
 
   // Filtra los items basado en la condición de superusuario
   const items = baseItems.filter((item) => {
-    if (item.requiresSuperuser) {
-      return isSuperuser; // Solo incluir si el usuario es superusuario
-    }
-    if (item.requiresSuperuserOrManager) {
-      return isSuperuser || isManager; // Incluir si el usuario es superusuario o manager
+    if (item.requiresManager) {
+      return isManager || isSuperuser; // Incluir si el usuario es manager
     }
     return true; // Incluir siempre si no tiene restricciones
   });
@@ -98,7 +95,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu de navegación</SidebarGroupLabel>
+          <SidebarGroupLabel>Menu de Navegación</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {/* Mapea sobre la lista filtrada de items */}
