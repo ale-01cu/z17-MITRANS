@@ -105,7 +105,7 @@ const ImportFromExcelDialog = () => {
 
   return (
     <>
-      <Button onClick={() => setIsOpen(true)}>
+      <Button onClick={() => setIsOpen(true)} variant="secondary">
         Importar Opiniones
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -155,7 +155,11 @@ const ImportFromExcelDialog = () => {
 
 
           {/* Mostrar los comentarios recibidos */}
-          {isLoading ? <div className="w-full p-4 flex justify-center items-center"><Loader2 className="w-8 h-8 animate-spin"/></div> :
+          {isLoading 
+            ? <div className="w-full p-4 flex justify-center items-center">
+                <Loader2 className="w-8 h-8 animate-spin"/>
+              </div> 
+            :
            (
             <div className="mt-6">
               <h3 className="text-lg font-medium">Opiniones encontradas:</h3>

@@ -196,9 +196,6 @@ export default function CommentsCrud() {
             />
           </div>
 
-          {!isConsultant && <Button onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
-            <Plus className="h-4 w-4" /> Nueva Opinión
-          </Button>}
 
           <UserOwnerSelector
             value={selectedUser}
@@ -230,6 +227,9 @@ export default function CommentsCrud() {
 
           {/* <DatePickerWithRange/> */}
 
+          {!isConsultant && <Button variant="outline" onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
+            <Plus className="h-4 w-4" /> Nueva Opinión
+          </Button>}
 
           {!isConsultant && <ClassifyBtnByCommentId 
             comments={selectedComments}

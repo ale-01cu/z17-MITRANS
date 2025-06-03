@@ -22,7 +22,7 @@ const ExportAllToExcelBtn = () => {
 
 
   return ( 
-    <Button onClick={handleExportToExcel} className="">
+    <Button onClick={handleExportToExcel} variant="secondary" className="">
       {isLoading && <Loader2 className="animate-spin w-4 h-4" />}
       Exportar todo a Excel
     </Button> 

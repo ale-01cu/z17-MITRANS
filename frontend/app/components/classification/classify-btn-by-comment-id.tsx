@@ -57,6 +57,7 @@ const ClassifyBtnByCommentId = ({ comments, setComments }: Props) => {
   return (
     <Button
       className="flex justify-start w-full"
+      variant="secondary"
       onClick={handleClassify}
       disabled={isClassifying || !hasUnclassifiedComments} // Desactivar si está clasificando o no hay comentarios sin clasificar
     >
