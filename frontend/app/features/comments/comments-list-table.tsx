@@ -4,14 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Checkbox } from "~/components/ui/checkbox";
 import type { CommentServerResponse } from "~/types/comments";
 import { getClassificationColor, transformDate } from "~/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu"
+import "./comments-styles.css"
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 
 interface CommentsListTableProps {
   filteredComments: CommentServerResponse[];
@@ -99,7 +93,17 @@ const CommentsListTable = ({
               className="cursor-pointer" // Cambiamos el cursor para indicar que es clickeable
             >
               <TableCell className="relative">
-                {comment.is_new && <span className="absolute -left-1 top-[36%] text-[8px] bg-green-400 rounded-full w-1.5 h-4"></span>}
+                {comment.is_new && 
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="new-gradient absolute -left-1 top-[36%] text-[8px] bg-green-400 rounded-full w-1.5 h-4"></span>
+                    </TooltipTrigger>
+
+                    <TooltipContent>
+                      Nueva Opinión
+                    </TooltipContent>
+                  </Tooltip>
+                }
 
                 <Checkbox
                   checked={selectedComments.some((c) => c.id === comment.id)}
@@ -114,8 +118,8 @@ const CommentsListTable = ({
               <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-36 truncate">{comment.text}</TableCell>
               <TableCell>
                 <div
-                  className="text-white rounded-lg w-32 text-xs p-2 text-center"
-                  style={{ background: getClassificationColor(comment?.classification?.name) }}
+                  className="rounded-lg w-32 text-xs p-2 text-center border"
+                  style={{ borderColor: getClassificationColor(comment?.classification?.name) }}
                 >
                   {comment.classification ? comment?.classification?.name : "-"}
                 </div>

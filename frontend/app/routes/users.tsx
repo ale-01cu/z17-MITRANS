@@ -1,12 +1,12 @@
-import type { Route } from "./+types/dashboard";
 import UsersIndex from "~/features/users/users-index";
 
-export function meta({}: Route.MetaArgs) {
+import { type MetaFunction } from "react-router";
+
+export const meta: MetaFunction = () => {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Usuarios - OpiCuba" },
   ];
-}
+};
 
 export default function Users() {
   return <UsersIndex/>;

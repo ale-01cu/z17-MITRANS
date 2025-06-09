@@ -26,6 +26,7 @@ import ExportToExcelBtn from "./export-to-excel-btn"
 import ExportAllToExcelBtn from "./export-all-to-excel-btn"
 import ImportFromExcelDialog from "./import-from-excel-dialog"
 import useComments from "~/hooks/useComments"
+import { Label } from "~/components/ui/label"
 
 export default function CommentsCrud() {
   const [comments, setComments] = useState<CommentServerResponse[]>([])
@@ -158,11 +159,8 @@ export default function CommentsCrud() {
     setIsDetailopen(true)
   }
 
-  console.log({filteredComments});
-  
-
   return (
-    <div className="space-y-6 flex gap-6">
+    <div className="space-y-6 flex gap-4">
 
       <Card className="rounded-md flex-3">
         <CommentsListTable
@@ -184,8 +182,12 @@ export default function CommentsCrud() {
         />
       </Card>
 
-      <div className="w-[278px]">
-        <Card className="flex-1 flex flex-col p-4 gap-4 fixed top-6 right-6 bottom-6">
+      <div className="w-[280px]">
+        <Card className="flex-1 flex flex-col p-4 gap-4 fixed top-6 right-6 bottom-6 overflow-y-auto">
+          <Label className="text-sm">
+            Buscar
+          </Label>
+
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -196,6 +198,9 @@ export default function CommentsCrud() {
             />
           </div>
 
+          <Label className="text-sm">
+            Filtros
+          </Label>
 
           <UserOwnerSelector
             value={selectedUser}
@@ -226,6 +231,13 @@ export default function CommentsCrud() {
           />
 
           {/* <DatePickerWithRange/> */}
+
+
+
+          <Label className="text-sm">
+            Acciones
+          </Label>
+
 
           {!isConsultant && <Button variant="outline" onClick={() => setIsCreateOpen(true)} className="flex items-center justify-start gap-2">
             <Plus className="h-4 w-4" /> Nueva Opinión

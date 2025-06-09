@@ -81,7 +81,7 @@ const UnReadComments = () => {
                   </div>
                   {
                     opinion?.classification && (
-                      <div className="text-white rounded-lg text-xs p-2 text-center max-w-48" style={{ background: getClassificationColor(opinion.classification.name) }}>
+                      <div className="rounded-lg text-xs p-2 text-center max-w-48 border" style={{ borderColor: getClassificationColor(opinion.classification.name) }}>
                         {opinion.classification?.name}
                       </div>
                     )

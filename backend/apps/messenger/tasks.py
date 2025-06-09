@@ -32,8 +32,7 @@ def messenger_api_task(facebook_page_name: str = None,
         logger.error("No conversation data received or format is incorrect.")
         return
 
-    for conv_api_data in conversations_data['data']:  # Iterar sobre los datos de la API
-
+    for conv_api_data in conversations_data['data'][::-1]:  # Iterar sobre los datos de la API
         conversation_api_id = conv_api_data['id']  # ID de la conversación desde la API
 
         # verificar el tiempo de actualizacion de esta conversacion que
@@ -64,7 +63,7 @@ def messenger_api_task(facebook_page_name: str = None,
         messages_api_list = messages_data['messages']['data']
         stop_loop_messages = False  # Bandera para este bucle de mensajes
 
-        for i, message_api_data in enumerate(messages_api_list):  # Iterar sobre los datos de mensajes de la API
+        for i, message_api_data in enumerate(messages_api_list[::-1]):  # Iterar sobre los datos de mensajes de la API
             # Verificar que el mensaje ya fue leido o no
             # si es el primer mensaje y ya fue leido entonces detener toda la revision
             # en caso de que el primero no sea leido continuar
@@ -88,7 +87,7 @@ def messenger_api_task(facebook_page_name: str = None,
                     stop_loop_conversations = True  # Indicamos que no se procesen más conversaciones
                     logger.info(
                         f"Most recent message for conversation API ID {conversation_api_id} already in DB. Stopping further conversation processing.")
-                break  # Salir del bucle de mensajError processing messagees para esta conversación
+                continue  # Salir del bucle de mensajError processing messagees para esta conversación
 
             msg_details_api = apiGql.get_message_details(message_api_data['id'])
 

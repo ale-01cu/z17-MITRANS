@@ -32,9 +32,11 @@ const UserOwnerSelector = ({ value, handleChange, error, isFilter = false, class
         <SelectContent>
           {isFilter && <SelectItem value="all">Todos las usuarios</SelectItem>}
           {users.map((user) => (
-            <SelectItem key={user.id} value={user.id}>
-              {user.name}
-            </SelectItem>
+            <>
+              <SelectItem key={user.id} value={user.id}>
+                {user.name}
+              </SelectItem>
+            </>
           ))}
         </SelectContent>
       </Select>
