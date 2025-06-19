@@ -24,5 +24,6 @@ export interface CommentServerResponse {
   source: Source
   created_at: string
   is_new: boolean
+  is_media: boolean
 
 }

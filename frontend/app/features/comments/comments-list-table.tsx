@@ -115,7 +115,24 @@ const CommentsListTable = ({
               </TableCell>
               <TableCell>{comment.source?.name}</TableCell>
               <TableCell><div className="text-xs">{transformDate(comment.created_at)}</div></TableCell>
-              <TableCell className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-36 truncate">{comment.text}</TableCell>
+              <TableCell className="">
+                {comment.is_media 
+                  ? <div className="px-2 py-1 bg-neutral-100 text-neutral-500 rounded-lg text-center">
+                      Foto/Video/Audio
+                    </div>
+                  : <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="min-w-0 max-w-16 xl:max-w-24 2xl:max-w-36 truncate">
+                          {comment.text}
+                        </div>
+                      </TooltipTrigger>
+
+                      <TooltipContent>
+                        {comment.text}
+                      </TooltipContent>
+                    </Tooltip>
+                }
+              </TableCell>
               <TableCell>
                 <div
                   className="rounded-lg w-32 text-xs p-2 text-center border"

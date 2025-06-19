@@ -7,7 +7,6 @@ from apps.comment_user_owner.serializers import UserOwnerSerializer
 from apps.source.serializers import SourceSerializer
 from apps.classification.serializers import ClassificationSerializer
 from apps.classification.models import Classification
-from django.core.exceptions import ObjectDoesNotExist
 from datetime import timedelta
 from django.utils import timezone
 
@@ -34,17 +33,18 @@ class CommentSerializer(serializers.ModelSerializer):
     )
 
     is_new = serializers.SerializerMethodField()
+    is_media = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ['id', 'text', 'classification',
                   'user', 'created_at', 'user_owner_id',
                   'user_owner_name', 'user_owner',
-                  'source_id', 'source', 'classification_id', 'external_id', 'is_new'
+                  'source_id', 'source', 'classification_id', 'external_id', 'is_new', 'is_media'
                   ]
 
         read_only_fields = ['id', 'created_at', 'user',
-                            'user_owner', 'source', 'is_new'
+                            'user_owner', 'source', 'is_new', 'is_media'
                             ]
 
     def get_id(self, obj):
@@ -57,6 +57,13 @@ class CommentSerializer(serializers.ModelSerializer):
         now = timezone.now()
         time_threshold = now - timedelta(hours=24)
         return obj.created_at >= time_threshold
+
+
+    def get_is_media(self, obj):
+        if not obj.text:
+            return True
+
+        return False
 
 
     def create(self, validated_data):

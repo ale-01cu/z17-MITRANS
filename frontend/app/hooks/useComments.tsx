@@ -10,7 +10,6 @@ export default function useComments(currentPage: number) {
     queryFn: async () => await listCommentsApi({ page: currentPage })}
   )
 
-
   return {
     data,
     isFetching: status === 'pending'
