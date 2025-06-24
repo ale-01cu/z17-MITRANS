@@ -11,6 +11,8 @@ from apps.user.models import Entity
 from apps.classification.ml.model_loader import predict_comment_label
 from apps.classification.models import Classification
 from .utils import validate_answer_format_and_extract
+from datetime import timedelta
+from django.utils import timezone  # Import correcto
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ def messenger_api_task(facebook_page_name: str = None,
                        facebook_access_token: str = None,
                        facebook_page_id: str = None,
                        entity_name: str = None):
-    logger.info("Executing messenger_api_task")
+    logger.info(f"Executing [messenger_api_task] task for entity {entity_name} and page {facebook_page_name}")
 
     apiGql = FacebookAPIGraphql(facebook_page_name,
                                     facebook_access_token,
@@ -224,11 +226,7 @@ def messenger_api_task(facebook_page_name: str = None,
         if stop_loop_conversations:
             break  # Salir del bucle de conversaciones
 
-    logger.info("Finished fetching and storing API data.")
-
-
-from datetime import timedelta
-from django.utils import timezone  # Import correcto
+    logger.info(f"Finished [messenger_api_task] task for entity {entity_name}.")
 
 
 def send_messsage_to_conversations_less_than_24h_task(
@@ -246,7 +244,7 @@ def send_messsage_to_conversations_less_than_24h_task(
         return
 
 
-    logger.info("Executing send_messsage_to_conversations_less_than_24h_task")
+    logger.info("Executing [send_messsage_to_conversations_less_than_24h_task] task.")
 
 
     apiGql = FacebookAPIGraphql(facebook_page_name,
@@ -294,6 +292,9 @@ def send_messsage_to_conversations_less_than_24h_task(
         if response:
             conversation.is_final_answer_sent = True
             conversation.save()
+
+
+    logger.info(f"Finished [send_messsage_to_conversations_less_than_24h_task] task.")
 
 
 

@@ -59,10 +59,11 @@ class FacebookPage(models.Model):
         verbose_name="ID externo"
     )
 
-    entity = models.OneToOneField(
+    entity = models.ForeignKey(
         Entity,
         on_delete=models.CASCADE,
-        verbose_name='Entidad'
+        verbose_name='Entidad',
+        related_name='facebook_pages'
     )
 
     facebook_access_token = models.CharField(
