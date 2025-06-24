@@ -27,6 +27,27 @@ class Conversation(models.Model):
         verbose_name="Link de la conversación"
     )
 
+    is_answer_sent = models.BooleanField(
+        default=False,
+        verbose_name='El sistema le respodio al usuario.'
+    )
+
+    is_user_reply_received = models.BooleanField(
+        default=False,
+        verbose_name='Se recivio la respuesta correcta del usuario.'
+    )
+
+    is_final_answer_sent = models.BooleanField(
+        default=False,
+        verbose_name='Se envió la respuesta final al usuario.'
+    )
+
+    last_answer_date_sent = models.DateTimeField(
+        verbose_name="Fecha de la ultima respuesta enviada",
+        null=True,
+        blank=True
+    )
+
     # Fecha de creación de la conversación en messenger
     messenger_updated_at = models.DateTimeField(
         verbose_name="Fecha de modificación en messenger"

@@ -1,8 +1,14 @@
 # Stage 1: Base build stage
-FROM python:3.13-slim AS builder
+FROM python:3.11-slim AS builder
  
 # Create the app directory
 RUN mkdir /app
+
+# Instala las dependencias del sistema para psycopg2
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
  
 # Set the working directory
 WORKDIR /app
@@ -15,11 +21,12 @@ WORKDIR /app
 #RUN pip install --upgrade pip
  
 # Copy the requirements file first (better caching)
-COPY requirements.txt /app/
+COPY requirements.txt .
  
 # Install Python dependencies
-RUN pip install --resume-retries-r requirements.txt
- 
+# RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
+
 ## Stage 2: Production stage
 #FROM python:3.13-slim
 #

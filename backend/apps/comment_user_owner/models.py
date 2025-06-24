@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import RegexValidator
 from simple_history.models import HistoricalRecords
 import uuid
 
@@ -15,9 +16,46 @@ class UserOwner(models.Model):
         verbose_name="ID externo"
     )
 
+    facebook_id = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False,
+        verbose_name="ID de usuario en Facebook",
+        null=True,
+        blank=True
+    )
+
     name = models.CharField(
         max_length=100,
         verbose_name="Nombre"
+    )
+
+    phone_number = models.CharField(
+        max_length=50,
+        validators=[
+            RegexValidator(
+                regex=r'^[5-7]\d{7}$',
+                message='El numero debe de tener 8 digitos y comenzar por 5, 6 o 7 (Ej: 51234567)'
+            )
+        ],
+        help_text="Ej: 51234567 (8 dígitos, sin '+53', espacios o guiones).",
+        null=True,
+        blank=True
+    )
+
+    email = models.EmailField(
+        max_length=255,
+        unique=True,
+        verbose_name='Correo',
+        null=True,
+        blank=True
+    )
+
+    province = models.CharField(
+        max_length=50,
+        verbose_name="Provincia",
+        null=True,
+        blank=True
     )
 
     created_at = models.DateTimeField(

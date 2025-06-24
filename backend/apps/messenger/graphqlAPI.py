@@ -92,6 +92,56 @@ class FacebookAPIGraphql:
                     user_to_name = user_to['name']
                     print(f'Messages from {user_from} to {user_to_name} -> {message}')
 
+
+    def send_text_message(self, psid, message_text):
+        """
+        Sends a text message to a user via Facebook Messenger using the Graph API.
+
+        Args:
+            psid (str): The Page-Scoped User ID (PSID) of the recipient.
+            message_text (str): The text message to send.
+
+        Returns:
+            dict: JSON response from the API or None if an error occurred.
+        """
+        url = f"{BASE_URL}/{self.facebook_page_id}/messages"
+
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "recipient": {
+                "id": psid
+            },
+            "messaging_type": "RESPONSE",
+            "message": {
+                "text": message_text
+            }
+        }
+
+        params = {
+            "access_token": self.facebook_access_token
+        }
+
+        try:
+            response = requests.post(url, json=payload, headers=headers, params=params)
+            data = response.json()
+
+            if "error" in data:
+                print(f"Error sending message: {data['error']['message']}")
+                return None
+
+            print("Message sent successfully!")
+            print(f"Recipient ID: {data.get('recipient_id')}")
+            print(f"Message ID: {data.get('message_id')}")
+
+            return data
+
+        except Exception as e:
+            print(f"An error occurred while sending the message: {str(e)}")
+            return None
+
 # def task_consult():
 #     """
 #     Esta función define la secuencia de acciones que se ejecutarán periódicamente.
@@ -147,6 +197,8 @@ class FacebookAPIGraphql:
 #         time.sleep(1)          # Espera 1 segundo antes de volver a comprobar
 # except KeyboardInterrupt:
 #     print("Programador detenido por el usuario.")
+
+
 # Conversation Schema
 # {
 #   "data": [
