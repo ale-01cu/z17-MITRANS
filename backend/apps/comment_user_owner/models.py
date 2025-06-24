@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from simple_history.models import HistoricalRecords
+from apps.user.models import Entity
 import uuid
 
 # Create your models here.
@@ -56,6 +57,12 @@ class UserOwner(models.Model):
         verbose_name="Provincia",
         null=True,
         blank=True
+    )
+
+    entity = models.ForeignKey(
+        Entity,
+        on_delete=models.CASCADE,
+        verbose_name='Entidad'
     )
 
     created_at = models.DateTimeField(

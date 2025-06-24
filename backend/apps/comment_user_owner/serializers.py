@@ -6,8 +6,8 @@ class UserOwnerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserOwner
-        fields = ('id', 'name', 'created_at')
-        read_only_fields = ('id', 'created_at')
+        fields = ('id', 'name', 'phone_number', 'email', 'province' ,'created_at')
+        read_only_fields = ('id', 'name', 'created_at')
 
     def get_id(self, obj):
         return obj.external_id

@@ -114,11 +114,13 @@ def messenger_api_task(facebook_page_name: str = None,
                 continue
 
             user = UserOwner.objects.filter(name=user_from_name).first()
+            entity = Entity.objects.filter(name=entity_name).first()
 
             if not user:
                 user = UserOwner.objects.create(
                     name=user_from_name,
-                    facebook_id=user_from_id
+                    facebook_id=user_from_id,
+                    entity=entity
                 )
 
             # ============================================= Check User Response for extract data ======================================================
