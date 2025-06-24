@@ -4,10 +4,11 @@ export default [
   layout("./features/protected-route.tsx", [
     layout("./layouts/sidebar-layout.tsx", [
       index("routes/dashboard.tsx"),
-      route("/extract", "routes/extract.tsx"),
+      // route("/extract", "routes/extract.tsx"),
       route("/comment", "routes/comments.tsx"),
-      route("/bot", "routes/bot.tsx"),
-      route("/users", "routes/users.tsx")
+      // route("/bot", "routes/bot.tsx"),
+      route("/users", "routes/users.tsx"),
+      route("/user-transmitter", "routes/user-owner.tsx")
   
     ]),
   ]),

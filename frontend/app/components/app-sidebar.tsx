@@ -24,18 +24,23 @@ const baseItems = [
     url: "/",
     icon: Home,
   },
+  // {
+  //   title: "Bot",
+  //   url: "/bot",
+  //   icon: Bot,
+  //   requiresManager: true, // Añadimos una bandera para identificarlo
+  // },
+  // // El item "Extraer" se manejará condicionalmente
+  // {
+  //   title: "Extraer",
+  //   url: "/extract",
+  //   icon: Pickaxe,
+  //   requiresManager: true, // Añadimos una bandera para identificarlo
+  // },
   {
-    title: "Bot",
-    url: "/bot",
-    icon: Bot,
-    requiresManager: true, // Añadimos una bandera para identificarlo
-  },
-  // El item "Extraer" se manejará condicionalmente
-  {
-    title: "Extraer",
-    url: "/extract",
-    icon: Pickaxe,
-    requiresManager: true, // Añadimos una bandera para identificarlo
+    title: "Usuarios Emisores",
+    url: "/user-transmitter",
+    icon: MessageSquareTextIcon,
   },
   {
     title: "Gestionar Opiniones",
