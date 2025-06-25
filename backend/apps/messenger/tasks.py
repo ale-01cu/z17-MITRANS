@@ -74,7 +74,7 @@ def messenger_api_task(facebook_page_name: str = None,
             # Verificar que el mensaje ya fue leido o no
             # si es el primer mensaje y ya fue leido entonces detener toda la revision
             # en caso de que el primero no sea leido continuar
-            conversation = Conversation.objects.filter(messenger_id=conversation_api_id).first()
+            # conversation = Conversation.objects.filter(messenger_id=conversation_api_id).first()
 
             if conversation:
                 comment = Comment.objects.filter(
@@ -131,23 +131,27 @@ def messenger_api_task(facebook_page_name: str = None,
                     and conversation.is_answer_sent
                     and not conversation.is_user_reply_received
                     and conversation.last_answer_date_sent  # Aseguramos que no sea None
-                    and (timezone.now() - conversation.last_answer_date_sent) < timedelta(hours=72)
+                    # and (timezone.now() - conversation.last_answer_date_sent) < timedelta(hours=72)
             )
 
             if can_extract_user_data_from_message:
-                is_ok, data = validate_answer_format_and_extract(user_answer=message_content)
+                if (timezone.now() - conversation.last_answer_date_sent) < timedelta(hours=24):
+                    is_ok, data = validate_answer_format_and_extract(user_answer=message_content)
 
-                if is_ok:
-                    phone = data['phone']
-                    email = data['email']
-                    province = data['province']
+                    if is_ok:
+                        phone = data['phone']
+                        email = data['email']
+                        province = data['province']
 
-                    user.phone_number = phone
-                    user.email = email
-                    user.province = province
-                    user.save()
+                        user.phone_number = phone
+                        user.email = email
+                        user.province = province
+                        user.save()
 
-                    conversation.is_user_reply_received = True
+                        conversation.is_user_reply_received = True
+                        conversation.save()
+                else:
+                    conversation.is_answer_sent = False
                     conversation.save()
             # ============================================= Check User Response for extract data ======================================================
 

@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 # Create your views here.
 class CommentAPIView(viewsets.ModelViewSet):
-    queryset = CommentSerializer.Meta.model.objects.all().order_by('-created_at')
+    queryset = CommentSerializer.Meta.model.objects.all().order_by('-messenger_created_at')
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = ResultsSetPagination
