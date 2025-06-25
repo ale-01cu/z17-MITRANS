@@ -36,7 +36,7 @@ def messenger_api_task(facebook_page_name: str = None,
         logger.error("No conversation data received or format is incorrect.")
         return
 
-    for conv_api_data in conversations_data['data'][::-1]:  # Iterar sobre los datos de la API
+    for conv_api_data in conversations_data['data']:  # Iterar sobre los datos de la API
         conversation_api_id = conv_api_data['id']  # ID de la conversación desde la API
 
         # verificar el tiempo de actualizacion de esta conversacion que
@@ -89,7 +89,7 @@ def messenger_api_task(facebook_page_name: str = None,
             if comment:
                 logger.info(
                     f"Message API ID {message_api_data['id']} already exists in DB for conversation API ID {conversation_api_id}.")
-                if i == 0:
+                if i == 0 and not stop_loop_messages:
                     # Si el mensaje ya fue guardado y es el primero (más reciente) de la lista de la API
                     stop_loop_conversations = True  # Indicamos que no se procesen más conversaciones
                     logger.info(
