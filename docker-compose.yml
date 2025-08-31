@@ -1,0 +1,61 @@
+services:
+  # Servicio de PostgreSQL
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: opicuba
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - app_network
+
+  # Servicio de Redis
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app_network
+
+  # Backend (Django)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    command: ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app_network
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  app_network:
