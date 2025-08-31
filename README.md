@@ -1,116 +1,116 @@
-# **Documentación del Sistema de Gestión y Clasificación de Opiniones**
+# **Opinion Management and Classification System Documentation**
 
-## 1. Resumen General
+## 1. General Summary
 
-Este sistema es una aplicación web completa diseñada para gestionar la comunicación a través de Facebook Messenger. Su propósito principal es extraer mensajes de conversaciones, clasificarlos automáticamente mediante un modelo de Machine Learning y presentarlos en una interfaz de usuario intuitiva que permite su análisis y gestión.
+This system is a comprehensive web application designed to manage communication through Facebook Messenger. Its main purpose is to extract messages from conversations, automatically classify them using a Machine Learning model, and present them in an intuitive user interface that allows for their analysis and management.
 
-La plataforma se compone de tres partes principales:
+The platform consists of three main parts:
 
-1.  **Backend (Django):** Un servidor robusto que maneja la lógica de negocio, la comunicación con la API de Facebook, la base de datos y la inteligencia artificial.
-2.  **Frontend (React):** Una interfaz de usuario moderna y reactiva para que los operadores visualicen datos, gestionen opiniones y vean estadísticas.
-3.  **Módulo de Machine Learning:** Un componente integrado en el backend para la clasificación automática de los mensajes.
+1.  **Backend (Django):** A robust server that handles business logic, communication with the Facebook API, the database, and artificial intelligence.
+2.  **Frontend (React):** A modern and reactive user interface for operators to view data, manage opinions, and see statistics.
+3.  **Machine Learning Module:** A component integrated into the backend for the automatic classification of messages.
 
-## 2. Arquitectura del Sistema
+## 2. System Architecture
 
 ### 2.1. Backend (Django)
 
-El backend está construido con el framework Django y utiliza Django REST Framework para exponer una API RESTful.
+The backend is built with the Django framework and uses Django REST Framework to expose a RESTful API.
 
-**Tecnologías Clave:**
+**Key Technologies:**
 
-*   **Django:** Framework principal para el desarrollo web.
-*   **Django REST Framework (DRF):** Para la creación de la API REST.
-*   **Djoser:** Para la gestión de autenticación de usuarios (registro, login, etc.).
-*   **Channels:** Para la comunicación en tiempo real a través de WebSockets.
-*   **Celery:** Para la ejecución de tareas asíncronas en segundo plano, como la extracción de mensajes.
-*   **PostgreSQL:** Como motor de base de datos.
+*   **Django:** Main framework for web development.
+*   **Django REST Framework (DRF):** For creating the REST API.
+*   **Djoser:** For user authentication management (registration, login, etc.).
+*   **Channels:** For real-time communication via WebSockets.
+*   **Celery:** For executing asynchronous background tasks, such as message extraction.
+*   **PostgreSQL:** As the database engine.
 
-**Estructura de Aplicaciones (`apps`):**
+**Application Structure (`apps`):**
 
-*   `core`: Contiene la configuración principal del proyecto (`settings.py`), el enrutamiento de URLs (`urls.py`), la configuración de Celery (`celery.py`) y el punto de entrada para WebSockets (`asgi.py`).
-*   `user`: Gestiona los modelos de datos para `UserAccount`, `Entity` (para agrupar usuarios y páginas de Facebook) y `FacebookPage`.
-*   `messenger`: Es el corazón de la integración con Facebook.
-    *   `graphqlAPI.py`: Contiene la clase `FacebookAPIGraphql` que se comunica con la Graph API de Facebook para obtener conversaciones y mensajes.
-    *   `tasks.py`: Define las tareas de Celery (`messenger_api_task`) que se ejecutan periódicamente para extraer nuevos mensajes de las páginas de Facebook configuradas.
-*   `comment`, `post`, `source`, `comment_user_owner`: Definen los modelos de la base de datos para almacenar las opiniones, las publicaciones de origen, las fuentes (ej. Messenger, Facebook) y los usuarios que emiten las opiniones.
+*   `core`: Contains the main project configuration (`settings.py`), URL routing (`urls.py`), Celery configuration (`celery.py`), and the entry point for WebSockets (`asgi.py`).
+*   `user`: Manages the data models for `UserAccount`, `Entity` (for grouping users and Facebook pages), and `FacebookPage`.
+*   `messenger`: This is the heart of the Facebook integration.
+    *   `graphqlAPI.py`: Contains the `FacebookAPIGraphql` class that communicates with the Facebook Graph API to get conversations and messages.
+    *   `tasks.py`: Defines the Celery tasks (`messenger_api_task`) that run periodically to extract new messages from the configured Facebook pages.
+*   `comment`, `post`, `source`, `comment_user_owner`: Define the database models for storing opinions, source posts, sources (e.g., Messenger, Facebook), and the users who issue the opinions.
 *   `classification`:
-    *   Gestiona el modelo de datos `Classification` donde se almacenan las posibles categorías de un mensaje (ej. "queja", "sugerencia").
-    *   Contiene el módulo de Machine Learning en `apps/classification/ml/`.
-    *   Expone los endpoints de la API para clasificar comentarios (`views.py`).
-*   `bot`: Implementa la lógica de WebSockets.
-    *   `consumers.py`: El `ChatConsumer` maneja las conexiones en tiempo real. Recibe mensajes (tanto del frontend como de un posible bot externo), los procesa, los clasifica usando el modelo de ML y los retransmite a los clientes conectados.
-*   `stats`: Proporciona los endpoints para las estadísticas que se muestran en el dashboard del frontend.
+    *   Manages the `Classification` data model where possible message categories (e.g., "complaint", "suggestion") are stored.
+    *   Contains the Machine Learning module in `apps/classification/ml/`.
+    *   Exposes the API endpoints for classifying comments (`views.py`).
+*   `bot`: Implements the WebSocket logic.
+    *   `consumers.py`: The `ChatConsumer` handles real-time connections. It receives messages (from both the frontend and a possible external bot), processes them, classifies them using the ML model, and relays them to connected clients.
+*   `stats`: Provides the endpoints for the statistics displayed on the frontend dashboard.
 
 ### 2.2. Frontend (React)
 
-La interfaz de usuario es una Single Page Application (SPA) desarrollada con React.
+The user interface is a Single Page Application (SPA) developed with React.
 
-**Tecnologías Clave:**
+**Key Technologies:**
 
-*   **React:** Biblioteca principal para construir la interfaz.
-*   **Vite:** Herramienta de construcción y servidor de desarrollo.
-*   **TypeScript:** Para un tipado estático y un código más robusto.
-*   **React Router:** Para la gestión de rutas en el lado del cliente.
-*   **Tailwind CSS:** Para el diseño y estilos de la aplicación.
-*   **shadcn/ui (inferido):** Utiliza una colección de componentes de UI reutilizables y personalizables (en `components/ui/`) como `Card`, `Button`, `Table`, etc.
-*   **Axios:** Para realizar peticiones HTTP al backend.
+*   **React:** Main library for building the interface.
+*   **Vite:** Build tool and development server.
+*   **TypeScript:** For static typing and more robust code.
+*   **React Router:** For client-side route management.
+*   **Tailwind CSS:** For the application's design and styling.
+*   **shadcn/ui (inferred):** Uses a collection of reusable and customizable UI components (in `components/ui/`) such as `Card`, `Button`, `Table`, etc.
+*   **Axios:** For making HTTP requests to the backend.
 
-**Estructura de Carpetas (`app`):**
+**Folder Structure (`app`):**
 
-*   `api`: Contiene todas las funciones que llaman a los endpoints del backend. Cada función está encapsulada y tipada para una fácil reutilización.
-*   `components`: Almacena componentes de UI reutilizables, incluyendo los componentes base de `ui` y componentes más complejos como `app-sidebar`.
-*   `features`: Organiza la lógica y los componentes por funcionalidad principal de la aplicación (Dashboard, Comentarios, Usuarios, etc.).
-*   `hooks`: Contiene hooks personalizados (`useAuth`, `useIsManager`, etc.) para gestionar estado y lógica compartida.
-*   `layouts`: Define las plantillas de página, como `sidebar-layout.tsx` que incluye la barra de navegación lateral.
-*   `routes`: Define las rutas de la aplicación, mapeando URLs a componentes de página.
+*   `api`: Contains all functions that call the backend endpoints. Each function is encapsulated and typed for easy reuse.
+*   `components`: Stores reusable UI components, including the base components from `ui` and more complex components like `app-sidebar`.
+*   `features`: Organizes logic and components by the main functionality of the application (Dashboard, Comments, Users, etc.).
+*   `hooks`: Contains custom hooks (`useAuth`, `useIsManager`, etc.) to manage shared state and logic.
+*   `layouts`: Defines page templates, such as `sidebar-layout.tsx` which includes the side navigation bar.
+*   `routes`: Defines the application routes, mapping URLs to page components.
 
-### 2.3. Módulo de Machine Learning
+### 2.3. Machine Learning Module
 
-El componente de inteligencia artificial está integrado directamente en el backend, en la ruta `backend/apps/classification/ml/`.
+The artificial intelligence component is integrated directly into the backend, at the path `backend/apps/classification/ml/`.
 
-**Pipeline de Clasificación:**
+**Classification Pipeline:**
 
-1.  **Carga de Modelos (`model_loader.py`):** Al iniciar la aplicación Django, este script carga en memoria los modelos necesarios para evitar cargarlos en cada predicción.
-2.  **Generación de Embeddings:** Un texto de entrada (un mensaje) primero se convierte en un vector numérico utilizando un modelo de `SentenceTransformer` (`paraphrase-MiniLM-L6-v2-tunned`). Este modelo ha sido afinado para entender el contexto semántico del texto en español.
-3.  **Predicción:** El vector numérico generado se pasa a un modelo de clasificación `XGBoost` (`xgboost_model.json`), que predice la etiqueta final (ej. "queja", "pregunta").
-4.  **Decodificación:** La etiqueta predicha, que es un número, se decodifica a su correspondiente texto (ej. de `1` a `"queja"`) usando un `label_encoder.pkl`.
+1.  **Model Loading (`model_loader.py`):** When the Django application starts, this script loads the necessary models into memory to avoid loading them for each prediction.
+2.  **Embedding Generation:** An input text (a message) is first converted into a numerical vector using a `SentenceTransformer` model (`paraphrase-MiniLM-L6-v2-tunned`). This model has been fine-tuned to understand the semantic context of Spanish text.
+3.  **Prediction:** The generated numerical vector is passed to an `XGBoost` classification model (`xgboost_model.json`), which predicts the final label (e.g., "complaint", "question").
+4.  **Decoding:** The predicted label, which is a number, is decoded to its corresponding text (e.g., from `1` to `"complaint"`) using a `label_encoder.pkl`.
 
-Las categorías de clasificación predefinidas se encuentran en `backend/apps/classification/classifications.py`.
+The predefined classification categories are located in `backend/apps/classification/classifications.py`.
 
-## 3. Flujo de Datos Principal (Extracción y Clasificación)
+## 3. Main Data Flow (Extraction and Classification)
 
-1.  **Tarea Programada:** Una tarea de Celery (`messenger_api_task`) se ejecuta cada cierto intervalo de tiempo.
-2.  **Extracción de Datos:** La tarea itera sobre las `Entity` activas y sus `FacebookPage` asociadas. Usando el token de acceso, llama a la Graph API de Facebook a través de `graphqlAPI.py` para obtener las conversaciones y sus mensajes más recientes.
-3.  **Procesamiento y Almacenamiento:**
-    *   Para cada mensaje nuevo, el sistema extrae el contenido, el autor y la fecha.
-    *   El texto del mensaje se envía a la función `predict_comment_label` del módulo de ML.
-    *   El modelo de ML devuelve una etiqueta de clasificación (ej. "sugerencia").
-    *   El sistema guarda el mensaje, su clasificación, el autor (`UserOwner`), la fuente (`Source`) y la conversación a la que pertenece en la base de datos.
-4.  **Visualización en Frontend:**
-    *   El usuario accede a la sección "Gestionar Opiniones".
-    *   El frontend realiza una petición a la API del backend (`/api/comment/`).
-    *   El backend devuelve la lista de opiniones almacenadas.
-    *   La interfaz muestra los datos en una tabla, permitiendo al usuario filtrar, buscar y gestionar dichas opiniones.
+1.  **Scheduled Task:** A Celery task (`messenger_api_task`) runs at a set interval.
+2.  **Data Extraction:** The task iterates over active `Entity`s and their associated `FacebookPage`s. Using the access token, it calls the Facebook Graph API via `graphqlAPI.py` to get the most recent conversations and their messages.
+3.  **Processing and Storage:**
+    *   For each new message, the system extracts the content, author, and date.
+    *   The message text is sent to the `predict_comment_label` function of the ML module.
+    *   The ML model returns a classification label (e.g., "suggestion").
+    *   The system saves the message, its classification, the author (`UserOwner`), the source (`Source`), and the conversation it belongs to in the database.
+4.  **Frontend Visualization:**
+    *   The user accesses the "Manage Opinions" section.
+    *   The frontend makes a request to the backend API (`/api/comment/`).
+    *   The backend returns the list of stored opinions.
+    *   The interface displays the data in a table, allowing the user to filter, search, and manage these opinions.
 
-## 4. Funcionalidades Clave
+## 4. Key Features
 
-*   **Autenticación de Usuarios:** Sistema de inicio de sesión seguro con roles (Administrador, Gestor, Consultor).
-*   **Dashboard de Estadísticas:** Visualización de métricas clave como el número total de opiniones, distribución por clasificación y una línea de tiempo de la actividad.
-*   **Gestión de Opiniones:** Interfaz para ver, buscar, filtrar y editar las opiniones extraídas. Incluye paginación para manejar grandes volúmenes de datos.
-*   **Clasificación Automática:** Cada opinión extraída de Messenger es clasificada automáticamente por el modelo de IA.
-*   **Comunicación en Tiempo Real:** A través de WebSockets, la interfaz puede recibir notificaciones o datos en tiempo real desde el servidor.
-*   **Gestión de Usuarios del Sistema:** Los administradores pueden crear y gestionar las cuentas de usuario que acceden a la plataforma.
-*   **Gestión de Usuarios Emisores:** El sistema almacena y permite editar la información de los usuarios de Facebook que envían los mensajes.
-*   **Importación y Exportación:** Funcionalidad para exportar opiniones a un archivo Excel e importar opiniones desde uno.
+*   **User Authentication:** Secure login system with roles (Administrator, Manager, Consultant).
+*   **Statistics Dashboard:** Visualization of key metrics such as the total number of opinions, distribution by classification, and an activity timeline.
+*   **Opinion Management:** Interface to view, search, filter, and edit extracted opinions. Includes pagination to handle large volumes of data.
+*   **Automatic Classification:** Every opinion extracted from Messenger is automatically classified by the AI model.
+*   **Real-Time Communication:** Through WebSockets, the interface can receive notifications or real-time data from the server.
+*   **System User Management:** Administrators can create and manage user accounts that access the platform.
+*   **Sender User Management:** The system stores and allows editing of information for the Facebook users who send messages.
+*   **Import and Export:** Functionality to export opinions to an Excel file and import opinions from one.
 
-## 5. Cómo Ejecutar el Sistema
+## 5. How to Run the System
 
-El proyecto está configurado para ser ejecutado fácilmente a través de Docker. El archivo `docker-compose.yml` en la raíz del proyecto orquesta los servicios necesarios (backend, frontend, base de datos, etc.).
+The project is configured to be easily run via Docker. The `docker-compose.yml` file in the project root orchestrates the necessary services (backend, frontend, database, etc.).
 
-Para iniciar el sistema, generalmente se ejecutaría el siguiente comando en la raíz del proyecto:
+To start the system, you would typically run the following command in the project root:
 
 ```bash
 docker-compose up -d
 ```
 
-Esto construirá las imágenes de los contenedores (si no existen) y levantará todos los servicios, dejando la aplicación accesible a través del navegador.
+This will build the container images (if they don't exist) and start all the services, making the application accessible through the browser.
